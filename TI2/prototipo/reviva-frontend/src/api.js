@@ -3,7 +3,7 @@
    Todas as chamadas HTTP do app passam por aqui.
    ============================================================ */
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
 const TOKEN_KEY = "reviva_token";
 

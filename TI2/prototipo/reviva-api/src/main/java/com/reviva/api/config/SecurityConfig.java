@@ -29,7 +29,9 @@ public class SecurityConfig {
     private static final String[] ROTAS_PUBLICAS = {
             "/api/auth/**", "/h2-console/**",
             "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
-            "/v3/api-docs.yaml", "/webjars/**"
+            "/v3/api-docs.yaml", "/webjars/**",
+            // Frontend estático (servido pelo próprio Spring Boot a partir daqui em diante)
+            "/", "/index.html", "/assets/**", "/favicon.ico", "/*.svg", "/*.png", "/*.ico"
     };
 
     // Rotas liberadas apenas para LEITURA (GET) sem login — navegar/buscar itens
