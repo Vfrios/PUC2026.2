@@ -7,4 +7,9 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  // sockjs-client (usado pelo chat em tempo real) foi escrito pra Node.js e
+  // espera a variável global "global" existir, que não existe no navegador.
+  define: {
+    global: "globalThis",
+  },
 });
