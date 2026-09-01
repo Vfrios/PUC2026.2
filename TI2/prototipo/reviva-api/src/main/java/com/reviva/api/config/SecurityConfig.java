@@ -27,7 +27,7 @@ public class SecurityConfig {
 
     // Rotas liberadas para qualquer método (login/registro, docs, console do H2).
     private static final String[] ROTAS_PUBLICAS = {
-            "/api/auth/**", "/h2-console/**",
+            "/api/auth/**",
             "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
             "/v3/api-docs.yaml", "/webjars/**",
             "/ws/**", // handshake do chat em tempo real; autenticado via JwtHandshakeInterceptor

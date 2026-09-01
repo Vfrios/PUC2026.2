@@ -34,14 +34,13 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:h2:mem:reviva;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: ""
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    # Arquivo local: cresce e persiste entre reinícios (ao contrário do H2 em
+    # memória de antes). A pasta "db" é criada automaticamente pelo SQLite se
+    # não existir; ver Dockerfile para garantir que ela também exista lá.
+    url: jdbc:sqlite:./db/reviva.db
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
 
 ---
 spring:

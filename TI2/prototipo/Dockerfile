@@ -21,6 +21,7 @@ RUN mvn -B clean package -DskipTests
 # --- Stage 3: runtime ---
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
+RUN mkdir -p db
 COPY --from=backend-build /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-Dserver.port=${PORT:-8080}", "-jar", "/app/app.jar"]
