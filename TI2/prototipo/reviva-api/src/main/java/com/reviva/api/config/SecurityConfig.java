@@ -30,6 +30,7 @@ public class SecurityConfig {
             "/api/auth/**", "/h2-console/**",
             "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
             "/v3/api-docs.yaml", "/webjars/**",
+            "/ws/**", // handshake do chat em tempo real; autenticado via JwtHandshakeInterceptor
             // Frontend estático (servido pelo próprio Spring Boot a partir daqui em diante)
             "/", "/index.html", "/assets/**", "/favicon.ico", "/*.svg", "/*.png", "/*.ico"
     };

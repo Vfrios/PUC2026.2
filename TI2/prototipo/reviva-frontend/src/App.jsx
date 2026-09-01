@@ -8,7 +8,9 @@ import {
   ShieldCheck, ArrowLeftRight, ImagePlus,
   LogOut, Loader2, UserPlus, Trash2,
 } from "lucide-react";
-import { api, getToken, setToken, ApiError } from "./api.js";
+import { api, getToken, setToken, ApiError, wsUrl } from "./api.js";
+import { Client as StompClient } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 
 /* ============================================================
    REVIVA — Plataforma de Doação e Troca de Objetos
@@ -982,9 +984,31 @@ function Chat({ go, role, notify, params, usuario }) {
 
   useEffect(() => {
     carregar();
-    const t = setInterval(carregar, 3500);
-    return () => clearInterval(t);
   }, [carregar]);
+
+  // Chat em tempo real: assina o tópico desta conversa via STOMP/WebSocket.
+  // Substitui o polling — a mensagem chega assim que o outro lado envia,
+  // sem esperar um intervalo nem recarregar a tela.
+  useEffect(() => {
+    if (!solicitacaoId) return;
+
+    const client = new StompClient({
+      webSocketFactory: () => new SockJS(`${wsUrl()}?token=${encodeURIComponent(getToken() || "")}`),
+      reconnectDelay: 4000,
+      onConnect: () => {
+        client.subscribe(`/topic/solicitacoes/${solicitacaoId}`, (frame) => {
+          const nova = JSON.parse(frame.body);
+          setMessages((atual) => {
+            if (atual.some((m) => m.id === nova.id)) return atual; // evita duplicar
+            return [...atual, nova];
+          });
+        });
+      },
+    });
+    client.activate();
+
+    return () => client.deactivate();
+  }, [solicitacaoId]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;

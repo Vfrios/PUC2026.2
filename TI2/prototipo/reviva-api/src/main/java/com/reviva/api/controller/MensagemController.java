@@ -9,6 +9,7 @@ import com.reviva.api.repository.SolicitacaoRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,8 +18,10 @@ import java.util.List;
 
 /**
  * Cobre a tela de Chat (Doador <-> Receptor de uma Solicitação).
- * Implementado via REST simples (o front busca em intervalos curtos);
- * ver README para o caminho de evolução para WebSocket/STOMP em tempo real.
+ * Envio/histórico seguem via REST (reaproveitando toda a validação de
+ * acesso já existente); a mensagem salva é também publicada em
+ * /topic/solicitacoes/{id} via WebSocket/STOMP, para chegar instantaneamente
+ * em quem estiver com o chat aberto (ver WebSocketConfig).
  */
 @RestController
 @RequestMapping("/api/solicitacoes/{solicitacaoId}/mensagens")
@@ -27,6 +30,7 @@ public class MensagemController {
 
     private final MensagemRepository mensagemRepository;
     private final SolicitacaoRepository solicitacaoRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @GetMapping
     public List<Mensagem> listar(@PathVariable String solicitacaoId, @AuthenticationPrincipal Usuario usuario) {
@@ -44,7 +48,9 @@ public class MensagemController {
                 .remetente(usuario)
                 .texto(req.texto())
                 .build();
-        return mensagemRepository.save(mensagem);
+        Mensagem salva = mensagemRepository.save(mensagem);
+        messagingTemplate.convertAndSend("/topic/solicitacoes/" + solicitacaoId, salva);
+        return salva;
     }
 
     /** Só o doador do item ou o receptor da solicitação podem ver/enviar mensagens dela. */

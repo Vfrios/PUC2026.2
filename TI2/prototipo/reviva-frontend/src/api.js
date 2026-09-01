@@ -7,6 +7,13 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
 const TOKEN_KEY = "reviva_token";
 
+// SockJS precisa de uma URL absoluta; quando BASE_URL é "" (deploy same-origin),
+// completamos com a origem atual do navegador.
+export function wsUrl() {
+  const base = BASE_URL || (typeof window !== "undefined" ? window.location.origin : "");
+  return base + "/ws";
+}
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
