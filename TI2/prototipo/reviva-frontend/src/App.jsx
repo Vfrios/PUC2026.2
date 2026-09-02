@@ -2005,65 +2005,52 @@ export default function RevivaApp() {
   }
 
   return (
-    <div style={{
+    <div className="reviva-shell" style={{
       "--role-primary": colors.primary, "--role-primary-dark": colors.primaryDark, "--role-soft": colors.soft,
       "--font-display": "'Fraunces', ui-serif, Georgia, serif", "--font-ui": "'Inter', ui-sans-serif, system-ui, sans-serif",
       minHeight: "100vh", background: "radial-gradient(circle at 20% 10%, #F3F1E6, #E9ECE3 60%)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      gap: 34, padding: "40px 20px", fontFamily: "var(--font-ui)",
+      padding: "40px 20px", fontFamily: "var(--font-ui)",
     }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         * { box-sizing: border-box; }
         input::placeholder, textarea::placeholder { color: #B7BBAF; }
+
+        .reviva-phone-outer {
+          width: 390px; height: 812px; border-radius: 46px; background: #0E120F; padding: 12px;
+          box-shadow: 0 30px 60px -12px rgba(20,30,20,.35), 0 0 0 1px rgba(0,0,0,.05);
+          position: relative;
+        }
+        .reviva-notch {
+          position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+          width: 120px; height: 26px; background: #0E120F; border-radius: 14px; margin-top: 8px; z-index: 50;
+        }
+
+        /* Em telas de celular a moldura decorativa vira a própria tela do app,
+           ocupando 100% da viewport, sem padding/borda e sem precisar rolar
+           pra enxergar o app inteiro. */
+        @media (max-width: 480px) {
+          html, body, #root { height: 100%; }
+          .reviva-shell { min-height: 100dvh; padding: 0 !important; }
+          .reviva-phone-outer {
+            width: 100vw; height: 100dvh; border-radius: 0; padding: 0; box-shadow: none;
+          }
+          .reviva-phone-inner { border-radius: 0 !important; }
+          .reviva-notch { display: none; }
+        }
       `}</style>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 40, alignItems: "center", justifyContent: "center", maxWidth: 900 }}>
-        {/* Brand / control panel */}
-        <div style={{ maxWidth: 300 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 11, background: "var(--role-primary)", display: "flex", alignItems: "center", justifyContent: "center", transition: "background .3s" }}>
-              <Recycle size={19} color="#fff" />
+      <div className="reviva-phone-outer">
+        <div className="reviva-phone-inner" style={{ width: "100%", height: "100%", borderRadius: 34, background: "var(--role-primary)", overflow: "hidden", position: "relative", transition: "background .3s" }}>
+          <div style={{ width: "100%", height: "100%", background: "#FBFAF4", display: "flex", flexDirection: "column", position: "relative" }}>
+            <div className="reviva-notch" />
+            <StatusBar />
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              {ScreenView}
             </div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: INK }}>Reviva</div>
-          </div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 600, color: INK, lineHeight: 1.25 }}>
-            {SCREEN_LABELS[screen] || screen}
-          </div>
-          <div style={{ fontSize: 13.5, color: INK_SOFT, marginTop: 10, lineHeight: 1.55 }}>
-            Doe ou troque objetos com a sua vizinhança como <b style={{ color: "var(--role-primary-dark)" }}>Doador</b> ou <b style={{ color: "var(--role-primary-dark)" }}>Receptor</b>.
-          </div>
-          {usuario && (
-            <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #EDEBE1", borderRadius: 14, padding: 10 }}>
-              <Avatar label={usuario.nome} size={32} tone="var(--role-primary)" />
-              <div style={{ fontSize: 12.5 }}>
-                <div style={{ fontWeight: 700, color: INK }}>{usuario.nome}</div>
-                <div style={{ color: INK_SOFT }}>{usuario.email}</div>
-              </div>
-            </div>
-          )}
-          {history.length > 0 && (
-            <div onClick={() => go(-1)} style={{ marginTop: 22, fontSize: 12.5, fontWeight: 700, color: "var(--role-primary-dark)", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-              <ChevronLeft size={14} /> voltar
-            </div>
-          )}
-        </div>
-
-        {/* Phone frame */}
-        <div style={{
-          width: 390, height: 812, borderRadius: 46, background: "#0E120F", padding: 12,
-          boxShadow: "0 30px 60px -12px rgba(20,30,20,.35), 0 0 0 1px rgba(0,0,0,.05)", position: "relative",
-        }}>
-          <div style={{ width: "100%", height: "100%", borderRadius: 34, background: "var(--role-primary)", overflow: "hidden", position: "relative", transition: "background .3s" }}>
-            <div style={{ width: "100%", height: "100%", background: "#FBFAF4", display: "flex", flexDirection: "column", position: "relative" }}>
-              <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 120, height: 26, background: "#0E120F", borderRadius: 14, marginTop: 8, zIndex: 50 }} />
-              <StatusBar />
-              <div style={{ flex: 1, overflowY: "auto" }}>
-                {ScreenView}
-              </div>
-              {showNav && <BottomNav active={screen} go={go} />}
-              <Toast text={toast} show={!!toast} />
-            </div>
+            {showNav && <BottomNav active={screen} go={go} />}
+            <Toast text={toast} show={!!toast} />
           </div>
         </div>
       </div>
