@@ -29,7 +29,12 @@ public class WsAuthChannelInterceptor implements ChannelInterceptor {
             String destino = accessor.getDestination();
             String usuarioId = (String) accessor.getSessionAttributes().get(JwtHandshakeInterceptor.ATTR_USUARIO_ID);
 
-            if (destino == null || usuarioId == null || !destino.startsWith("/topic/solicitacoes/")) {
+            if (destino == null || usuarioId == null) {
+                throw new IllegalArgumentException("Inscrição não permitida.");
+            }
+
+            if ("/topic/presence".equals(destino)) return message;
+            if (!destino.startsWith("/topic/solicitacoes/")) {
                 throw new IllegalArgumentException("Inscrição não permitida.");
             }
 

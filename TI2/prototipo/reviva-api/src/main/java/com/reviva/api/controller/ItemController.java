@@ -38,6 +38,9 @@ public class ItemController {
                 .tipoPublicacao(req.tipoPublicacao())
                 .latitude(req.latitude())
                 .longitude(req.longitude())
+                .cep(req.cep())
+                .numero(req.numero())
+                .complemento(req.complemento())
                 .bairro(req.bairro())
                 .cidade(req.cidade())
                 .uf(req.uf())
@@ -81,5 +84,10 @@ public class ItemController {
     @DeleteMapping("/{id}")
     public ItemResponse remover(@PathVariable String id, @AuthenticationPrincipal Usuario doador) {
         return ItemResponse.from(itemService.remover(id, doador));
+    }
+
+    @PostMapping("/{id}/restaurar")
+    public ItemResponse restaurar(@PathVariable String id, @AuthenticationPrincipal Usuario doador) {
+        return ItemResponse.from(itemService.restaurar(id, doador));
     }
 }

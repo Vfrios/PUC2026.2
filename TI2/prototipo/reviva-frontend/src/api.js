@@ -82,8 +82,8 @@ async function request(path, { method = "GET", body, auth = true, params } = {})
 
 /* ---------------- Auth / Usuário ---------------- */
 export const api = {
-  registrar: (nome, email, senha) =>
-    request("/api/auth/registrar", { method: "POST", auth: false, body: { nome, email, senha } }),
+  registrar: (payload) =>
+    request("/api/auth/registrar", { method: "POST", auth: false, body: payload }),
 
   login: (email, senha) =>
     request("/api/auth/login", { method: "POST", auth: false, body: { email, senha } }),
@@ -127,6 +127,8 @@ export const api = {
   marcarItemComoDoado: (id) => request(`/api/itens/${id}/doado`, { method: "POST" }),
 
   removerItem: (id) => request(`/api/itens/${id}`, { method: "DELETE" }),
+
+  restaurarItem: (id) => request(`/api/itens/${id}/restaurar`, { method: "POST" }),
 
   /* ---------------- Solicitações ---------------- */
   solicitar: (itemId, mensagem) =>

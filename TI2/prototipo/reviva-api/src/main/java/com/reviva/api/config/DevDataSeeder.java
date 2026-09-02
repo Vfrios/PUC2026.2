@@ -40,6 +40,10 @@ public class DevDataSeeder implements CommandLineRunner {
         Usuario doador = usuarioRepository.save(Usuario.builder()
                 .nome("Marina Souza")
                 .email("doador@reviva.com")
+                .cpf("52998224725")
+                .cep("30140071")
+                .numero("120")
+                .complemento("Apto 302")
                 .senhaHash(passwordEncoder.encode("reviva123"))
                 .perfilAtivo(Usuario.PerfilAtivo.DOADOR)
                 .build());
@@ -47,6 +51,10 @@ public class DevDataSeeder implements CommandLineRunner {
         Usuario receptor = usuarioRepository.save(Usuario.builder()
                 .nome("Carlos Teixeira")
                 .email("receptor@reviva.com")
+                .cpf("39053344705")
+                .cep("30130170")
+                .numero("45")
+                .complemento("Casa")
                 .senhaHash(passwordEncoder.encode("reviva123"))
                 .perfilAtivo(Usuario.PerfilAtivo.RECEPTOR)
                 .build());
@@ -55,36 +63,42 @@ public class DevDataSeeder implements CommandLineRunner {
                 .doador(doador).titulo("Jaqueta jeans P/M").descricao("Usada poucas vezes, sem manchas ou rasgos.")
                 .categoria(Item.Categoria.ROUPAS).estadoConservacao(Item.EstadoConservacao.SEMINOVO)
                 .tipoPublicacao(Item.TipoPublicacao.DOAR).impactoCo2Kg(3.4)
+                .cep("30140071").numero("120").complemento("Apto 302")
                 .bairro("Funcionários").cidade("Belo Horizonte").uf("MG").build());
 
         itemRepository.save(Item.builder()
                 .doador(doador).titulo("Caixa de livros infantis").descricao("12 livros ilustrados, 3-8 anos.")
                 .categoria(Item.Categoria.LIVROS).estadoConservacao(Item.EstadoConservacao.USADO)
                 .tipoPublicacao(Item.TipoPublicacao.DOAR).impactoCo2Kg(2.1)
+                .cep("30140071").numero("120").complemento("Apto 302")
                 .bairro("Savassi").cidade("Belo Horizonte").uf("MG").build());
 
         itemRepository.save(Item.builder()
                 .doador(doador).titulo("Estante de madeira").descricao("4 prateleiras, madeira maciça. Troco por item de cozinha ou eletrônico pequeno.")
                 .categoria(Item.Categoria.MOVEIS).estadoConservacao(Item.EstadoConservacao.USADO)
                 .tipoPublicacao(Item.TipoPublicacao.TROCAR).impactoCo2Kg(11.8)
+                .cep("30140071").numero("120").complemento("Apto 302")
                 .bairro("Funcionários").cidade("Belo Horizonte").uf("MG").build());
 
         itemRepository.save(Item.builder()
                 .doador(doador).titulo("Carrinho de bebê").descricao("Modelo compacto, dobrável, rodas em bom estado.")
                 .categoria(Item.Categoria.INFANTIL).estadoConservacao(Item.EstadoConservacao.SEMINOVO)
                 .tipoPublicacao(Item.TipoPublicacao.DOAR).impactoCo2Kg(6.7)
+                .cep("30140071").numero("120").complemento("Apto 302")
                 .bairro("Santo Agostinho").cidade("Belo Horizonte").uf("MG").build());
 
         itemRepository.save(Item.builder()
                 .doador(doador).titulo("Liquidificador 3 velocidades").descricao("Funcionando perfeitamente, motor testado.")
                 .categoria(Item.Categoria.ELETRONICOS).estadoConservacao(Item.EstadoConservacao.USADO)
                 .tipoPublicacao(Item.TipoPublicacao.TROCAR).impactoCo2Kg(4.2)
+                .cep("30140071").numero("120").complemento("Apto 302")
                 .bairro("Savassi").cidade("Belo Horizonte").uf("MG").build());
 
         itemRepository.save(Item.builder()
                 .doador(doador).titulo("Jogo de panelas antiaderente").descricao("Conjunto com 5 peças, uso doméstico leve.")
                 .categoria(Item.Categoria.COZINHA).estadoConservacao(Item.EstadoConservacao.USADO)
                 .tipoPublicacao(Item.TipoPublicacao.DOAR).impactoCo2Kg(3.9)
+                .cep("30140071").numero("120").complemento("Apto 302")
                 .bairro("Funcionários").cidade("Belo Horizonte").uf("MG").build());
 
         comunidadeRepository.save(Comunidade.builder()

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -72,15 +73,20 @@ public class GeoService {
             throw new IllegalArgumentException("CEP não encontrado: " + cepLimpo);
         }
 
-        String logradouro = (String) viaCep.getOrDefault("logradouro", "");
-        String bairro = (String) viaCep.getOrDefault("bairro", "");
-        String cidade = (String) viaCep.getOrDefault("localidade", "");
-        String uf = (String) viaCep.getOrDefault("uf", "");
+        String logradouro = corrigirTexto((String) viaCep.getOrDefault("logradouro", ""));
+        String bairro = corrigirTexto((String) viaCep.getOrDefault("bairro", ""));
+        String cidade = corrigirTexto((String) viaCep.getOrDefault("localidade", ""));
+        String uf = corrigirTexto((String) viaCep.getOrDefault("uf", ""));
 
         double[] coords = geocodificar(cidade, uf);
 
         return new EnderecoResponse(cepLimpo, logradouro, bairro, cidade, uf,
                 coords != null ? coords[0] : null, coords != null ? coords[1] : null);
+    }
+
+    private String corrigirTexto(String valor) {
+        if (valor == null || (!valor.contains("Ã") && !valor.contains("Â"))) return valor;
+        return new String(valor.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
     }
 
     /** Lista os 27 estados brasileiros (sigla + nome), em ordem alfabética. Cobre os selects de Estado na busca. */
@@ -200,4 +206,3 @@ public class GeoService {
         }
     }
 }
-

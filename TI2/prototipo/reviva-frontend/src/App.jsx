@@ -6,7 +6,7 @@ import {
   Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap,
   UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles,
   ShieldCheck, ArrowLeftRight, ImagePlus,
-  LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2,
+  LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, Archive, RotateCcw, X,
 } from "lucide-react";
 import { api, getToken, setToken, ApiError, wsUrl } from "./api.js";
 import { Client as StompClient } from "@stomp/stompjs";
@@ -108,6 +108,44 @@ function fmtDateTime(iso) {
 function badgeIndex(tier) {
   const i = BADGES.findIndex(b => b.tier === tier);
   return i < 0 ? 0 : i;
+}
+
+function onlyDigits(v) {
+  return (v || "").replace(/\D/g, "");
+}
+
+function distanciaKm(origem, destino) {
+  if (origem?.latitude == null || origem?.longitude == null || destino?.latitude == null || destino?.longitude == null) return null;
+  const rad = Math.PI / 180;
+  const dLat = (destino.latitude - origem.latitude) * rad;
+  const dLon = (destino.longitude - origem.longitude) * rad;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(origem.latitude * rad) * Math.cos(destino.latitude * rad) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatCpf(v) {
+  const d = onlyDigits(v).slice(0, 11);
+  if (d.length > 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+  if (d.length > 6) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  if (d.length > 3) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  return d;
+}
+
+function formatCep(v) {
+  const d = onlyDigits(v).slice(0, 8);
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+}
+
+function cpfValido(valor) {
+  const cpf = onlyDigits(valor);
+  if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+  const calc = (base) => {
+    let soma = 0;
+    for (let i = 0; i < base; i++) soma += Number(cpf[i]) * (base + 1 - i);
+    const d = 11 - (soma % 11);
+    return d >= 10 ? 0 : d;
+  };
+  return calc(9) === Number(cpf[9]) && calc(10) === Number(cpf[10]);
 }
 
 /**
@@ -257,10 +295,13 @@ function ImpactRing({ pct = 0, size = 84, label, value }) {
   );
 }
 
-function ItemCard({ item, onClick, favorite, onFav }) {
+function ItemCard({ item, onClick, favorite, onFav, usuario, onlineIds = new Set() }) {
   const cat = CATS[item.categoria] || CATS.OUTROS;
   const Icon = cat.Icon;
   const foto = item.fotosUrls?.[0];
+  const distancia = distanciaKm(usuario, item);
+  const anuncianteOnline = item.doador?.id ? onlineIds.has(item.doador.id) : false;
+  const localizacao = [item.bairro, item.cidade].filter(Boolean).join(" · ");
   return (
     <div onClick={onClick} style={{
       background: "#fff", borderRadius: 18, padding: 12, display: "flex", gap: 12, cursor: "pointer",
@@ -277,21 +318,23 @@ function ItemCard({ item, onClick, favorite, onFav }) {
           <div style={{ fontWeight: 700, fontSize: 14, color: INK, fontFamily: "var(--font-ui)" }}>{item.titulo}</div>
           {onFav && (
             <Heart size={17} onClick={(e) => { e.stopPropagation(); onFav(item); }}
+              style={{ animation: favorite ? "favorite-pulse .45s ease" : "none" }}
               fill={favorite ? "#E0673F" : "none"} color={favorite ? "#E0673F" : "#C7C9C1"} />
           )}
         </div>
-        <div style={{ fontSize: 12, color: INK_SOFT, margin: "3px 0 6px" }}>{cat.label} · {capitalize(item.estadoConservacao)}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: INK_SOFT, margin: "3px 0 4px" }}>
+          <span>{item.doador?.nome || "Anunciante"}</span>
+          {item.doador && <><Stars value={item.doador.reputacaoScore} size={11} /><span>{(item.doador.reputacaoScore || 0).toFixed(1)}</span></>}
+        </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           <span style={{
             fontSize: 10.5, fontWeight: 700, padding: "3px 8px", borderRadius: 999,
             background: item.tipoPublicacao === "DOAR" ? "var(--role-soft)" : "#FBE8E0",
             color: item.tipoPublicacao === "DOAR" ? "var(--role-primary-dark)" : "#9C4327",
           }}>{item.tipoPublicacao === "DOAR" ? "DOAÇÃO" : "TROCA"}</span>
-          {item.bairro && (
-            <span style={{ fontSize: 11, color: INK_SOFT, display: "flex", alignItems: "center", gap: 3 }}>
-              <MapPin size={11} /> {item.bairro}
-            </span>
-          )}
+          {localizacao && <span style={{ fontSize: 11, color: INK_SOFT }}><MapPin size={11} style={{ verticalAlign: "-2px" }} /> {localizacao}</span>}
+          {distancia != null && <span style={{ fontSize: 11, color: INK_SOFT }}>{distancia < 1 ? "menos de 1 km" : `${Math.round(distancia)} km`}</span>}
+          <span style={{ fontSize: 11, color: anuncianteOnline ? "#2D8A57" : INK_SOFT, display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: anuncianteOnline ? "#2D8A57" : "#A7ADA3" }} /> {anuncianteOnline ? "online" : "offline"}</span>
         </div>
       </div>
     </div>
@@ -447,12 +490,45 @@ function Auth({ go, onLogin, onRegister }) {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [cep, setCep] = useState("");
+  const [numero, setNumero] = useState("");
+  const [complemento, setComplemento] = useState("");
+  const [endereco, setEndereco] = useState(null);
+  const [cepBuscando, setCepBuscando] = useState(false);
+  const [cepErro, setCepErro] = useState("");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const cepDigits = onlyDigits(cep).slice(0, 8);
+
+  useEffect(() => {
+    if (mode !== "registro" || cepDigits.length !== 8) {
+      setEndereco(null);
+      setCepErro("");
+      setCepBuscando(false);
+      return;
+    }
+    let cancelado = false;
+    setCepBuscando(true);
+    setCepErro("");
+    api.buscarCep(cepDigits)
+      .then(res => {
+        if (cancelado) return;
+        setEndereco(res);
+      })
+      .catch(e => {
+        if (cancelado) return;
+        setEndereco(null);
+        setCepErro(e.message || "CEP não encontrado. Confira o CEP informado.");
+      })
+      .finally(() => { if (!cancelado) setCepBuscando(false); });
+    return () => { cancelado = true; };
+  }, [mode, cepDigits]);
+
   const submit = async () => {
     setErro("");
-    if (!email || !senha || (mode === "registro" && !nome)) {
+    if (!email || !senha || (mode === "registro" && (!nome || !cpf || !cep || !numero))) {
       setErro("Preencha todos os campos.");
       return;
     }
@@ -460,10 +536,30 @@ function Auth({ go, onLogin, onRegister }) {
       setErro("A senha precisa ter pelo menos 8 caracteres.");
       return;
     }
+    if (mode === "registro" && !cpfValido(cpf)) {
+      setErro("Informe um CPF valido.");
+      return;
+    }
+    if (mode === "registro" && cepDigits.length !== 8) {
+      setErro("Informe um CEP valido com 8 digitos.");
+      return;
+    }
+    if (mode === "registro" && !/^\d+$/.test(numero.trim())) {
+      setErro("O numero do endereco deve conter apenas digitos.");
+      return;
+    }
     setLoading(true);
     try {
       if (mode === "login") await onLogin(email, senha);
-      else await onRegister(nome, email, senha);
+      else await onRegister({
+        nome: nome.trim(),
+        email: email.trim(),
+        cpf: onlyDigits(cpf),
+        cep: onlyDigits(cep),
+        numero: numero.trim(),
+        complemento: complemento.trim(),
+        senha,
+      });
     } catch (e) {
       setErro(e.message || "Não foi possível continuar.");
     } finally {
@@ -496,6 +592,32 @@ function Auth({ go, onLogin, onRegister }) {
           <>
             <label style={fieldLabel}>Nome</label>
             <div style={fieldBox}><User size={16} color={INK_SOFT} /><input name="nome" autoComplete="name" value={nome} onChange={e => setNome(e.target.value)} placeholder="Seu nome" style={fieldInput} /></div>
+            <label style={fieldLabel}>CPF</label>
+            <div style={fieldBox}><User size={16} color={INK_SOFT} /><input name="cpf" autoComplete="off" value={formatCpf(cpf)} onChange={e => setCpf(e.target.value)} placeholder="000.000.000-00" inputMode="numeric" maxLength={14} style={fieldInput} /></div>
+            <label style={fieldLabel}>CEP</label>
+            <div style={fieldBox}>
+              <MapPin size={16} color={INK_SOFT} />
+              <input name="cep" autoComplete="postal-code" value={formatCep(cep)} onChange={e => setCep(e.target.value)} placeholder="00000-000" inputMode="numeric" maxLength={9} style={fieldInput} />
+              {cepBuscando && <Loader2 size={15} color={INK_SOFT} style={{ animation: "spin .8s linear infinite" }} />}
+            </div>
+            <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 4 }}>Digite o CEP para preencher rua, bairro e cidade automaticamente.</div>
+            {cepErro && <div style={{ fontSize: 11.5, color: "#9C4327", marginTop: 4 }}>{cepErro}</div>}
+            {endereco && (
+              <div style={{ marginTop: 8, background: "var(--role-soft)", borderRadius: 12, padding: "9px 12px", fontSize: 12, color: "var(--role-primary-dark)" }}>
+                <div>{endereco.logradouro || "Rua não informada"} {endereco.uf ? `· ${endereco.uf}` : ""}</div>
+                <div style={{ marginTop: 3 }}>{endereco.bairro || "Bairro não informado"} · {endereco.cidade || "Cidade não informada"}</div>
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <label style={fieldLabel}>Numero</label>
+                <div style={fieldBox}><input name="numero" autoComplete="address-line2" value={numero} onChange={e => setNumero(onlyDigits(e.target.value))} placeholder="Ex: 120" inputMode="numeric" pattern="[0-9]*" style={fieldInput} /></div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={fieldLabel}>Complemento</label>
+                <div style={fieldBox}><input name="complemento" autoComplete="address-line3" value={complemento} onChange={e => setComplemento(e.target.value)} placeholder="Opcional" style={fieldInput} /></div>
+              </div>
+            </div>
           </>
         )}
         <label style={fieldLabel}>E-mail</label>
@@ -511,14 +633,6 @@ function Auth({ go, onLogin, onRegister }) {
           </Button>
         </div>
       </form>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0" }}>
-        <div style={{ flex: 1, height: 1, background: "#E9E7DC" }} /><span style={{ fontSize: 11, color: INK_SOFT }}>demonstração</span><div style={{ flex: 1, height: 1, background: "#E9E7DC" }} />
-      </div>
-      <div style={{ fontSize: 11.5, color: INK_SOFT, lineHeight: 1.6, background: "#F7F6EE", borderRadius: 12, padding: 12 }}>
-        Contas de demonstração já cadastradas no backend:<br />
-        <b>doador@reviva.com</b> / receptor@reviva.com — senha <b>reviva123</b>
-      </div>
 
       <div style={{ flex: 1 }} />
       <div style={{ textAlign: "center", fontSize: 13, color: INK_SOFT }}>
@@ -657,7 +771,7 @@ function HomeDoador({ go, usuario }) {
 }
 
 /* ---- CADASTRO DE ITEM (também usado para editar, quando params.item vem preenchido) ---- */
-function CadastroItem({ go, notify, params }) {
+function CadastroItem({ go, notify, params, usuario }) {
   const itemEditando = params?.item || null;
   const [tipo, setTipo] = useState(itemEditando?.tipoPublicacao || "DOAR");
   const [cat, setCat] = useState(itemEditando?.categoria || "ROUPAS");
@@ -691,7 +805,9 @@ function CadastroItem({ go, notify, params }) {
   const removerFoto = (idx) => setFotos(f => f.filter((_, i) => i !== idx));
 
 
-  const [cep, setCep] = useState("");
+  const [cep, setCep] = useState(itemEditando?.cep || usuario?.cep || "");
+  const [numero, setNumero] = useState(itemEditando?.numero || usuario?.numero || "");
+  const [complemento, setComplemento] = useState(itemEditando?.complemento || usuario?.complemento || "");
   const [cepBuscando, setCepBuscando] = useState(false);
   const [cepErro, setCepErro] = useState("");
   const [endereco, setEndereco] = useState(itemEditando ? {
@@ -700,12 +816,7 @@ function CadastroItem({ go, notify, params }) {
   } : null); // { logradouro, bairro, cidade, uf, latitude, longitude }
   const [bairro, setBairro] = useState(itemEditando?.bairro || "");
   const [cidade, setCidade] = useState(itemEditando?.cidade || "");
-  const cepDigits = cep.replace(/\D/g, "").slice(0, 8);
-
-  const formatCep = (v) => {
-    const d = v.replace(/\D/g, "").slice(0, 8);
-    return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
-  };
+  const cepDigits = onlyDigits(cep).slice(0, 8);
 
   useEffect(() => {
     if (cepDigits.length !== 8) { setCepErro(""); return; }
@@ -731,6 +842,7 @@ function CadastroItem({ go, notify, params }) {
   const submit = async () => {
     setErro("");
     if (!titulo.trim()) { setErro("Dê um título para o item."); return; }
+    if (!numero.trim()) { setErro("Informe o numero do endereco."); return; }
     if (!bairro.trim() || !cidade.trim()) { setErro("Informe o CEP ou preencha bairro e cidade."); return; }
     setLoading(true);
     try {
@@ -740,6 +852,9 @@ function CadastroItem({ go, notify, params }) {
         categoria: cat,
         estadoConservacao: estado,
         tipoPublicacao: tipo,
+        cep: cepDigits || null,
+        numero: numero.trim(),
+        complemento: complemento.trim(),
         bairro: bairro.trim(),
         cidade: cidade.trim(),
         uf: endereco?.uf || null,
@@ -851,6 +966,17 @@ function CadastroItem({ go, notify, params }) {
 
         <div style={{ display: "flex", gap: 8 }}>
           <div style={{ flex: 1 }}>
+            <label style={fieldLabel}>Numero</label>
+            <div style={fieldBox}><input value={numero} onChange={e => setNumero(e.target.value)} placeholder="Ex: 120" style={fieldInput} /></div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={fieldLabel}>Complemento</label>
+            <div style={fieldBox}><input value={complemento} onChange={e => setComplemento(e.target.value)} placeholder="Opcional" style={fieldInput} /></div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ flex: 1 }}>
             <label style={fieldLabel}>Bairro</label>
             <div style={fieldBox}><input value={bairro} onChange={e => setBairro(e.target.value)} placeholder="Preenchido pelo CEP" style={fieldInput} /></div>
           </div>
@@ -881,6 +1007,7 @@ function GerenciarItens({ go, notify }) {
   const { data: solicitacoes, reload: reloadSolic } = useApiData(() => api.solicitacoesRecebidas(), []);
   const [expandido, setExpandido] = useState(null);
   const [acaoLoading, setAcaoLoading] = useState(null);
+  const [aba, setAba] = useState("ativos");
 
   const reload = () => { reloadItens(); reloadSolic(); };
 
@@ -912,6 +1039,13 @@ function GerenciarItens({ go, notify }) {
     finally { setAcaoLoading(null); }
   };
 
+  const restaurar = async (item) => {
+    setAcaoLoading(item.id);
+    try { await api.restaurarItem(item.id); notify("Item restaurado por mais 60 dias."); reload(); }
+    catch (e) { notify(e.message || "Erro ao restaurar item."); }
+    finally { setAcaoLoading(null); }
+  };
+
   // Confirmação rápida de doação: marca o item como doado e já atualiza o
   // perfil do usuário (kg evitados, itens doados, pontos e selo — ver
   // ItemService.marcarComoDoado no backend), sem precisar passar pelo fluxo
@@ -932,13 +1066,17 @@ function GerenciarItens({ go, notify }) {
   return (
     <div>
       <TopBar title="Gerenciar itens" onBack={() => go(-1)} />
+      <div style={{ padding: "0 20px 12px", display: "flex", gap: 8 }}>
+        <Chip active={aba === "ativos"} onClick={() => setAba("ativos")}>Ativos</Chip>
+        <Chip active={aba === "arquivados"} onClick={() => setAba("arquivados")}>Arquivados</Chip>
+      </div>
       <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
         {loading && <Loading label="Buscando seus itens..." />}
         {error && <ErrorBox message={error} onRetry={reload} />}
-        {!loading && !error && (itens || []).length === 0 && (
-          <EmptyState Icon={Gift} text="Você ainda não publicou nenhum item. Toque em 'Doar' para cadastrar o primeiro." />
+        {!loading && !error && (itens || []).filter(it => (it.status === "REMOVIDO" || it.expirado) === (aba === "arquivados")).length === 0 && (
+          <EmptyState Icon={aba === "arquivados" ? Archive : Gift} text={aba === "arquivados" ? "Nenhum item arquivado." : "Você ainda não publicou nenhum item. Toque em 'Doar' para cadastrar o primeiro."} />
         )}
-        {(itens || []).map((it) => {
+        {(itens || []).filter(it => (it.status === "REMOVIDO" || it.expirado) === (aba === "arquivados")).map((it) => {
           const relacionadas = solicPorItem(it.id);
           const pendentes = relacionadas.filter(s => s.status === "AGUARDANDO");
           const aceitas = relacionadas.filter(s => s.status === "ACEITA");
@@ -981,7 +1119,9 @@ function GerenciarItens({ go, notify }) {
                       <ChevronRight size={15} color="var(--role-primary-dark)" />
                     </div>
                   ))}
-                  {(it.status === "ATIVO" || it.status === "EM_NEGOCIACAO") && (
+                  {aba === "arquivados" ? (
+                    <Button small variant="primary" icon={RotateCcw} loading={acaoLoading === it.id} onClick={() => restaurar(it)}>Restaurar item</Button>
+                  ) : (it.status === "ATIVO" || it.status === "EM_NEGOCIACAO") && (
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <Button small variant="ghost" icon={Pencil} onClick={() => go("cadastroItem", { item: it })}>Editar</Button>
                       <Button small variant="primary" icon={CheckCircle2} loading={acaoLoading === it.id} onClick={() => confirmarDoacao(it)}>Item doado</Button>
@@ -1352,7 +1492,7 @@ function DashboardImpacto({ go, usuario }) {
 }
 
 /* ---- HOME RECEPTOR ---- */
-function HomeReceptor({ go, favorites, toggleFav }) {
+function HomeReceptor({ go, favorites, toggleFav, usuario, onlineIds }) {
   const { loading, error, data: itens, reload } = useApiData(() => api.listarItens(), []);
   return (
     <Screen>
@@ -1369,7 +1509,7 @@ function HomeReceptor({ go, favorites, toggleFav }) {
         </div>
       </div>
       <div style={{ padding: "0 20px" }}>
-        <SectionTitle right={<span style={linkText} onClick={() => go("mapaItens")}>ver mapa</span>}>Categorias</SectionTitle>
+        <SectionTitle>Categorias</SectionTitle>
         <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
           {Object.entries(CATS).map(([k, v]) => (
             <div key={k} onClick={() => go("listaItens", { categoria: k })} style={{ minWidth: 68, textAlign: "center", cursor: "pointer" }}>
@@ -1387,7 +1527,7 @@ function HomeReceptor({ go, favorites, toggleFav }) {
         {error && <ErrorBox message={error} onRetry={reload} />}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {(itens || []).slice(0, 4).map(it => (
-            <ItemCard key={it.id} item={it} favorite={!!favorites[it.id]} onFav={toggleFav} onClick={() => go("detalhesItem", { itemId: it.id })} />
+            <ItemCard key={it.id} item={it} usuario={usuario} onlineIds={onlineIds} favorite={!!favorites[it.id]} onFav={toggleFav} onClick={() => go("detalhesItem", { itemId: it.id })} />
           ))}
           {!loading && !error && (itens || []).length === 0 && <EmptyState Icon={Search} text="Nenhum item publicado ainda." />}
         </div>
@@ -1397,7 +1537,7 @@ function HomeReceptor({ go, favorites, toggleFav }) {
 }
 
 /* ---- BUSCA ---- */
-function Busca({ go }) {
+function Busca({ go, favorites, toggleFav, usuario, onlineIds }) {
   const [q, setQ] = useState("");
   const [uf, setUf] = useState("");
   const [cidade, setCidade] = useState("");
@@ -1405,8 +1545,7 @@ function Busca({ go }) {
   const [localizacaoAuto, setLocalizacaoAuto] = useState(false);
   const [localizacaoErro, setLocalizacaoErro] = useState("");
   const qRef = useRef(q);
-  const pendingCidadeRef = useRef(null);
-  const autoBuscouRef = useRef(false);
+  const [resultado, setResultado] = useState(null);
 
   useEffect(() => { qRef.current = q; }, [q]);
 
@@ -1416,8 +1555,36 @@ function Busca({ go }) {
     [uf]
   );
 
-  const buscar = (ufParam = uf, cidadeParam = cidade) =>
-    go("listaItens", { termo: q || undefined, uf: ufParam || undefined, cidade: cidadeParam || undefined });
+  const buscar = (ufParam = uf, cidadeParam = cidade, termoParam = q) =>
+    setResultado({ termo: termoParam || undefined, uf: ufParam || undefined, cidade: cidadeParam || undefined });
+  
+  const detectarLocalizacao = () => {
+    if (!("geolocation" in navigator)) {
+      setLocalizacaoErro("Seu navegador não oferece localização automática.");
+      return;
+    }
+    setLocalizando(true);
+    setLocalizacaoErro("");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await api.reverseGeo(pos.coords.latitude, pos.coords.longitude);
+          if (!res?.uf) throw new Error("Não foi possível determinar sua região.");
+          const cidadeAtual = res.cidade || "";
+          setUf(res.uf);
+          setCidade(cidadeAtual);
+          setLocalizacaoAuto(true);
+          buscar(res.uf, cidadeAtual, qRef.current);
+        } catch (e) {
+          setLocalizacaoErro(e.message || "Não foi possível detectar sua região automaticamente.");
+        } finally {
+          setLocalizando(false);
+        }
+      },
+      () => { setLocalizando(false); setLocalizacaoErro("Permita o acesso à localização para buscar perto de você."); },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 10 * 60 * 1000 }
+    );
+  };
 
   // Detecta a localização automaticamente ao abrir a tela: pede a posição do
   // navegador (GPS/Wi-Fi), converte em cidade/UF via reverse geocoding e já
@@ -1425,52 +1592,9 @@ function Busca({ go }) {
   // nada. Se a permissão for negada ou o GPS falhar, a busca manual segue
   // funcionando normalmente, sem travar a tela.
   useEffect(() => {
-    if (!("geolocation" in navigator)) return;
-    setLocalizando(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const res = await api.reverseGeo(pos.coords.latitude, pos.coords.longitude);
-          if (res?.uf) {
-            setUf(res.uf);
-            setLocalizacaoAuto(true);
-            if (res.cidade) {
-              pendingCidadeRef.current = res.cidade;
-            } else if (qRef.current.trim() === "") {
-              autoBuscouRef.current = true;
-              buscar(res.uf, "");
-            }
-          } else {
-            setLocalizacaoErro("Não foi possível detectar sua região automaticamente.");
-          }
-        } catch {
-          setLocalizacaoErro("Não foi possível detectar sua região automaticamente.");
-        } finally {
-          setLocalizando(false);
-        }
-      },
-      () => setLocalizando(false), // permissão negada ou indisponível: segue no fluxo manual, sem erro visível
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 10 * 60 * 1000 }
-    );
+    detectarLocalizacao();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Quando a lista de cidades do estado detectado termina de carregar, seleciona
-  // a cidade encontrada pelo GPS e dispara a busca automaticamente (uma única vez,
-  // e só se o usuário ainda não tiver começado a digitar um termo por conta própria).
-  useEffect(() => {
-    if (!pendingCidadeRef.current || cidadesLoading || autoBuscouRef.current) return;
-    const alvo = pendingCidadeRef.current.toLowerCase();
-    const encontrada = (cidades || []).find(c => c.nome.toLowerCase() === alvo);
-    const cidadeFinal = encontrada ? encontrada.nome : "";
-    setCidade(cidadeFinal);
-    pendingCidadeRef.current = null;
-    if (qRef.current.trim() === "") {
-      autoBuscouRef.current = true;
-      buscar(uf, cidadeFinal);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cidades, cidadesLoading]);
 
   return (
     <div>
@@ -1479,6 +1603,7 @@ function Busca({ go }) {
         <div style={{ ...fieldBox }}>
           <Search size={16} color={INK_SOFT} />
           <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && buscar()} placeholder="O que você está procurando?" style={fieldInput} autoFocus />
+          {q && <button type="button" onClick={() => setQ("")} aria-label="Limpar busca" title="Limpar busca" style={{ border: "none", background: "none", padding: 0, color: INK_SOFT, cursor: "pointer", display: "flex" }}><X size={16} /></button>}
         </div>
 
         <label style={fieldLabel}>Região</label>
@@ -1488,16 +1613,17 @@ function Busca({ go }) {
               <><Loader2 size={12} style={{ animation: "spin .8s linear infinite" }} /> Detectando sua localização...</>
             ) : localizacaoErro ? (
               <>{localizacaoErro}</>
-            ) : (
-              <><MapPin size={12} /> Região preenchida automaticamente pela sua localização</>
-            )}
+            ) : null}
           </div>
         )}
+        <button type="button" onClick={detectarLocalizacao} disabled={localizando} style={{ border: "none", background: "none", padding: 0, color: "var(--role-primary)", fontSize: 12, fontWeight: 700, cursor: localizando ? "wait" : "pointer" }}>
+           <MapPin size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} /> {(localizando || localizacaoAuto) ? "Usando localização atual" : "Usar minha localização atual"}
+        </button>
         <div style={{ display: "flex", gap: 8 }}>
           <div style={{ ...fieldBox, flex: 1 }}>
             <select
               value={uf}
-              onChange={e => { setUf(e.target.value); setCidade(""); setLocalizacaoAuto(false); pendingCidadeRef.current = null; }}
+              onChange={e => { setUf(e.target.value); setCidade(""); setLocalizacaoAuto(false); }}
               style={{ ...fieldInput, appearance: "none", cursor: "pointer" }}
             >
               <option value="">Estado</option>
@@ -1519,17 +1645,17 @@ function Busca({ go }) {
 
         <SectionTitle>Sugestões</SectionTitle>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {["Roupas","Livros","Eletrônicos","Móveis","Cozinha"].map(s => <Chip key={s} onClick={() => go("listaItens", { termo: s, uf: uf || undefined, cidade: cidade || undefined })}>{s}</Chip>)}
+          {(["Roupas","Livros","Eletrônicos","Móveis","Cozinha"].map(s => <Chip key={s} onClick={() => { setQ(s); buscar(uf, cidade, s); }}>{s}</Chip>))}
         </div>
         <div style={{ marginTop: 16 }}><Button full onClick={() => buscar()}>Buscar</Button></div>
       </div>
+      {resultado && <ListaItens go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={resultado} embedded />}
     </div>
   );
 }
 
 /* ---- LISTA / MAPA ---- */
-function ListaItens({ go, favorites, toggleFav, params }) {
-  const [view, setView] = useState("lista");
+function ListaItens({ go, favorites, toggleFav, usuario, onlineIds, params, embedded = false }) {
   const [tipoFiltro, setTipoFiltro] = useState(null);
   const categoria = params?.categoria || null;
   const termo = params?.termo || null;
@@ -1541,13 +1667,12 @@ function ListaItens({ go, favorites, toggleFav, params }) {
     [categoria, tipoFiltro, termo, uf, cidade]
   );
 
-  if (view === "mapa") return <MapaItens go={go} setView={setView} embedded />;
-
   const tituloRegiao = cidade ? ` em ${cidade}` : uf ? ` em ${uf}` : "";
 
   return (
     <div>
-      <TopBar title={termo ? `Resultados: "${termo}"` : `Itens perto de você${tituloRegiao}`} onBack={() => go(-1)} right={<MapPin size={18} color={INK} onClick={() => setView("mapa")} style={{ cursor: "pointer" }} />} />
+      {!embedded && <TopBar title={termo ? `Resultados: "${termo}"` : `Itens perto de você${tituloRegiao}`} onBack={() => go(-1)} right={<MapPin size={18} color={INK} />} />}
+      {embedded && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px 8px" }}><SectionTitle>{termo ? `Resultados para "${termo}"` : `Itens perto de você${tituloRegiao}`}</SectionTitle><MapPin size={17} color={INK} /></div>}
       <div style={{ padding: "0 20px", display: "flex", gap: 8, marginBottom: 10 }}>
         <Chip active={!tipoFiltro} onClick={() => setTipoFiltro(null)}>Todos</Chip>
         <Chip active={tipoFiltro === "DOAR"} onClick={() => setTipoFiltro("DOAR")}>Doação</Chip>
@@ -1557,44 +1682,14 @@ function ListaItens({ go, favorites, toggleFav, params }) {
         {loading && <Loading label="Buscando itens..." />}
         {error && <ErrorBox message={error} onRetry={reload} />}
         {!loading && !error && (itens || []).length === 0 && <EmptyState Icon={Search} text="Nenhum item encontrado com esses filtros." />}
-        {(itens || []).map(it => <ItemCard key={it.id} item={it} favorite={!!favorites[it.id]} onFav={toggleFav} onClick={() => go("detalhesItem", { itemId: it.id })} />)}
+        {(itens || []).map(it => <ItemCard key={it.id} item={it} usuario={usuario} onlineIds={onlineIds} favorite={!!favorites[it.id]} onFav={toggleFav} onClick={() => go("detalhesItem", { itemId: it.id })} />)}
       </div>
-    </div>
-  );
-}
-
-function MapaItens({ go, setView, embedded }) {
-  const { data: itens } = useApiData(() => api.listarItens(), []);
-  return (
-    <div style={{ height: embedded ? "auto" : "100%", display: "flex", flexDirection: "column" }}>
-      <TopBar title="Mapa de itens" onBack={() => embedded ? setView("lista") : go(-1)} />
-      <div style={{ margin: "0 20px", borderRadius: 20, overflow: "hidden", position: "relative", height: 380, background: "linear-gradient(135deg,#DCE7DA,#EFEBDD)" }}>
-        <svg width="100%" height="100%" viewBox="0 0 300 380">
-          {[...Array(9)].map((_,i)=><path key={i} d={`M ${i*35} 0 L ${i*35} 380`} stroke="#CBD6C7" strokeWidth="1"/>)}
-          {[...Array(11)].map((_,i)=><path key={i} d={`M 0 ${i*35} L 300 ${i*35}`} stroke="#CBD6C7" strokeWidth="1"/>)}
-        </svg>
-        {(itens || []).map((it, i) => {
-          const PinIcon = (CATS[it.categoria] || CATS.OUTROS).Icon;
-          return (
-            <div key={it.id} onClick={() => go("detalhesItem", { itemId: it.id })} style={{
-              position: "absolute", left: 30 + (i * 47) % 240, top: 40 + (i * 63) % 300,
-              width: 34, height: 34, borderRadius: "50% 50% 50% 0", background: "var(--role-primary)",
-              transform: "rotate(-45deg)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-              boxShadow: "0 4px 10px rgba(0,0,0,.2)",
-            }}>
-              <div style={{ transform: "rotate(45deg)" }}><PinIcon size={14} color="#fff" /></div>
-            </div>
-          );
-        })}
-        <div style={{ position: "absolute", left: 12, bottom: 12, background: "#fff", borderRadius: 10, padding: "5px 10px", fontSize: 10.5, fontWeight: 700, color: INK }}>mapa ilustrativo</div>
-      </div>
-      <div style={{ padding: "12px 20px" }}><Button full variant="soft" onClick={() => embedded ? setView("lista") : go("listaItens")}>Ver como lista</Button></div>
     </div>
   );
 }
 
 /* ---- DETALHES DO ITEM ---- */
-function DetalhesItem({ go, notify, favorites, toggleFav, usuario, params }) {
+function DetalhesItem({ go, notify, favorites, toggleFav, usuario, onlineIds, params }) {
   const itemId = params?.itemId;
   const { loading, error, data: item, reload } = useApiData(() => api.itemPorId(itemId), [itemId], { skip: !itemId });
   const [fotoAtiva, setFotoAtiva] = useState(0);
@@ -1608,6 +1703,8 @@ function DetalhesItem({ go, notify, favorites, toggleFav, usuario, params }) {
   const Icon = cat.Icon;
   const souEuOItem = usuario && item.doador?.id === usuario.id;
   const fotos = item.fotosUrls || [];
+  const distancia = distanciaKm(usuario, item);
+  const localizacao = [item.bairro, item.cidade].filter(Boolean).join(" · ");
 
   return (
     <div>
@@ -1634,7 +1731,7 @@ function DetalhesItem({ go, notify, favorites, toggleFav, usuario, params }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 14 }}>
           <div>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: INK }}>{item.titulo}</div>
-            <div style={{ fontSize: 12.5, color: INK_SOFT, marginTop: 3 }}>{cat.label} · {capitalize(item.estadoConservacao)}{item.bairro ? ` · ${item.bairro}` : ""}</div>
+            <div style={{ fontSize: 12.5, color: INK_SOFT, marginTop: 3 }}>{cat.label} · {capitalize(item.estadoConservacao)}{localizacao ? ` · ${localizacao}` : ""}{distancia != null ? ` · ${distancia < 1 ? "menos de 1 km" : `${Math.round(distancia)} km`}` : ""}</div>
           </div>
           <span style={{ fontSize: 10.5, fontWeight: 700, padding: "4px 10px", borderRadius: 999, background: item.tipoPublicacao === "DOAR" ? "var(--role-soft)" : "#FBE8E0", color: item.tipoPublicacao === "DOAR" ? "var(--role-primary-dark)" : "#9C4327" }}>{item.tipoPublicacao === "DOAR" ? "DOAÇÃO" : "TROCA"}</span>
         </div>
@@ -1644,7 +1741,7 @@ function DetalhesItem({ go, notify, favorites, toggleFav, usuario, params }) {
             <Avatar label={item.doador.nome} />
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 13.5, color: INK }}>{item.doador.nome}</div>
-              <div style={{ fontSize: 11.5, color: INK_SOFT, display: "flex", alignItems: "center", gap: 4 }}><Stars value={item.doador.reputacaoScore} /> {(item.doador.reputacaoScore || 0).toFixed(1)}</div>
+              <div style={{ fontSize: 11.5, color: INK_SOFT, display: "flex", alignItems: "center", gap: 6 }}><Stars value={item.doador.reputacaoScore} /> {(item.doador.reputacaoScore || 0).toFixed(1)} <span style={{ color: onlineIds.has(item.doador.id) ? "#2D8A57" : INK_SOFT }}>{onlineIds.has(item.doador.id) ? "· online" : "· offline"}</span></div>
             </div>
             <ChevronRight size={16} color={INK_SOFT} />
           </div>
@@ -1856,7 +1953,7 @@ function Comunidades({ go, notify, usuario }) {
 }
 
 /* ---- FAVORITOS ---- */
-function Favoritos({ go, favorites, toggleFav }) {
+function Favoritos({ go, favorites, toggleFav, usuario, onlineIds }) {
   const list = Object.values(favorites);
   return (
     <div>
@@ -1866,7 +1963,7 @@ function Favoritos({ go, favorites, toggleFav }) {
           <EmptyState Icon={Heart} text="Você ainda não favoritou nenhum item. Toque no ❤ de um item para salvá-lo aqui." />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {list.map(it => <ItemCard key={it.id} item={it} favorite onFav={toggleFav} onClick={() => go("detalhesItem", { itemId: it.id })} />)}
+            {list.map(it => <ItemCard key={it.id} item={it} usuario={usuario} onlineIds={onlineIds} favorite onFav={toggleFav} onClick={() => go("detalhesItem", { itemId: it.id })} />)}
           </div>
         )}
       </div>
@@ -1960,7 +2057,7 @@ const SCREEN_LABELS = {
   homeDoador:"Home · Doador", cadastroItem:"Cadastro de item", gerenciarItens:"Gerenciar itens",
   chatDoador:"Chat", agendamentoDoador:"Agendamento", confirmDoacao:"Confirmação de doação",
   avaliarReceptor:"Avaliar receptor", dashboardImpacto:"Dashboard de impacto",
-  homeReceptor:"Home · Receptor", busca:"Busca", listaItens:"Lista de itens", mapaItens:"Mapa",
+  homeReceptor:"Home · Receptor", busca:"Busca", listaItens:"Lista de itens",
   detalhesItem:"Detalhes do item", solicitacao:"Solicitação", chatReceptor:"Chat",
   agendamentoReceptor:"Agendamento", confirmRecebimento:"Confirmação de recebimento",
   avaliarDoador:"Avaliar doador", historico:"Histórico", perfil:"Perfil", reputacao:"Reputação",
@@ -1968,7 +2065,7 @@ const SCREEN_LABELS = {
   notificacoes:"Notificações", moderacao:"Moderação",
 };
 
-const NAV_SCREENS_UNIFICADAS = ["homeDoador", "busca", "cadastroItem", "gerenciarItens", "perfil", "comunidades", "mapaItens", "favoritos", "listaItens"];
+const NAV_SCREENS_UNIFICADAS = ["homeDoador", "busca", "cadastroItem", "gerenciarItens", "perfil", "comunidades", "favoritos", "listaItens"];
 
 export default function RevivaApp() {
   const [nav, setNav] = useState({ screen: "splash", params: {} });
@@ -1978,6 +2075,7 @@ export default function RevivaApp() {
   });
   const [toast, setToast] = useState(null);
   const [usuario, setUsuario] = useState(null);
+  const [onlineIds, setOnlineIds] = useState(() => new Set());
   const usuarioRef = useRef(null);
   useEffect(() => { usuarioRef.current = usuario; }, [usuario]);
 
@@ -2041,6 +2139,39 @@ export default function RevivaApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!usuario || !getToken()) {
+      setOnlineIds(new Set());
+      return;
+    }
+    const client = new StompClient({
+      webSocketFactory: () => new SockJS(`${wsUrl()}?token=${encodeURIComponent(getToken() || "")}`),
+      reconnectDelay: 4000,
+      onConnect: () => {
+        client.subscribe("/topic/presence", frame => {
+          const evento = JSON.parse(frame.body);
+          setOnlineIds(atual => {
+            const proximo = new Set(atual);
+            if (evento.online) proximo.add(evento.usuarioId);
+            else proximo.delete(evento.usuarioId);
+            return proximo;
+          });
+        });
+        const enviarHeartbeat = () => {
+          if (!client.connected) return;
+          client.publish({ destination: "/app/presence/heartbeat", body: "{}" });
+        };
+        enviarHeartbeat();
+        client.__heartbeat = setInterval(enviarHeartbeat, 10000);
+      },
+    });
+    client.activate();
+    return () => {
+      if (client.__heartbeat) clearInterval(client.__heartbeat);
+      client.deactivate();
+    };
+  }, [usuario?.id]);
+
   const handleLogin = async (email, senha) => {
     const res = await api.login(email, senha);
     setToken(res.token);
@@ -2050,8 +2181,8 @@ export default function RevivaApp() {
     notify(`Bem-vindo(a) de volta, ${u?.nome?.split(" ")[0] || ""}!`);
   };
 
-  const handleRegister = async (nome, email, senha) => {
-    const res = await api.registrar(nome, email, senha);
+  const handleRegister = async (payload) => {
+    const res = await api.registrar(payload);
     setToken(res.token);
     await refreshUsuario();
     setHistory([]);
@@ -2092,18 +2223,17 @@ export default function RevivaApp() {
     case "onboarding": ScreenView = <Onboarding go={go} />; break;
     case "chooseProfile": ScreenView = <ChooseProfile go={go} setRole={setRole} />; break;
     case "homeDoador": ScreenView = <HomeDoador go={go} usuario={usuario} />; break;
-    case "cadastroItem": ScreenView = <CadastroItem go={go} notify={notify} params={params} />; break;
+    case "cadastroItem": ScreenView = <CadastroItem go={go} notify={notify} params={params} usuario={usuario} />; break;
     case "gerenciarItens": ScreenView = <GerenciarItens go={go} notify={notify} />; break;
     case "chatDoador": ScreenView = <Chat go={go} role="doador" notify={notify} params={params} usuario={usuario} />; break;
     case "agendamentoDoador": ScreenView = <Agendamento go={go} role="doador" notify={notify} params={params} />; break;
     case "confirmDoacao": ScreenView = <ConfirmDoacao go={go} notify={notify} params={params} refreshUsuario={refreshUsuario} />; break;
     case "avaliarReceptor": ScreenView = <Avaliar go={go} notify={notify} params={params} />; break;
     case "dashboardImpacto": ScreenView = <DashboardImpacto go={go} usuario={usuario} />; break;
-    case "homeReceptor": ScreenView = <HomeReceptor go={go} favorites={favorites} toggleFav={toggleFav} />; break;
-    case "busca": ScreenView = <Busca go={go} />; break;
-    case "listaItens": ScreenView = <ListaItens go={go} favorites={favorites} toggleFav={toggleFav} params={params} />; break;
-    case "mapaItens": ScreenView = <MapaItens go={go} />; break;
-    case "detalhesItem": ScreenView = <DetalhesItem go={go} notify={notify} favorites={favorites} toggleFav={toggleFav} usuario={usuario} params={params} />; break;
+    case "homeReceptor": ScreenView = <HomeReceptor go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} />; break;
+    case "busca": ScreenView = <Busca go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} />; break;
+    case "listaItens": ScreenView = <ListaItens go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={params} />; break;
+    case "detalhesItem": ScreenView = <DetalhesItem go={go} notify={notify} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={params} />; break;
     case "solicitacao": ScreenView = <Solicitacao go={go} notify={notify} params={params} />; break;
     case "chatReceptor": ScreenView = <Chat go={go} role="receptor" notify={notify} params={params} usuario={usuario} />; break;
     case "agendamentoReceptor": ScreenView = <Agendamento go={go} role="receptor" notify={notify} params={params} />; break;
@@ -2113,7 +2243,7 @@ export default function RevivaApp() {
     case "perfil": ScreenView = <Perfil go={go} usuario={usuario} onLogout={logout} />; break;
     case "reputacao": ScreenView = <Reputacao go={go} usuario={usuario} />; break;
     case "comunidades": ScreenView = <Comunidades go={go} notify={notify} usuario={usuario} />; break;
-    case "favoritos": ScreenView = <Favoritos go={go} favorites={favorites} toggleFav={toggleFav} />; break;
+    case "favoritos": ScreenView = <Favoritos go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} />; break;
     case "notificacoes": ScreenView = <Notificacoes go={go} role={role} />; break;
     case "moderacao": ScreenView = <Moderacao go={go} notify={notify} params={params} />; break;
     default: ScreenView = <div />;
@@ -2129,6 +2259,7 @@ export default function RevivaApp() {
     }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes favorite-pulse { 0% { transform: scale(1); } 45% { transform: scale(1.3); } 100% { transform: scale(1); } }
         * { box-sizing: border-box; }
         input::placeholder, textarea::placeholder { color: #B7BBAF; }
 

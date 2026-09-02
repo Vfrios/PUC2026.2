@@ -35,12 +35,20 @@ public class Usuario {
     @Column(nullable = false, unique = true)
     private String email;
 
+    // SQLite nao consegue adicionar uma coluna UNIQUE durante o ddl-auto=update.
+    // A unicidade tambem e validada no AuthController antes de salvar.
+    @Column
+    private String cpf;
+
     @Column(nullable = false)
     @JsonIgnore // nunca devolver o hash da senha nas respostas da API
     private String senhaHash;
 
     private String telefone;
     private String fotoUrl;
+    private String cep;
+    private String numero;
+    private String complemento;
 
     @Enumerated(EnumType.STRING)
     @Builder.Default

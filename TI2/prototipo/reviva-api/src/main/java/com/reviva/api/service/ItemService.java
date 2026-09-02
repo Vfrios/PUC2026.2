@@ -52,6 +52,9 @@ public class ItemService {
         item.setCategoria(req.categoria());
         item.setEstadoConservacao(req.estadoConservacao());
         item.setTipoPublicacao(req.tipoPublicacao());
+        if (req.cep() != null) item.setCep(req.cep());
+        if (req.numero() != null) item.setNumero(req.numero());
+        if (req.complemento() != null) item.setComplemento(req.complemento());
         if (req.bairro() != null) item.setBairro(req.bairro());
         if (req.cidade() != null) item.setCidade(req.cidade());
         if (req.uf() != null) item.setUf(req.uf());
@@ -86,6 +89,21 @@ public class ItemService {
         Item item = buscarDoProprioDoador(itemId, doador);
         item.setStatus(Item.StatusItem.REMOVIDO);
         return itemRepository.save(item);
+    }
+
+    @Transactional
+    public Item restaurar(String itemId, Usuario doador) {
+        Item item = buscarDoProprioDoador(itemId, doador);
+        if (item.getStatus() != Item.StatusItem.REMOVIDO && !estaExpirado(item)) {
+            throw new IllegalArgumentException("Este item ainda está ativo.");
+        }
+        item.setStatus(Item.StatusItem.ATIVO);
+        item.setExpiraEm(Instant.now().plus(DIAS_VALIDADE_ANUNCIO, ChronoUnit.DAYS));
+        return itemRepository.save(item);
+    }
+
+    private boolean estaExpirado(Item item) {
+        return item.getExpiraEm() != null && item.getExpiraEm().isBefore(Instant.now());
     }
 
     private Item buscarDoProprioDoador(String itemId, Usuario doador) {

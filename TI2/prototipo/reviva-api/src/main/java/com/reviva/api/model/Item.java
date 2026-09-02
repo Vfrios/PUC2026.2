@@ -52,6 +52,9 @@ public class Item {
 
     private Double latitude;
     private Double longitude;
+    private String cep;
+    private String numero;
+    private String complemento;
     private String bairro;
     private String cidade;
     private String uf;
