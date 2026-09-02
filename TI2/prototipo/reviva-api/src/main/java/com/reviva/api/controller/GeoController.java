@@ -23,6 +23,11 @@ public class GeoController {
         return geoService.buscarPorCep(cep);
     }
 
+    @GetMapping("/reverse")
+    public EnderecoResponse reverso(@RequestParam double lat, @RequestParam double lon) {
+        return geoService.buscarPorCoordenadas(lat, lon);
+    }
+
     @GetMapping("/estados")
     public List<EstadoResponse> estados() {
         return geoService.listarEstados();

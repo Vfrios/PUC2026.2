@@ -67,13 +67,19 @@ public class ItemController {
         return ItemResponse.from(itemService.buscarPorId(id));
     }
 
+    /** Cobre a edição do anúncio em "Gerenciar itens" — renova o prazo de validade. */
+    @PutMapping("/{id}")
+    public ItemResponse editar(@PathVariable String id, @RequestBody @Valid ItemRequest req, @AuthenticationPrincipal Usuario doador) {
+        return ItemResponse.from(itemService.editar(id, req, doador));
+    }
+
     @PostMapping("/{id}/doado")
-    public ItemResponse marcarComoDoado(@PathVariable String id) {
-        return ItemResponse.from(itemService.marcarComoDoado(id));
+    public ItemResponse marcarComoDoado(@PathVariable String id, @AuthenticationPrincipal Usuario doador) {
+        return ItemResponse.from(itemService.marcarComoDoado(id, doador));
     }
 
     @DeleteMapping("/{id}")
-    public ItemResponse remover(@PathVariable String id) {
-        return ItemResponse.from(itemService.remover(id));
+    public ItemResponse remover(@PathVariable String id, @AuthenticationPrincipal Usuario doador) {
+        return ItemResponse.from(itemService.remover(id, doador));
     }
 }

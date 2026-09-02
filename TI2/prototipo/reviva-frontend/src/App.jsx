@@ -6,7 +6,7 @@ import {
   Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap,
   UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles,
   ShieldCheck, ArrowLeftRight, ImagePlus,
-  LogOut, Loader2, UserPlus, Trash2,
+  LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2,
 } from "lucide-react";
 import { api, getToken, setToken, ApiError, wsUrl } from "./api.js";
 import { Client as StompClient } from "@stomp/stompjs";
@@ -656,19 +656,20 @@ function HomeDoador({ go, usuario }) {
   );
 }
 
-/* ---- CADASTRO DE ITEM ---- */
-function CadastroItem({ go, notify }) {
-  const [tipo, setTipo] = useState("DOAR");
-  const [cat, setCat] = useState("ROUPAS");
-  const [estado, setEstado] = useState("SEMINOVO");
-  const [titulo, setTitulo] = useState("");
-  const [descricao, setDescricao] = useState("");
+/* ---- CADASTRO DE ITEM (também usado para editar, quando params.item vem preenchido) ---- */
+function CadastroItem({ go, notify, params }) {
+  const itemEditando = params?.item || null;
+  const [tipo, setTipo] = useState(itemEditando?.tipoPublicacao || "DOAR");
+  const [cat, setCat] = useState(itemEditando?.categoria || "ROUPAS");
+  const [estado, setEstado] = useState(itemEditando?.estadoConservacao || "SEMINOVO");
+  const [titulo, setTitulo] = useState(itemEditando?.titulo || "");
+  const [descricao, setDescricao] = useState(itemEditando?.descricao || "");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
 
   // ---- Fotos (câmera ou galeria) — comprimidas no navegador e enviadas como
   // data URLs em fotosUrls (o backend já persiste isso no Item, ver model/Item.java) ----
-  const [fotos, setFotos] = useState([]); // array de data URLs, até 3
+  const [fotos, setFotos] = useState(itemEditando?.fotosUrls || []); // array de data URLs, até 3
   const [fotoEnviando, setFotoEnviando] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -693,9 +694,12 @@ function CadastroItem({ go, notify }) {
   const [cep, setCep] = useState("");
   const [cepBuscando, setCepBuscando] = useState(false);
   const [cepErro, setCepErro] = useState("");
-  const [endereco, setEndereco] = useState(null); // { logradouro, bairro, cidade, uf, latitude, longitude }
-  const [bairro, setBairro] = useState("");
-  const [cidade, setCidade] = useState("");
+  const [endereco, setEndereco] = useState(itemEditando ? {
+    logradouro: null, uf: itemEditando.uf, cidade: itemEditando.cidade, bairro: itemEditando.bairro,
+    latitude: itemEditando.latitude, longitude: itemEditando.longitude,
+  } : null); // { logradouro, bairro, cidade, uf, latitude, longitude }
+  const [bairro, setBairro] = useState(itemEditando?.bairro || "");
+  const [cidade, setCidade] = useState(itemEditando?.cidade || "");
   const cepDigits = cep.replace(/\D/g, "").slice(0, 8);
 
   const formatCep = (v) => {
@@ -730,7 +734,7 @@ function CadastroItem({ go, notify }) {
     if (!bairro.trim() || !cidade.trim()) { setErro("Informe o CEP ou preencha bairro e cidade."); return; }
     setLoading(true);
     try {
-      await api.criarItem({
+      const payload = {
         titulo: titulo.trim(),
         descricao: descricao.trim(),
         categoria: cat,
@@ -743,11 +747,18 @@ function CadastroItem({ go, notify }) {
         longitude: endereco?.longitude ?? null,
         impactoCo2Kg: CO2_ESTIMADO[cat] || 2,
         fotosUrls: fotos,
-      });
-      notify("Item publicado com sucesso 🎉");
-      go("homeDoador");
+      };
+      if (itemEditando) {
+        await api.editarItem(itemEditando.id, payload);
+        notify("Item atualizado com sucesso ✏️");
+        go(-1);
+      } else {
+        await api.criarItem(payload);
+        notify("Item publicado com sucesso 🎉");
+        go("homeDoador");
+      }
     } catch (e) {
-      setErro(e.message || "Não foi possível publicar o item.");
+      setErro(e.message || "Não foi possível salvar o item.");
     } finally {
       setLoading(false);
     }
@@ -755,7 +766,7 @@ function CadastroItem({ go, notify }) {
 
   return (
     <div>
-      <TopBar title="Cadastrar item" onBack={() => go("homeDoador")} />
+      <TopBar title={itemEditando ? "Editar item" : "Cadastrar item"} onBack={() => go(-1)} />
       <div style={{ padding: "0 20px" }}>
         <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 8 }}>
           {[0, 1, 2].map(i => {
@@ -827,7 +838,9 @@ function CadastroItem({ go, notify }) {
           />
           {cepBuscando && <Loader2 size={15} color={INK_SOFT} style={{ animation: "spin .8s linear infinite" }} />}
         </div>
-        <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 4 }}>Digite o CEP para preencher rua, bairro e cidade automaticamente.</div>
+        <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 4 }}>
+          {itemEditando ? "Deixe em branco para manter o endereço atual, ou digite um novo CEP para atualizá-lo." : "Digite o CEP para preencher rua, bairro e cidade automaticamente."}
+        </div>
         {cepErro && <div style={{ fontSize: 11.5, color: "#9C4327", marginTop: 4 }}>{cepErro}</div>}
 
         {endereco?.logradouro && (
@@ -855,7 +868,7 @@ function CadastroItem({ go, notify }) {
         {erro && <div style={{ marginTop: 12, fontSize: 12, color: "#9C4327", background: "#FBE8E0", padding: "8px 10px", borderRadius: 10 }}>{erro}</div>}
 
         <div style={{ marginTop: 18 }}>
-          <Button full loading={loading} onClick={submit}>Publicar item</Button>
+          <Button full loading={loading} onClick={submit}>{itemEditando ? "Salvar alterações" : "Publicar item"}</Button>
         </div>
       </div>
     </div>
@@ -899,9 +912,26 @@ function GerenciarItens({ go, notify }) {
     finally { setAcaoLoading(null); }
   };
 
+  // Confirmação rápida de doação: marca o item como doado e já atualiza o
+  // perfil do usuário (kg evitados, itens doados, pontos e selo — ver
+  // ItemService.marcarComoDoado no backend), sem precisar passar pelo fluxo
+  // completo de agendamento/QR Code.
+  const confirmarDoacao = async (item) => {
+    setAcaoLoading(item.id);
+    try {
+      await api.marcarItemComoDoado(item.id);
+      notify("Doação confirmada! Seu impacto foi atualizado. 🎉");
+      reload();
+    } catch (e) {
+      notify(e.message || "Não foi possível confirmar a doação.");
+    } finally {
+      setAcaoLoading(null);
+    }
+  };
+
   return (
     <div>
-      <TopBar title="Gerenciar itens" onBack={() => go("homeDoador")} />
+      <TopBar title="Gerenciar itens" onBack={() => go(-1)} />
       <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
         {loading && <Loading label="Buscando seus itens..." />}
         {error && <ErrorBox message={error} onRetry={reload} />}
@@ -921,6 +951,11 @@ function GerenciarItens({ go, notify }) {
                   <span style={{ fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 999, ...statusStyle(it.status) }}>{statusLabel[it.status] || it.status}</span>
                 </div>
                 <div style={{ fontSize: 12, color: INK_SOFT, marginTop: 6 }}>{relacionadas.length} solicitações recebidas</div>
+                <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 3 }}>
+                  Publicado em {new Date(it.publicadoEm).toLocaleDateString("pt-BR")}
+                  {it.expiraEm && <> · válido até {new Date(it.expiraEm).toLocaleDateString("pt-BR")}</>}
+                  {it.expirado && <span style={{ marginLeft: 6, fontWeight: 700, color: "#9C4327" }}>Expirado</span>}
+                </div>
               </div>
               {aberto && (
                 <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8, borderTop: "1px solid #F0EEE4", paddingTop: 10 }}>
@@ -946,7 +981,13 @@ function GerenciarItens({ go, notify }) {
                       <ChevronRight size={15} color="var(--role-primary-dark)" />
                     </div>
                   ))}
-                  {it.status !== "REMOVIDO" && (
+                  {(it.status === "ATIVO" || it.status === "EM_NEGOCIACAO") && (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Button small variant="ghost" icon={Pencil} onClick={() => go("cadastroItem", { item: it })}>Editar</Button>
+                      <Button small variant="primary" icon={CheckCircle2} loading={acaoLoading === it.id} onClick={() => confirmarDoacao(it)}>Item doado</Button>
+                    </div>
+                  )}
+                  {it.status !== "REMOVIDO" && it.status !== "DOADO" && (
                     <Button small variant="danger" icon={Trash2} loading={acaoLoading === it.id} onClick={() => remover(it)}>Remover anúncio</Button>
                   )}
                 </div>
@@ -1033,7 +1074,7 @@ function Chat({ go, role, notify, params, usuario }) {
   if (!solicitacaoId) {
     return (
       <div>
-        <TopBar title="Chat" onBack={() => go(role === "doador" ? "gerenciarItens" : "homeReceptor")} />
+        <TopBar title="Chat" onBack={() => go(-1)} />
         <EmptyState Icon={MessageCircle} text="Abra esta conversa a partir de uma solicitação aceita." />
       </div>
     );
@@ -1041,7 +1082,7 @@ function Chat({ go, role, notify, params, usuario }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <TopBar title={otherName || "Conversa"} onBack={() => go(role === "doador" ? "gerenciarItens" : "detalhesItem")} />
+      <TopBar title={otherName || "Conversa"} onBack={() => go(-1)} />
       <div style={{ padding: "0 16px 8px", display: "flex", alignItems: "center", gap: 8 }}>
         <Avatar label={otherName} size={30} />
         <div style={{ fontSize: 11.5, color: INK_SOFT }}>{itemTitulo}</div>
@@ -1127,7 +1168,7 @@ function Agendamento({ go, role, notify, params }) {
 function ConfirmDoacao({ go, notify, params, refreshUsuario }) {
   const { agendamento, otherName } = params || {};
   const [loading, setLoading] = useState(false);
-  if (!agendamento) return <div><TopBar title="Confirmação" onBack={() => go("homeDoador")} /><EmptyState Icon={QrCode} text="Nenhum agendamento em andamento." /></div>;
+  if (!agendamento) return <div><TopBar title="Confirmação" onBack={() => go(-1)} /><EmptyState Icon={QrCode} text="Nenhum agendamento em andamento." /></div>;
 
   const token = agendamento.solicitacao?.item?.qrCodeToken;
 
@@ -1172,7 +1213,7 @@ function ConfirmRecebimento({ go, notify, params, refreshUsuario }) {
   const { agendamento, otherName } = params || {};
   const [codigo, setCodigo] = useState("");
   const [loading, setLoading] = useState(false);
-  if (!agendamento) return <div><TopBar title="Confirmação" onBack={() => go("homeReceptor")} /><EmptyState Icon={QrCode} text="Nenhum agendamento em andamento." /></div>;
+  if (!agendamento) return <div><TopBar title="Confirmação" onBack={() => go(-1)} /><EmptyState Icon={QrCode} text="Nenhum agendamento em andamento." /></div>;
 
   const irParaAvaliacao = async () => {
     await refreshUsuario();
@@ -1279,7 +1320,7 @@ function DashboardImpacto({ go, usuario }) {
   const proximo = BADGES[idx + 1];
   return (
     <div>
-      <TopBar title="Meu impacto" onBack={() => go("homeDoador")} />
+      <TopBar title="Meu impacto" onBack={() => go(-1)} />
       <div style={{ padding: "0 20px" }}>
         <div style={{ display: "flex", justifyContent: "center", gap: 18, background: "#fff", border: "1px solid #EDEBE1", borderRadius: 20, padding: 18 }}>
           <ImpactRing pct={Math.min(1, kg / 100)} size={110} value={`${Math.round(kg)} kg`} label="resíduo evitado" />
@@ -1360,17 +1401,80 @@ function Busca({ go }) {
   const [q, setQ] = useState("");
   const [uf, setUf] = useState("");
   const [cidade, setCidade] = useState("");
+  const [localizando, setLocalizando] = useState(false);
+  const [localizacaoAuto, setLocalizacaoAuto] = useState(false);
+  const [localizacaoErro, setLocalizacaoErro] = useState("");
+  const qRef = useRef(q);
+  const pendingCidadeRef = useRef(null);
+  const autoBuscouRef = useRef(false);
+
+  useEffect(() => { qRef.current = q; }, [q]);
+
   const { data: estados } = useApiData(() => api.listarEstados(), []);
   const { data: cidades, loading: cidadesLoading } = useApiData(
     () => (uf ? api.listarCidades(uf) : Promise.resolve([])),
     [uf]
   );
 
-  const buscar = () => go("listaItens", { termo: q || undefined, uf: uf || undefined, cidade: cidade || undefined });
+  const buscar = (ufParam = uf, cidadeParam = cidade) =>
+    go("listaItens", { termo: q || undefined, uf: ufParam || undefined, cidade: cidadeParam || undefined });
+
+  // Detecta a localização automaticamente ao abrir a tela: pede a posição do
+  // navegador (GPS/Wi-Fi), converte em cidade/UF via reverse geocoding e já
+  // filtra os itens perto do usuário — sem precisar digitar ou selecionar
+  // nada. Se a permissão for negada ou o GPS falhar, a busca manual segue
+  // funcionando normalmente, sem travar a tela.
+  useEffect(() => {
+    if (!("geolocation" in navigator)) return;
+    setLocalizando(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await api.reverseGeo(pos.coords.latitude, pos.coords.longitude);
+          if (res?.uf) {
+            setUf(res.uf);
+            setLocalizacaoAuto(true);
+            if (res.cidade) {
+              pendingCidadeRef.current = res.cidade;
+            } else if (qRef.current.trim() === "") {
+              autoBuscouRef.current = true;
+              buscar(res.uf, "");
+            }
+          } else {
+            setLocalizacaoErro("Não foi possível detectar sua região automaticamente.");
+          }
+        } catch {
+          setLocalizacaoErro("Não foi possível detectar sua região automaticamente.");
+        } finally {
+          setLocalizando(false);
+        }
+      },
+      () => setLocalizando(false), // permissão negada ou indisponível: segue no fluxo manual, sem erro visível
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 10 * 60 * 1000 }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Quando a lista de cidades do estado detectado termina de carregar, seleciona
+  // a cidade encontrada pelo GPS e dispara a busca automaticamente (uma única vez,
+  // e só se o usuário ainda não tiver começado a digitar um termo por conta própria).
+  useEffect(() => {
+    if (!pendingCidadeRef.current || cidadesLoading || autoBuscouRef.current) return;
+    const alvo = pendingCidadeRef.current.toLowerCase();
+    const encontrada = (cidades || []).find(c => c.nome.toLowerCase() === alvo);
+    const cidadeFinal = encontrada ? encontrada.nome : "";
+    setCidade(cidadeFinal);
+    pendingCidadeRef.current = null;
+    if (qRef.current.trim() === "") {
+      autoBuscouRef.current = true;
+      buscar(uf, cidadeFinal);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cidades, cidadesLoading]);
 
   return (
     <div>
-      <TopBar title="Buscar" onBack={() => go("homeReceptor")} />
+      <TopBar title="Buscar" onBack={() => go(-1)} />
       <div style={{ padding: "0 20px" }}>
         <div style={{ ...fieldBox }}>
           <Search size={16} color={INK_SOFT} />
@@ -1378,11 +1482,22 @@ function Busca({ go }) {
         </div>
 
         <label style={fieldLabel}>Região</label>
+        {(localizando || localizacaoAuto || localizacaoErro) && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: localizacaoErro ? "#9C6B14" : "var(--role-primary-dark)", marginBottom: 6 }}>
+            {localizando ? (
+              <><Loader2 size={12} style={{ animation: "spin .8s linear infinite" }} /> Detectando sua localização...</>
+            ) : localizacaoErro ? (
+              <>{localizacaoErro}</>
+            ) : (
+              <><MapPin size={12} /> Região preenchida automaticamente pela sua localização</>
+            )}
+          </div>
+        )}
         <div style={{ display: "flex", gap: 8 }}>
           <div style={{ ...fieldBox, flex: 1 }}>
             <select
               value={uf}
-              onChange={e => { setUf(e.target.value); setCidade(""); }}
+              onChange={e => { setUf(e.target.value); setCidade(""); setLocalizacaoAuto(false); pendingCidadeRef.current = null; }}
               style={{ ...fieldInput, appearance: "none", cursor: "pointer" }}
             >
               <option value="">Estado</option>
@@ -1392,7 +1507,7 @@ function Busca({ go }) {
           <div style={{ ...fieldBox, flex: 1 }}>
             <select
               value={cidade}
-              onChange={e => setCidade(e.target.value)}
+              onChange={e => { setCidade(e.target.value); setLocalizacaoAuto(false); }}
               disabled={!uf || cidadesLoading}
               style={{ ...fieldInput, appearance: "none", cursor: uf ? "pointer" : "not-allowed" }}
             >
@@ -1404,9 +1519,9 @@ function Busca({ go }) {
 
         <SectionTitle>Sugestões</SectionTitle>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {["Roupas","Livros","Eletrônicos","Móveis","Cozinha"].map(s => <Chip key={s} onClick={() => go("listaItens", { termo: s })}>{s}</Chip>)}
+          {["Roupas","Livros","Eletrônicos","Móveis","Cozinha"].map(s => <Chip key={s} onClick={() => go("listaItens", { termo: s, uf: uf || undefined, cidade: cidade || undefined })}>{s}</Chip>)}
         </div>
-        <div style={{ marginTop: 16 }}><Button full onClick={buscar}>Buscar</Button></div>
+        <div style={{ marginTop: 16 }}><Button full onClick={() => buscar()}>Buscar</Button></div>
       </div>
     </div>
   );
@@ -1432,7 +1547,7 @@ function ListaItens({ go, favorites, toggleFav, params }) {
 
   return (
     <div>
-      <TopBar title={termo ? `Resultados: "${termo}"` : `Itens perto de você${tituloRegiao}`} onBack={() => go("homeReceptor")} right={<MapPin size={18} color={INK} onClick={() => setView("mapa")} style={{ cursor: "pointer" }} />} />
+      <TopBar title={termo ? `Resultados: "${termo}"` : `Itens perto de você${tituloRegiao}`} onBack={() => go(-1)} right={<MapPin size={18} color={INK} onClick={() => setView("mapa")} style={{ cursor: "pointer" }} />} />
       <div style={{ padding: "0 20px", display: "flex", gap: 8, marginBottom: 10 }}>
         <Chip active={!tipoFiltro} onClick={() => setTipoFiltro(null)}>Todos</Chip>
         <Chip active={tipoFiltro === "DOAR"} onClick={() => setTipoFiltro("DOAR")}>Doação</Chip>
@@ -1452,7 +1567,7 @@ function MapaItens({ go, setView, embedded }) {
   const { data: itens } = useApiData(() => api.listarItens(), []);
   return (
     <div style={{ height: embedded ? "auto" : "100%", display: "flex", flexDirection: "column" }}>
-      <TopBar title="Mapa de itens" onBack={() => embedded ? setView("lista") : go("homeReceptor")} />
+      <TopBar title="Mapa de itens" onBack={() => embedded ? setView("lista") : go(-1)} />
       <div style={{ margin: "0 20px", borderRadius: 20, overflow: "hidden", position: "relative", height: 380, background: "linear-gradient(135deg,#DCE7DA,#EFEBDD)" }}>
         <svg width="100%" height="100%" viewBox="0 0 300 380">
           {[...Array(9)].map((_,i)=><path key={i} d={`M ${i*35} 0 L ${i*35} 380`} stroke="#CBD6C7" strokeWidth="1"/>)}
@@ -1484,9 +1599,9 @@ function DetalhesItem({ go, notify, favorites, toggleFav, usuario, params }) {
   const { loading, error, data: item, reload } = useApiData(() => api.itemPorId(itemId), [itemId], { skip: !itemId });
   const [fotoAtiva, setFotoAtiva] = useState(0);
 
-  if (!itemId) return <div><TopBar title="Detalhes" onBack={() => go("listaItens")} /><EmptyState Icon={Search} text="Nenhum item selecionado." /></div>;
-  if (loading) return <div><TopBar title="Detalhes" onBack={() => go("listaItens")} /><Loading /></div>;
-  if (error) return <div><TopBar title="Detalhes" onBack={() => go("listaItens")} /><ErrorBox message={error} onRetry={reload} /></div>;
+  if (!itemId) return <div><TopBar title="Detalhes" onBack={() => go(-1)} /><EmptyState Icon={Search} text="Nenhum item selecionado." /></div>;
+  if (loading) return <div><TopBar title="Detalhes" onBack={() => go(-1)} /><Loading /></div>;
+  if (error) return <div><TopBar title="Detalhes" onBack={() => go(-1)} /><ErrorBox message={error} onRetry={reload} /></div>;
   if (!item) return null;
 
   const cat = CATS[item.categoria] || CATS.OUTROS;
@@ -1496,7 +1611,7 @@ function DetalhesItem({ go, notify, favorites, toggleFav, usuario, params }) {
 
   return (
     <div>
-      <TopBar title="Detalhes" onBack={() => go("listaItens")} right={<Share2 size={17} color={INK} />} />
+      <TopBar title="Detalhes" onBack={() => go(-1)} right={<Share2 size={17} color={INK} />} />
       <div style={{ padding: "0 20px" }}>
         <div style={{ height: 190, borderRadius: 20, background: "var(--role-soft)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
           {fotos.length > 0
@@ -1597,7 +1712,7 @@ function Historico({ go }) {
   const { loading, error, data: enviadas, reload } = useApiData(() => api.solicitacoesEnviadas(), []);
   return (
     <div>
-      <TopBar title="Histórico de solicitações" onBack={() => go("homeReceptor")} />
+      <TopBar title="Histórico de solicitações" onBack={() => go(-1)} />
       <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
         {loading && <Loading />}
         {error && <ErrorBox message={error} onRetry={reload} />}
@@ -1618,7 +1733,7 @@ function Historico({ go }) {
 function Perfil({ go, usuario, onLogout }) {
   return (
     <div>
-      <TopBar title="Perfil" onBack={() => go("homeDoador")} />
+      <TopBar title="Perfil" onBack={() => go(-1)} />
       <div style={{ padding: "0 20px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <Avatar label={usuario?.nome} size={64} tone="var(--role-primary)" />
@@ -1658,7 +1773,7 @@ function Reputacao({ go, usuario }) {
   const pontos = usuario?.pontos || 0;
   return (
     <div>
-      <TopBar title="Reputação e selos" onBack={() => go("perfil")} />
+      <TopBar title="Reputação e selos" onBack={() => go(-1)} />
       <div style={{ padding: "0 20px", textAlign: "center" }}>
         <ImpactRing pct={Math.min(1, (usuario?.reputacaoScore || 0) / 5)} size={100} value={(usuario?.reputacaoScore || 0).toFixed(1)} label="nota média" />
         <div style={{ fontSize: 12.5, color: INK_SOFT, marginTop: 8 }}>Score calculado a partir das avaliações recebidas nas suas trocas e doações.</div>
@@ -1702,7 +1817,7 @@ function Comunidades({ go, notify, usuario }) {
 
   return (
     <div>
-      <TopBar title="Comunidades" onBack={() => go("homeDoador")} right={<Bell size={18} color={INK} onClick={() => go("notificacoes")} style={{ cursor: "pointer" }} />} />
+      <TopBar title="Comunidades" onBack={() => go(-1)} right={<Bell size={18} color={INK} onClick={() => go("notificacoes")} style={{ cursor: "pointer" }} />} />
       <div style={{ padding: "0 20px" }}>
         <SectionTitle>Grupos</SectionTitle>
         {loading && <Loading />}
@@ -1745,7 +1860,7 @@ function Favoritos({ go, favorites, toggleFav }) {
   const list = Object.values(favorites);
   return (
     <div>
-      <TopBar title="Favoritos" onBack={() => go("homeReceptor")} />
+      <TopBar title="Favoritos" onBack={() => go(-1)} />
       <div style={{ padding: "0 20px" }}>
         {list.length === 0 ? (
           <EmptyState Icon={Heart} text="Você ainda não favoritou nenhum item. Toque no ❤ de um item para salvá-lo aqui." />
@@ -1767,7 +1882,7 @@ function Notificacoes({ go, role }) {
   };
   return (
     <div>
-      <TopBar title="Notificações" onBack={() => go(role === "doador" ? "homeDoador" : "homeReceptor")} />
+      <TopBar title="Notificações" onBack={() => go(-1)} />
       <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 8 }}>
         {loading && <Loading />}
         {error && <ErrorBox message={error} onRetry={reload} />}
@@ -1977,7 +2092,7 @@ export default function RevivaApp() {
     case "onboarding": ScreenView = <Onboarding go={go} />; break;
     case "chooseProfile": ScreenView = <ChooseProfile go={go} setRole={setRole} />; break;
     case "homeDoador": ScreenView = <HomeDoador go={go} usuario={usuario} />; break;
-    case "cadastroItem": ScreenView = <CadastroItem go={go} notify={notify} />; break;
+    case "cadastroItem": ScreenView = <CadastroItem go={go} notify={notify} params={params} />; break;
     case "gerenciarItens": ScreenView = <GerenciarItens go={go} notify={notify} />; break;
     case "chatDoador": ScreenView = <Chat go={go} role="doador" notify={notify} params={params} usuario={usuario} />; break;
     case "agendamentoDoador": ScreenView = <Agendamento go={go} role="doador" notify={notify} params={params} />; break;

@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -75,6 +76,12 @@ public class Item {
 
     @Builder.Default
     private Instant publicadoEm = Instant.now();
+
+    /** Prazo de validade do anúncio (padrão de 60 dias, igual à OLX). Ao editar
+     *  o item o prazo é renovado — ver ItemService.editar. Anúncios vencidos
+     *  saem da busca pública mas continuam visíveis em "Meus itens". */
+    @Builder.Default
+    private Instant expiraEm = Instant.now().plus(60, ChronoUnit.DAYS);
 
     public enum Categoria { ROUPAS, LIVROS, MOVEIS, INFANTIL, ELETRONICOS, COZINHA, OUTROS }
     public enum EstadoConservacao { NOVO, SEMINOVO, USADO }

@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static java.util.Map.entry;
+
 /**
  * Geolocalização a partir do CEP (não do CPF: CPF é dado pessoal sensível e
  * não existe API pública/legítima que devolva endereço a partir dele — isso
@@ -29,6 +31,19 @@ public class GeoService {
     private final RestClient restClient;
 
     private static final String IBGE_BASE = "https://servicodados.ibge.gov.br/api/v1/localidades";
+
+    // Nominatim devolve o nome por extenso do estado ("Minas Gerais"), mas os
+    // selects de Estado/Cidade da busca trabalham com a sigla (ver listarEstados
+    // acima e o value dos <option> no front) — esse mapa faz essa conversão.
+    private static final Map<String, String> NOME_ESTADO_PARA_UF = Map.ofEntries(
+            entry("Acre", "AC"), entry("Alagoas", "AL"), entry("Amapá", "AP"), entry("Amazonas", "AM"),
+            entry("Bahia", "BA"), entry("Ceará", "CE"), entry("Distrito Federal", "DF"), entry("Espírito Santo", "ES"),
+            entry("Goiás", "GO"), entry("Maranhão", "MA"), entry("Mato Grosso", "MT"), entry("Mato Grosso do Sul", "MS"),
+            entry("Minas Gerais", "MG"), entry("Pará", "PA"), entry("Paraíba", "PB"), entry("Paraná", "PR"),
+            entry("Pernambuco", "PE"), entry("Piauí", "PI"), entry("Rio de Janeiro", "RJ"), entry("Rio Grande do Norte", "RN"),
+            entry("Rio Grande do Sul", "RS"), entry("Rondônia", "RO"), entry("Roraima", "RR"), entry("Santa Catarina", "SC"),
+            entry("São Paulo", "SP"), entry("Sergipe", "SE"), entry("Tocantins", "TO")
+    );
 
     // Cache simples em memória: a lista de estados e municípios do IBGE
     // praticamente não muda, então não faz sentido bater na API pública a
@@ -113,6 +128,50 @@ public class GeoService {
             log.warn("Falha ao consultar municípios do IBGE para {}: {}", ufNormalizada, e.getMessage());
             throw new IllegalArgumentException("Não foi possível carregar os municípios de " + ufNormalizada + " agora");
         }
+    }
+
+    /** Geolocalização automática: a partir das coordenadas do GPS/navegador do
+     *  usuário (tela de Busca), descobre em qual cidade/UF ele está, para
+     *  pré-preencher a região e já filtrar os itens por perto sem digitação. */
+    @SuppressWarnings("unchecked")
+    public EnderecoResponse buscarPorCoordenadas(double latitude, double longitude) {
+        try {
+            Map<String, Object> resultado = restClient.get()
+                    .uri(uri -> uri.scheme("https").host("nominatim.openstreetmap.org").path("/reverse")
+                            .queryParam("format", "json")
+                            .queryParam("lat", latitude)
+                            .queryParam("lon", longitude)
+                            .queryParam("zoom", 10)
+                            .queryParam("addressdetails", 1)
+                            .build())
+                    .retrieve()
+                    .body(Map.class);
+
+            Map<String, Object> address = resultado != null ? (Map<String, Object>) resultado.get("address") : null;
+            if (address == null) {
+                throw new IllegalArgumentException("Não foi possível determinar sua localização");
+            }
+
+            String cidade = primeiroNaoNulo(address.get("city"), address.get("town"), address.get("village"),
+                    address.get("municipality"), address.get("county"));
+            String bairro = primeiroNaoNulo(address.get("suburb"), address.get("neighbourhood"));
+            String nomeEstado = (String) address.get("state");
+            String uf = nomeEstado != null ? NOME_ESTADO_PARA_UF.getOrDefault(nomeEstado, "") : "";
+
+            return new EnderecoResponse(null, null, bairro, cidade, uf, latitude, longitude);
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Falha ao reverse-geocodificar {}/{}: {}", latitude, longitude, e.getMessage());
+            throw new IllegalArgumentException("Não foi possível determinar sua localização agora");
+        }
+    }
+
+    private String primeiroNaoNulo(Object... valores) {
+        for (Object v : valores) {
+            if (v instanceof String s && !s.isBlank()) return s;
+        }
+        return null;
     }
 
     /** Best-effort: se o geocoding falhar, devolvemos o endereço mesmo assim sem lat/long. */

@@ -19,6 +19,7 @@ public interface ItemRepository extends JpaRepository<Item, String> {
     @Query("""
            select i from Item i
            where i.status = 'ATIVO'
+             and (i.expiraEm is null or i.expiraEm > CURRENT_TIMESTAMP)
              and (:categoria is null or i.categoria = :categoria)
              and (:tipo is null or i.tipoPublicacao = :tipo)
              and (:termo is null or lower(i.titulo) like lower(concat('%', :termo, '%'))

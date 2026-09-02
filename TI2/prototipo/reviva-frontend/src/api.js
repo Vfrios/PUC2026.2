@@ -104,6 +104,9 @@ export const api = {
   // sem API pública legítima de endereço).
   buscarCep: (cep) => request(`/api/geo/cep/${cep.replace(/\D/g, "")}`, { auth: false }),
 
+  // Geolocalização automática (tela de Busca): coordenadas do navegador -> cidade/UF.
+  reverseGeo: (latitude, longitude) => request("/api/geo/reverse", { auth: false, params: { lat: latitude, lon: longitude } }),
+
   /* ---------------- Regiões (IBGE) — selects de Estado/Cidade na busca ---------------- */
   listarEstados: () => request("/api/geo/estados", { auth: false }),
 
@@ -118,6 +121,8 @@ export const api = {
   meusItens: () => request("/api/itens/meus"),
 
   criarItem: (payload) => request("/api/itens", { method: "POST", body: payload }),
+
+  editarItem: (id, payload) => request(`/api/itens/${id}`, { method: "PUT", body: payload }),
 
   marcarItemComoDoado: (id) => request(`/api/itens/${id}/doado`, { method: "POST" }),
 

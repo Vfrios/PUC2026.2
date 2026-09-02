@@ -23,7 +23,9 @@ public record ItemResponse(
         String uf,
         Double impactoCo2Kg,
         List<String> fotosUrls,
-        Instant publicadoEm
+        Instant publicadoEm,
+        Instant expiraEm,
+        boolean expirado
 ) {
     public static ItemResponse from(Item i) {
         if (i == null) return null;
@@ -43,7 +45,9 @@ public record ItemResponse(
                 i.getUf(),
                 i.getImpactoCo2Kg(),
                 i.getFotosUrls(),
-                i.getPublicadoEm()
+                i.getPublicadoEm(),
+                i.getExpiraEm(),
+                i.getExpiraEm() != null && i.getExpiraEm().isBefore(Instant.now())
         );
     }
 
