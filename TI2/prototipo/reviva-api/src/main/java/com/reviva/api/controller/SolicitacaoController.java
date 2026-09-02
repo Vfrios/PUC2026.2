@@ -3,7 +3,6 @@ package com.reviva.api.controller;
 import com.reviva.api.dto.SolicitacaoRequest;
 import com.reviva.api.dto.SolicitacaoResponse;
 import com.reviva.api.model.Item;
-import com.reviva.api.model.Solicitacao;
 import com.reviva.api.model.Usuario;
 import com.reviva.api.repository.ItemRepository;
 import com.reviva.api.repository.SolicitacaoRepository;
@@ -35,24 +34,17 @@ public class SolicitacaoController {
         return SolicitacaoResponse.from(solicitacaoService.solicitar(item, receptor, req.mensagem()));
     }
 
-    @PostMapping("/{id}/aceitar")
-    public SolicitacaoResponse aceitar(@PathVariable String id) {
-        Solicitacao s = solicitacaoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Solicitação não encontrada"));
-        return SolicitacaoResponse.from(solicitacaoService.aceitar(s));
-    }
-
-    @PostMapping("/{id}/recusar")
-    public SolicitacaoResponse recusar(@PathVariable String id) {
-        Solicitacao s = solicitacaoRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Solicitação não encontrada"));
-        return SolicitacaoResponse.from(solicitacaoService.recusar(s));
-    }
-
-    /** Solicitações recebidas em todos os itens publicados pelo usuário logado. */
+    /** Conversas em todos os itens publicados pelo usuário logado. */
     @GetMapping("/recebidas")
     public List<SolicitacaoResponse> recebidas(@AuthenticationPrincipal Usuario doador) {
         return SolicitacaoResponse.from(solicitacaoRepository.findByItem_DoadorOrderByCriadaEmDesc(doador));
+    }
+
+    /** Caixa de mensagens: inclui conversas iniciadas ou recebidas pelo usuário. */
+    @GetMapping("/conversas")
+    public List<SolicitacaoResponse> conversas(@AuthenticationPrincipal Usuario usuario) {
+        return SolicitacaoResponse.from(
+                solicitacaoRepository.findByItem_DoadorOrReceptorOrderByCriadaEmDesc(usuario, usuario));
     }
 
     /** Solicitações que o usuário logado enviou para itens de outros. */

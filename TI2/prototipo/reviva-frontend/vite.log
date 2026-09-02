@@ -6,3 +6,36 @@
   VITE v5.4.21  ready in 985 ms
 
   ➜  Local:   http://127.0.0.1:5173/
+18:02:13 [vite] ✨ new dependencies optimized: leaflet, react-leaflet
+18:02:13 [vite] ✨ optimized dependencies changed. reloading
+18:02:52 [vite] hmr update /src/screens/tradeScreens.jsx
+18:04:38 [vite] hmr update /src/screens/discoveryScreens.jsx
+18:07:09 [vite] hmr update /src/index.css
+18:10:17 [vite] hmr update /src/index.css
+18:10:19 [vite] hmr update /src/index.css
+18:12:52 [vite] hmr update /src/App.jsx, /src/screens/discoveryScreens.jsx, /src/screens/authScreens.jsx, /src/screens/shared.jsx, /src/screens/accountScreens.jsx, /src/screens/itemScreens.jsx, /src/screens/tradeScreens.jsx
+18:12:52 [vite] hmr update /src/screens/tradeScreens.jsx
+18:12:52 [vite] hmr update /src/App.jsx
+18:12:53 [vite] hmr invalidate /src/screens/shared.jsx Could not Fast Refresh ("BADGES" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+18:12:53 [vite] hmr update /src/App.jsx, /src/screens/discoveryScreens.jsx, /src/screens/authScreens.jsx, /src/screens/accountScreens.jsx, /src/screens/itemScreens.jsx, /src/screens/tradeScreens.jsx
+18:13:44 [vite] hmr update /src/screens/itemScreens.jsx
+18:14:04 [vite] hmr update /src/screens/itemScreens.jsx
+18:14:17 [vite] hmr update /src/screens/itemScreens.jsx
+18:14:37 [vite] hmr update /src/screens/itemScreens.jsx
+18:14:43 [vite] hmr update /src/screens/itemScreens.jsx
+18:16:04 [vite] hmr update /src/App.jsx, /src/screens/discoveryScreens.jsx, /src/screens/authScreens.jsx, /src/screens/shared.jsx, /src/screens/accountScreens.jsx, /src/screens/itemScreens.jsx, /src/screens/tradeScreens.jsx
+18:16:04 [vite] hmr update /src/screens/discoveryScreens.jsx
+18:16:04 [vite] hmr update /src/screens/tradeScreens.jsx
+18:16:04 [vite] hmr update /src/screens/discoveryScreens.jsx
+18:16:06 [vite] hmr invalidate /src/screens/shared.jsx Could not Fast Refresh ("BADGES" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+18:16:06 [vite] hmr update /src/App.jsx, /src/screens/discoveryScreens.jsx, /src/screens/authScreens.jsx, /src/screens/accountScreens.jsx, /src/screens/itemScreens.jsx, /src/screens/tradeScreens.jsx
+18:17:48 [vite] hmr update /src/screens/tradeScreens.jsx
+18:17:48 [vite] hmr update /src/screens/discoveryScreens.jsx
+18:17:48 [vite] hmr update /src/screens/tradeScreens.jsx
+18:17:48 [vite] hmr update /src/App.jsx, /src/screens/discoveryScreens.jsx, /src/screens/authScreens.jsx, /src/screens/shared.jsx, /src/screens/accountScreens.jsx, /src/screens/itemScreens.jsx, /src/screens/tradeScreens.jsx
+18:17:48 [vite] hmr update /src/screens/itemScreens.jsx
+18:17:48 [vite] hmr update /src/App.jsx
+18:17:50 [vite] hmr invalidate /src/screens/shared.jsx Could not Fast Refresh ("BADGES" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+18:17:50 [vite] hmr update /src/App.jsx, /src/screens/discoveryScreens.jsx, /src/screens/authScreens.jsx, /src/screens/accountScreens.jsx, /src/screens/itemScreens.jsx, /src/screens/tradeScreens.jsx
+18:24:07 [vite] hmr update /src/index.css
+18:24:54 [vite] hmr update /src/index.css

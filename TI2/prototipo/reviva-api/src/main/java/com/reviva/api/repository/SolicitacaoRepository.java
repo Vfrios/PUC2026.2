@@ -17,4 +17,7 @@ public interface SolicitacaoRepository extends JpaRepository<Solicitacao, String
 
     /** Solicitações enviadas pelo receptor. */
     List<Solicitacao> findByReceptorOrderByCriadaEmDesc(Usuario receptor);
+
+    /** Conversas dos dois lados para a caixa de mensagens. */
+    List<Solicitacao> findByItem_DoadorOrReceptorOrderByCriadaEmDesc(Usuario doador, Usuario receptor);
 }

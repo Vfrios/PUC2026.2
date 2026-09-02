@@ -122,8 +122,7 @@ exception/    Tratamento global de erros (JSON padronizado)
 | Gerenciar Itens                 | `GET /api/itens/meus`, `GET /api/solicitacoes/recebidas`, `DELETE /api/itens/{id}` |
 | Busca / Lista / Mapa de Itens   | `GET /api/itens?categoria=&tipo=&termo=`                  |
 | Detalhes do Item                | `GET /api/itens/{id}`                                     |
-| Solicitação de Item             | `POST /api/solicitacoes`                                   |
-| Aceitar / Recusar solicitação   | `POST /api/solicitacoes/{id}/aceitar`, `.../recusar`       |
+| Conversa / Inbox                | `POST /api/solicitacoes`, `GET /api/solicitacoes/conversas` |
 | Chat                            | `GET/POST /api/solicitacoes/{id}/mensagens`                |
 | Agendamento                     | `POST /api/agendamentos`                                    |
 | Confirmação (Doação/Recebimento)| `POST /api/agendamentos/{id}/confirmar-doador`, `.../confirmar-receptor`, `.../confirmar-qrcode?token=` |

@@ -32,6 +32,9 @@ public class AgendamentoService {
 
     @Transactional
     public Agendamento agendar(Solicitacao solicitacao, Instant dataHora, String local) {
+        Agendamento existente = agendamentoRepository.findBySolicitacaoId(solicitacao.getId()).orElse(null);
+        if (existente != null) return existente;
+
         Agendamento agendamento = Agendamento.builder()
                 .solicitacao(solicitacao)
                 .dataHora(dataHora)

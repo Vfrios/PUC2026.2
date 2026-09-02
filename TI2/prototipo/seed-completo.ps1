@@ -80,10 +80,7 @@ Write-Host "`nCriando fluxo completo (solicitação -> chat -> agendamento -> av
 $solicitacao = Post "/api/solicitacoes" @{ itemId = $itemMarinaIds[0]; mensagem = "Oi! Ainda está disponível?" } $tCarlos
 $solicitacaoId = $solicitacao.id
 
-# ---- 4. Marina (doadora) aceita ----
-Post "/api/solicitacoes/$solicitacaoId/aceitar" @{} $tMarina | Out-Null
-
-# ---- 5. Trocam mensagens no chat ----
+# ---- 4. Trocam mensagens no chat ----
 Post "/api/solicitacoes/$solicitacaoId/mensagens" @{ texto = "Oi! Sim, ainda está disponível :)" } $tMarina | Out-Null
 Post "/api/solicitacoes/$solicitacaoId/mensagens" @{ texto = "Perfeito, quando posso buscar?" } $tCarlos | Out-Null
 Post "/api/solicitacoes/$solicitacaoId/mensagens" @{ texto = "Pode ser amanhã de manhã!" } $tMarina | Out-Null

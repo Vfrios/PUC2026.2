@@ -4,7 +4,6 @@ import com.reviva.api.dto.PresencaEvent;
 import com.reviva.api.security.JwtHandshakeInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
-import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
@@ -24,8 +23,7 @@ public class PresencaController {
     private final Set<String> sessoesAtivas = ConcurrentHashMap.newKeySet();
 
     @MessageMapping("/presence/heartbeat")
-    public void heartbeat(Message<?> message) {
-        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
+    public void heartbeat(StompHeaderAccessor accessor) {
         String sessaoId = accessor.getSessionId();
         String usuarioId = usuarioId(accessor);
         if (sessaoId == null || usuarioId == null) return;

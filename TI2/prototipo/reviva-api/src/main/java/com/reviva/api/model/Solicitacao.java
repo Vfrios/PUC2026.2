@@ -11,8 +11,8 @@ import lombok.ToString;
 import java.time.Instant;
 
 /**
- * Solicitação de um Receptor por um Item publicado por um Doador.
- * Ao ser aceita, habilita o Chat e, em seguida, o Agendamento.
+ * Conversa iniciada por um usuário interessado em um item publicado.
+ * A criação já habilita o Chat e, em seguida, o Agendamento.
  */
 @Entity
 @Table(name = "solicitacoes")

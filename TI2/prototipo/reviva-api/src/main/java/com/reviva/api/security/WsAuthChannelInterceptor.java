@@ -27,7 +27,8 @@ public class WsAuthChannelInterceptor implements ChannelInterceptor {
 
         if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
             String destino = accessor.getDestination();
-            String usuarioId = (String) accessor.getSessionAttributes().get(JwtHandshakeInterceptor.ATTR_USUARIO_ID);
+            var atributos = accessor.getSessionAttributes();
+            String usuarioId = atributos == null ? null : (String) atributos.get(JwtHandshakeInterceptor.ATTR_USUARIO_ID);
 
             if (destino == null || usuarioId == null) {
                 throw new IllegalArgumentException("Inscrição não permitida.");

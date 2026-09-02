@@ -134,13 +134,11 @@ export const api = {
   solicitar: (itemId, mensagem) =>
     request("/api/solicitacoes", { method: "POST", body: { itemId, mensagem } }),
 
-  aceitarSolicitacao: (id) => request(`/api/solicitacoes/${id}/aceitar`, { method: "POST" }),
-
-  recusarSolicitacao: (id) => request(`/api/solicitacoes/${id}/recusar`, { method: "POST" }),
-
   solicitacoesRecebidas: () => request("/api/solicitacoes/recebidas"),
 
   solicitacoesEnviadas: () => request("/api/solicitacoes/enviadas"),
+
+  conversas: () => request("/api/solicitacoes/conversas"),
 
   /* ---------------- Chat (mensagens por solicitação) ---------------- */
   listarMensagens: (solicitacaoId) => request(`/api/solicitacoes/${solicitacaoId}/mensagens`),
