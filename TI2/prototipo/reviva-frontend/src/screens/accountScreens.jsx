@@ -197,20 +197,46 @@ function Favoritos({ go, favorites, toggleFav, usuario, onlineIds }) {
 /* ---- NOTIFICAÇÕES ---- */
 function Notificacoes({ go, role }) {
   const { loading, error, data: notificacoes, reload } = useApiData(() => api.notificacoes(), []);
-  const marcar = async (n) => {
-    try { await api.marcarNotificacaoLida(n.id); reload(); } catch {}
+  const [acao, setAcao] = useState(false);
+  const marcarEAbrir = async (n) => {
+    try {
+      await api.marcarNotificacaoLida(n.id);
+      if (n.tipo === "CHAT" && n.solicitacao?.id) {
+        go("chatDoador", {
+          solicitacaoId: n.solicitacao.id,
+          otherName: n.solicitacao.receptor?.nome,
+          itemTitulo: n.solicitacao.item?.titulo,
+          itemId: n.solicitacao.item?.id,
+        });
+        return;
+      }
+      reload();
+    } catch {}
+  };
+  const limpar = async (expiradas = false) => {
+    setAcao(true);
+    try {
+      if (expiradas) await api.excluirNotificacoesExpiradas();
+      else await api.limparNotificacoes();
+      reload();
+    } catch {}
+    finally { setAcao(false); }
   };
   return (
     <div>
       <TopBar title="Notificações" onBack={() => go(-1)} />
       <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+        {!loading && !error && (notificacoes || []).length > 0 && <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+          <Button small variant="ghost" loading={acao} onClick={() => limpar(false)}>Limpar todas</Button>
+          <Button small variant="soft" loading={acao} onClick={() => limpar(true)}>Excluir expiradas</Button>
+        </div>}
         {loading && <Loading />}
         {error && <ErrorBox message={error} onRetry={reload} />}
         {!loading && !error && (notificacoes || []).length === 0 && <EmptyState Icon={Bell} text="Nenhuma notificação por aqui ainda." />}
         {(notificacoes || []).map(n => {
           const Icon = NOTIF_ICONS[n.tipo] || Bell;
           return (
-            <div key={n.id} onClick={() => marcar(n)} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: n.lida ? "#fff" : "var(--role-soft)", border: "1px solid #EDEBE1", borderRadius: 14, padding: 12, cursor: "pointer" }}>
+            <div key={n.id} onClick={() => marcarEAbrir(n)} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: n.lida ? "#fff" : "var(--role-soft)", border: "1px solid #EDEBE1", borderRadius: 14, padding: 12, cursor: "pointer" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Icon size={16} color="var(--role-primary-dark)" />
               </div>

@@ -61,6 +61,7 @@ public class ItemService {
         if (req.latitude() != null) item.setLatitude(req.latitude());
         if (req.longitude() != null) item.setLongitude(req.longitude());
         if (req.impactoCo2Kg() != null) item.setImpactoCo2Kg(req.impactoCo2Kg());
+        if (req.pesoKg() != null) item.setPesoKg(req.pesoKg());
         if (req.fotosUrls() != null) item.setFotosUrls(req.fotosUrls());
         item.setExpiraEm(Instant.now().plus(DIAS_VALIDADE_ANUNCIO, ChronoUnit.DAYS));
         return itemRepository.save(item);
@@ -77,7 +78,7 @@ public class ItemService {
             item.setStatus(Item.StatusItem.DOADO);
             Usuario donoAtualizado = item.getDoador();
             donoAtualizado.setItensDoados(donoAtualizado.getItensDoados() + 1);
-            donoAtualizado.setKgResiduoEvitado(donoAtualizado.getKgResiduoEvitado() + (item.getImpactoCo2Kg() != null ? item.getImpactoCo2Kg() : 0));
+            donoAtualizado.setKgResiduoEvitado(donoAtualizado.getKgResiduoEvitado() + (item.getPesoKg() != null ? item.getPesoKg() : (item.getImpactoCo2Kg() != null ? item.getImpactoCo2Kg() : 0)));
             usuarioRepository.save(donoAtualizado);
             pontuacaoService.adicionar(donoAtualizado, PontuacaoService.PONTOS_DOACAO_CONCLUIDA);
         }

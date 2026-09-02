@@ -39,7 +39,7 @@ public class SolicitacaoService {
 
         notificacaoService.notificar(item.getDoador(),
                 receptor.getNome() + " enviou uma mensagem sobre \"" + item.getTitulo() + "\"",
-                Notificacao.Tipo.CHAT);
+            Notificacao.Tipo.CHAT, solicitacao);
 
         return solicitacao;
     }

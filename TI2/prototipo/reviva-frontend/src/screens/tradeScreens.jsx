@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import L from "leaflet";
-import { MapContainer, Marker, TileLayer } from "react-leaflet";
+import { MapContainer, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { api, getToken, setToken, ApiError, wsUrl } from "../api.js";
 import { Client as StompClient } from "@stomp/stompjs";
@@ -12,13 +11,6 @@ const dataAtual = new Date();
 const doisDigitos = valor => String(valor).padStart(2, "0");
 const dataLocalAtual = `${dataAtual.getFullYear()}-${doisDigitos(dataAtual.getMonth() + 1)}-${doisDigitos(dataAtual.getDate())}`;
 const horaLocalAtual = `${doisDigitos(dataAtual.getHours())}:${doisDigitos(dataAtual.getMinutes())}`;
-
-const locationPin = L.divIcon({
-  className: "reviva-location-pin",
-  html: "<span></span>",
-  iconSize: [24, 32],
-  iconAnchor: [12, 31],
-});
 
 function LocationMessage({ latitude, longitude, horario }) {
   const lat = Number(latitude);
@@ -51,7 +43,6 @@ function LocationMessage({ latitude, longitude, horario }) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="© OpenStreetMap"
           />
-          <Marker position={[lat, lng]} icon={locationPin} />
         </MapContainer>
       </div>
       <div className="location-message-details">
@@ -496,7 +487,7 @@ function DashboardImpacto({ go, usuario }) {
       <TopBar title="Meu impacto" onBack={() => go(-1)} />
       <div style={{ padding: "0 20px" }}>
         <div style={{ display: "flex", justifyContent: "center", gap: 18, background: "#fff", border: "1px solid #EDEBE1", borderRadius: 20, padding: 18 }}>
-          <ImpactRing pct={Math.min(1, kg / 100)} size={110} value={`${Math.round(kg)} kg`} label="resíduo evitado" />
+          <ImpactRing pct={Math.min(1, kg / 100)} size={110} value={`${kg.toFixed(1)} kg`} label="material reutilizado" />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 12 }}>
           <StatBox value={itens} label="itens doados" Icon={Gift} />
@@ -504,6 +495,9 @@ function DashboardImpacto({ go, usuario }) {
           <StatBox value={(usuario?.reputacaoScore || 0).toFixed(1)} label="nota média" Icon={Star} />
         </div>
         <SectionTitle>Selo de impacto</SectionTitle>
+        <div style={{ background: "var(--role-soft)", borderRadius: 14, padding: 12, fontSize: 12, lineHeight: 1.5, color: "var(--role-primary-dark)" }}>
+          Cada quilo representa material que ganhou uma nova vida em vez de ser descartado. Essa métrica acompanha a ODS 12, de consumo e produção responsáveis.
+        </div>
         <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6 }}>
           {BADGES.map((b, i) => (
             <div key={b.tier} style={{ minWidth: 78, textAlign: "center", opacity: i <= idx ? 1 : 0.4 }}>

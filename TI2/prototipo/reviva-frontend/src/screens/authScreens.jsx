@@ -190,7 +190,7 @@ function Onboarding({ go }) {
   const slides = [
     { Icon: Gift, title: "Doe em poucos toques", text: "Fotografe, descreva e publique. Alguém perto de você pode precisar exatamente disso." },
     { Icon: ArrowLeftRight, title: "Doe ou troque", text: "Escolha entre doação simples ou troca por outro item que você precise." },
-    { Icon: Leaf, title: "Veja seu impacto", text: "Acompanhe kg de resíduo evitado, pessoas ajudadas e conquiste selos." },
+    { Icon: Leaf, title: "Veja seu impacto", text: "Acompanhe os quilos de materiais reutilizados, pessoas ajudadas e conquiste selos." },
   ];
   const s = slides[step];
   return (

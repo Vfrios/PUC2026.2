@@ -21,5 +21,6 @@ public record ItemRequest(
         String cidade,
         String uf,
         Double impactoCo2Kg,
+        Double pesoKg,
         List<String> fotosUrls
 ) {}

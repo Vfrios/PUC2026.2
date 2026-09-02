@@ -81,7 +81,7 @@ public class AgendamentoService {
             agendamento.setStatus(Agendamento.StatusAgendamento.CONCLUIDO);
             Item item = agendamento.getSolicitacao().getItem();
             item.setStatus(Item.StatusItem.DOADO);
-            atualizarImpactoEBadge(item.getDoador(), item.getImpactoCo2Kg());
+            atualizarImpactoEBadge(item.getDoador(), item.getPesoKg() != null ? item.getPesoKg() : item.getImpactoCo2Kg());
             pontuacaoService.adicionar(item.getDoador(), PontuacaoService.PONTOS_DOACAO_CONCLUIDA);
             pontuacaoService.adicionar(agendamento.getSolicitacao().getReceptor(), PontuacaoService.PONTOS_RECEBIMENTO_CONCLUIDO);
             agendamento = agendamentoRepository.save(agendamento);

@@ -45,6 +45,7 @@ public class ItemController {
                 .cidade(req.cidade())
                 .uf(req.uf())
                 .impactoCo2Kg(req.impactoCo2Kg())
+                .pesoKg(req.pesoKg())
                 .fotosUrls(req.fotosUrls())
                 .build();
         return ItemResponse.from(itemService.publicar(item));

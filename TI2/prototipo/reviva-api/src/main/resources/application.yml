@@ -15,6 +15,8 @@ reviva:
   jwt:
     secret: ${JWT_SECRET:troque-esta-chave-em-producao-para-algo-bem-longo-e-aleatorio}
     expiration-minutes: 1440
+  notificacoes:
+    expiracao-dias: ${NOTIFICACOES_EXPIRACAO_DIAS:30}
 
 server:
   port: 8080

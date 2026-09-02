@@ -168,6 +168,10 @@ export const api = {
 
   marcarNotificacaoLida: (id) => request(`/api/notificacoes/${id}/lida`, { method: "POST" }),
 
+  limparNotificacoes: () => request("/api/notificacoes", { method: "DELETE" }),
+
+  excluirNotificacoesExpiradas: () => request("/api/notificacoes/expiradas", { method: "DELETE" }),
+
   /* ---------------- Comunidades ---------------- */
   comunidades: () => request("/api/comunidades", { auth: false }),
 

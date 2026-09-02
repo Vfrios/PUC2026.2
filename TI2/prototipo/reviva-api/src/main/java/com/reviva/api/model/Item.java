@@ -62,6 +62,9 @@ public class Item {
     /** Estimativa de kg de resíduo evitado ao reaproveitar este item. */
     private Double impactoCo2Kg;
 
+    /** Peso aproximado do item, usado como medida principal de material reutilizado. */
+    private Double pesoKg;
+
     // fetch = EAGER: por padrão @ElementCollection é LAZY. Com
     // spring.jpa.open-in-view=false a sessão do Hibernate fecha antes do
     // Jackson serializar a resposta, e tentar ler essa lista lazy fora da

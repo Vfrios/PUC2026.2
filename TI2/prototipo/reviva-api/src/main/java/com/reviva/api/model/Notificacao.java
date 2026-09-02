@@ -24,6 +24,10 @@ public class Notificacao {
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
 
+    @ManyToOne
+    @JoinColumn(name = "solicitacao_id")
+    private Solicitacao solicitacao;
+
     @Column(nullable = false)
     private String titulo;
 

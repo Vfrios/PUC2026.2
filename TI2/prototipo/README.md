@@ -1,8 +1,8 @@
 # Reviva — Doação e Troca de Objetos
 
-Projeto completo: **backend Java 21 + Spring Boot 3** e **frontend React (Vite)**
-já conversando de verdade um com o outro, com banco de dados real (H2 em
-desenvolvimento, PostgreSQL pronto para produção).
+Projeto completo com **backend Java 21 + Spring Boot 3** e **frontend React (Vite)**,
+conectados por REST e WebSocket, usando SQLite em desenvolvimento e PostgreSQL
+preparado para producao.
 
 ```
 reviva-projeto/
@@ -10,153 +10,242 @@ reviva-projeto/
 └── reviva-frontend/     ← frontend React (Vite)
 ```
 
-## O que mudou nesta versão (integração real)
+## Visao geral
 
-Esta versão corrige/adiciona o que faltava para o front e o back conversarem
-de verdade:
+O projeto e dividido em dois aplicativos:
 
-**Backend**
-- **Bug de referência circular corrigido**: `Usuario.itensPublicados` agora é
-  ignorado na serialização JSON (`@JsonIgnore`) — sem isso, `GET /api/itens`
-  travava ou devolvia um JSON gigante e recursivo. Use `GET /api/itens/meus`
-  para listar os itens de um usuário.
-- **Senha nunca mais vaza pela API**: `Usuario.senhaHash` agora tem `@JsonIgnore`.
-- **Endpoint que faltava**: `GET /api/itens/{id}` (a tela de Detalhes do Item
-  dependia dele e ele não existia).
-- **Endpoints novos**: `GET /api/solicitacoes/recebidas` e
-  `GET /api/solicitacoes/enviadas`, usados nas telas "Gerenciar Itens" e
-  "Histórico".
-- **Chat de verdade, persistido no banco**: nova entidade `Mensagem` +
-  `GET/POST /api/solicitacoes/{id}/mensagens`. O front busca a cada ~3,5s
-  (polling simples); dá para evoluir para WebSocket/STOMP depois (a
-  dependência já está no `pom.xml`).
-- **Bug no QR Code de retirada corrigido**: o token gerado ao agendar não
-  estava sendo salvo no banco (faltava `@Transactional` + `save()` explícito
-  do item) — a confirmação por QR Code falhava silenciosamente antes.
-- **Segurança mais precisa**: antes, `POST /api/itens` (cadastrar) estava
-  liberado sem login, o que quebraria (doador ficaria nulo). Agora só GET é
-  público em `/api/itens` e `/api/comunidades`; publicar, aceitar, agendar,
-  confirmar etc. exigem login.
-- **Dados de demonstração automáticos** (`DevDataSeeder`, perfil `dev`): ao
-  subir a API pela primeira vez, ela já cria 2 usuários e 6 itens de exemplo.
+```text
+reviva-api/       API Java com Spring Boot, JPA e SQLite/PostgreSQL
+reviva-frontend/  Interface React executada pelo Vite
+```
 
-**Frontend**
-- Projeto Vite criado do zero em `reviva-frontend/`, com o protótipo visual
-  original migrado telinha por telinha para chamadas reais em `src/api.js`.
-- Login/registro reais, itens vindos do banco, solicitações, chat persistido,
-  agendamento com geração de código de retirada, confirmação (com ou sem
-  código), avaliações que atualizam a reputação, selo de impacto calculado
-  pelo backend, notificações e comunidades reais.
-- **Favoritos** continuam apenas no navegador (`localStorage`) — o backend
-  não tem esse conceito ainda.
-- **Feed de comunidade e "desafio do mês"** continuam ilustrativos — o
-  backend não tem um modelo de post/desafio (ver "Próximos passos").
-- **Upload de fotos** ainda não está implementado (o backend já aceita uma
-  lista de URLs em `fotosUrls`, é só plugar um serviço de storage depois).
+O frontend se comunica com a API por REST e recebe novas mensagens por WebSocket/STOMP.
 
-## Como rodar
+## Funcionalidades
 
-### 1. Backend
+### Autenticacao e conta
 
-```bash
+- Cadastro de usuario com nome, e-mail, CPF, telefone, senha e endereco.
+- Consulta de CEP com preenchimento de bairro, cidade e estado.
+- Login com token JWT.
+- Persistencia da sessao no navegador.
+- Logout com confirmacao.
+- Perfil unico: a mesma conta pode publicar, doar, receber e conversar.
+- Indicadores de e-mail/telefone verificados, reputacao, pontos e selo.
+
+### Inicio
+
+- Home com saudacao personalizada e indicador de impacto ambiental.
+- Atalhos para cadastrar item, gerenciar itens, mensagens, comunidades e perfil.
+- Atalho de mensagens que abre diretamente o Inbox.
+- Solicitacoes ou conversas recentes.
+- Indicador de notificacoes nao lidas.
+- Seletor de localizacao por CEP, GPS e historico de bairros.
+- Pull-to-refresh no feed.
+- Home com categorias e itens publicados recentemente.
+
+### Itens e anuncios
+
+- Cadastro de item com titulo, descricao, categoria, estado de conservacao,
+  tipo de publicacao, fotos, endereco e coordenadas.
+- Tipos de publicacao: doacao ou troca.
+- Categorias: roupas, livros, moveis, infantil, eletronicos, cozinha e outros.
+- Condicoes: novo, seminovo e usado.
+- Consulta de itens publicos.
+- Filtro por categoria, tipo de publicacao, termo, estado e cidade.
+- Lista de itens e tela de detalhes.
+- Exibicao de anunciante, reputacao, status online/offline, distancia e localizacao.
+- Favoritos salvos localmente no navegador.
+- Preview rapido do item na Home com toque longo.
+- Gerenciamento dos proprios itens.
+- Edicao do anuncio, com renovacao do prazo de validade por 60 dias.
+- Remocao, arquivamento, restauracao e marcacao do item como doado.
+- Calculo de impacto ambiental estimado por categoria.
+- Peso aproximado informado no anuncio para medir materiais reutilizados, em alinhamento com a ODS 12.
+
+### Busca e localizacao
+
+- Busca por texto com envio pelo Enter ou botao Buscar.
+- Limpeza rapida do campo de busca.
+- Sugestoes de categorias.
+- Selecao manual de estado e cidade usando dados do IBGE.
+- Deteccao automatica da cidade/UF pelo GPS do navegador.
+- Geocodificacao reversa com Nominatim/OpenStreetMap na API.
+- Consulta de CEP via ViaCEP.
+
+### Mensagens e Inbox
+
+- Conversa criada imediatamente ao clicar em Enviar mensagem em um anuncio.
+- Mensagem inicial pronta perguntando se o item ainda esta disponivel.
+- Nao existe etapa de match, aceite ou recusa para iniciar uma conversa.
+- Inbox com conversas iniciadas e recebidas pelo usuario.
+- Conversa vinculada ao anuncio, com foto, titulo e status do item.
+- Mensagens de texto persistidas no banco.
+- Atualizacao em tempo real por WebSocket/STOMP.
+- Indicadores visuais de mensagem enviada, entregue e lida.
+- Arquivamento de conversa por gesto de deslizar.
+- Menu de anexos com galeria, camera e compartilhamento de localizacao.
+- Aviso de seguranca para manter a interacao dentro da plataforma.
+
+#### Compartilhamento de localizacao
+
+- Captura da localizacao atual pelo navegador.
+- Envio de latitude, longitude e horario como mensagem da conversa.
+- Cartao com mini mapa Leaflet e OpenStreetMap.
+- Zoom fixo 15, sem zoom, arrasto ou controles interativos.
+- Link para abrir a coordenada no Google Maps em nova aba.
+
+### Agendamento e retirada
+
+- Agendamento de data, horario e local de encontro pelo chat.
+- Geracao de codigo/token de retirada associado ao item.
+- Confirmacao manual pelo doador ou receptor.
+- Confirmacao por codigo/token.
+- Fechamento da doacao quando os dois lados confirmam.
+- Atualizacao do impacto, pontos e selo do doador ao concluir.
+- Opcao de relatar problema.
+
+### Avaliacoes e impacto
+
+- Avaliacao mutua apos a retirada, com nota de 1 a 5 e comentario opcional.
+- Recalculo da reputacao, pontos e selos Bronze, Prata, Ouro e Esmeralda.
+- Dashboard com itens doados, residuos evitados, pontos e nota media.
+- Cada quilo informado no anuncio representa material que ganhou uma nova vida.
+
+### Notificacoes, comunidades e moderacao
+
+- Lista e marcacao de notificacoes como lidas.
+- Badge de notificacoes nao lidas na Home.
+- Clique em notificacao de chat abre a conversa relacionada.
+- Limpeza manual de todas as notificacoes ou somente das expiradas.
+- Expiracao configuravel por `reviva.notificacoes.expiracao-dias` ou pela variavel `NOTIFICACOES_EXPIRACAO_DIAS`.
+- Listagem e participacao em comunidades.
+- Denuncias com motivos de item divergente, comportamento inadequado,
+    nao comparecimento, suspeita de golpe e outros.
+
+## Stack tecnologica
+
+- Backend: Java 21, Spring Boot 3.3.2, Spring Web, Security, Validation,
+    Data JPA, WebSocket, JWT, SQLite, PostgreSQL e Springdoc.
+- Frontend: React 18, Vite, Tailwind CSS, Lucide, STOMP.js, SockJS, Leaflet,
+    react-leaflet e OpenStreetMap.
+
+## Como executar
+
+Pre-requisitos: JDK 21, Maven, Node.js e npm.
+
+```powershell
 cd reviva-api
 mvn spring-boot:run
 ```
-Requer **JDK 21+**. Se dois `mvn spring-boot:run` de tentativas antigas
-travarem a porta, mate o processo Java (`Get-Process java | Stop-Process -Force`
-no PowerShell) antes de rodar de novo.
 
-- API: http://localhost:8080
-- Swagger UI: http://localhost:8080/swagger-ui.html
-- Console H2: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:mem:reviva`, usuário `sa`, sem senha)
-
-Ao subir, o `DevDataSeeder` cria automaticamente:
-
-| Login                | Senha       | Perfil ativo |
-|-----------------------|-------------|--------------|
-| doador@reviva.com     | reviva123   | Doador (já com 6 itens publicados) |
-| receptor@reviva.com   | reviva123   | Receptor     |
-
-### 2. Frontend
+API: http://localhost:8080. Swagger: http://localhost:8080/swagger-ui.html.
+O perfil `dev` usa o banco SQLite em `reviva-api/db/reviva.db`.
 
 Em outro terminal:
 
-```bash
+```powershell
 cd reviva-frontend
 npm install
 npm run dev
 ```
 
-Abra o link que aparecer (normalmente **http://localhost:5173**). Por padrão
-o front já aponta para `http://localhost:8080` — se sua API estiver em outro
-endereço, copie `.env.example` para `.env` e ajuste `VITE_API_URL`.
+Frontend: http://localhost:5173. Para iniciar pela raiz, use `npm install` e
+`npm run dev`; o comando usa `concurrently` para iniciar os dois aplicativos.
 
-**Dica para testar o fluxo completo (doação de ponta a ponta):** abra duas
-abas/navegadores — uma logada como `doador@reviva.com` e outra como
-`receptor@reviva.com`. No papel de Receptor, solicite um dos itens do doador;
-no papel de Doador, aceite a solicitação em "Gerenciar itens"; depois é só
-seguir o chat → agendar → confirmar → avaliar dos dois lados.
+Se a porta 8080 estiver ocupada:
 
-## Estrutura do backend
-
-```
-model/        Entidades JPA (Usuario, Item, Solicitacao, Agendamento, Avaliacao,
-              Notificacao, Comunidade, Denuncia, Mensagem)
-repository/   Interfaces Spring Data JPA
-service/      Regras de negócio (impacto ambiental, selos, QR Code de retirada,
-              recálculo de reputação)
-controller/   Endpoints REST, um por fluxo/tela
-dto/          Records de entrada e saída da API
-security/     JWT (geração/validação) + filtro de autenticação
-config/       Spring Security, CORS, seed de dados de demonstração
-exception/    Tratamento global de erros (JSON padronizado)
+```powershell
+Get-NetTCPConnection -LocalPort 8080 -State Listen
+Stop-Process -Id <PID>
 ```
 
-## Mapeamento tela → endpoint
+## Usuarios de demonstracao
 
-| Tela do front                   | Endpoint                                                |
-|----------------------------------|----------------------------------------------------------|
-| Login / Criar conta             | `POST /api/auth/login`, `POST /api/auth/registrar`       |
-| Escolher perfil / Perfil        | `PATCH /api/usuarios/me/perfil-ativo`, `GET /api/usuarios/me` |
-| Cadastro de Item                | `POST /api/itens`                                         |
-| Gerenciar Itens                 | `GET /api/itens/meus`, `GET /api/solicitacoes/recebidas`, `DELETE /api/itens/{id}` |
-| Busca / Lista / Mapa de Itens   | `GET /api/itens?categoria=&tipo=&termo=`                  |
-| Detalhes do Item                | `GET /api/itens/{id}`                                     |
-| Conversa / Inbox                | `POST /api/solicitacoes`, `GET /api/solicitacoes/conversas` |
-| Chat                            | `GET/POST /api/solicitacoes/{id}/mensagens`                |
-| Agendamento                     | `POST /api/agendamentos`                                    |
-| Confirmação (Doação/Recebimento)| `POST /api/agendamentos/{id}/confirmar-doador`, `.../confirmar-receptor`, `.../confirmar-qrcode?token=` |
-| Avaliação                       | `POST /api/avaliacoes`                                       |
-| Dashboard de Impacto / Reputação| `GET /api/usuarios/me`                                       |
-| Notificações                    | `GET /api/notificacoes`, `POST /api/notificacoes/{id}/lida`  |
-| Comunidades                     | `GET/POST /api/comunidades`, `POST /api/comunidades/{id}/participar` |
-| Moderação (denúncia)            | `POST /api/denuncias`                                        |
-| Histórico de solicitações       | `GET /api/solicitacoes/enviadas`                              |
+| Usuario | Senha | Perfil |
+| --- | --- | --- |
+| `doador@reviva.com` | `reviva123` | Doador |
+| `receptor@reviva.com` | `reviva123` | Receptor |
 
-## Funcionalidade: confirmação por código/QR Code
+O seed cria itens e comunidades quando o banco esta vazio. Para testar, use os
+dois usuarios em abas separadas, abra um anuncio e clique em Enviar mensagem.
 
-Ao agendar uma retirada (`POST /api/agendamentos`), um token é gerado no
-`Item` (`qrCodeToken`) e devolvido dentro do agendamento
-(`agendamento.solicitacao.item.qrCodeToken`). No app:
+## API REST
 
-- O **Doador** vê esse código na tela de confirmação e o mostra ao Receptor.
-- O **Receptor** digita o código e confirma com
-  `POST /api/agendamentos/{id}/confirmar-qrcode?token=...` — isso fecha
-  **as duas pontas de uma vez**, atualiza o impacto ambiental e recalcula o
-  selo do doador (Bronze/Prata/Ouro/Esmeralda), sem precisar de duas
-  confirmações manuais separadas.
-- Também dá para confirmar manualmente de cada lado, sem código, caso o
-  encontro não permita compartilhar a tela.
+| Recurso | Metodo e rota | Funcao |
+| --- | --- | --- |
+| Auth | `POST /api/auth/registrar` | Criar conta |
+| Auth | `POST /api/auth/login` | Entrar e obter JWT |
+| Usuario | `GET /api/usuarios/me` | Consultar perfil |
+| Usuario | `PATCH /api/usuarios/me/perfil-ativo` | Atualizar perfil ativo |
+| Usuario | `PATCH /api/usuarios/me/localizacao` | Salvar coordenadas |
+| Geo | `GET /api/geo/cep/{cep}` | Buscar endereco por CEP |
+| Geo | `GET /api/geo/reverse` | Converter coordenadas em regiao |
+| Geo | `GET /api/geo/estados` | Listar estados |
+| Geo | `GET /api/geo/estados/{uf}/cidades` | Listar cidades |
+| Itens | `GET /api/itens` | Buscar itens publicos |
+| Itens | `GET /api/itens/{id}` | Ver detalhes |
+| Itens | `GET /api/itens/meus` | Listar itens do usuario |
+| Itens | `POST /api/itens` | Publicar item |
+| Itens | `PUT /api/itens/{id}` | Editar item |
+| Itens | `DELETE /api/itens/{id}` | Remover item |
+| Itens | `POST /api/itens/{id}/restaurar` | Restaurar item |
+| Itens | `POST /api/itens/{id}/doado` | Marcar como doado |
+| Conversas | `POST /api/solicitacoes` | Criar conversa e mensagem inicial |
+| Conversas | `GET /api/solicitacoes/conversas` | Listar Inbox |
+| Conversas | `GET /api/solicitacoes/recebidas` | Listar conversas recebidas |
+| Conversas | `GET /api/solicitacoes/enviadas` | Listar conversas iniciadas |
+| Mensagens | `GET /api/solicitacoes/{id}/mensagens` | Listar mensagens |
+| Mensagens | `POST /api/solicitacoes/{id}/mensagens` | Enviar mensagem |
+| Agendamento | `POST /api/agendamentos` | Agendar retirada |
+| Agendamento | `POST /api/agendamentos/{id}/confirmar-doador` | Confirmar pelo doador |
+| Agendamento | `POST /api/agendamentos/{id}/confirmar-receptor` | Confirmar pelo receptor |
+| Agendamento | `POST /api/agendamentos/{id}/confirmar-qrcode?token=` | Confirmar por codigo |
+| Agendamento | `POST /api/agendamentos/{id}/reportar-problema` | Relatar problema |
+| Avaliacoes | `POST /api/avaliacoes` | Avaliar usuario |
+| Notificacoes | `GET /api/notificacoes` | Listar notificacoes |
+| Notificacoes | `POST /api/notificacoes/{id}/lida` | Marcar como lida |
+| Notificacoes | `DELETE /api/notificacoes` | Limpar todas |
+| Notificacoes | `DELETE /api/notificacoes/expiradas` | Excluir expiradas |
+| Comunidades | `GET /api/comunidades` | Listar comunidades |
+| Comunidades | `POST /api/comunidades/{id}/participar` | Participar |
+| Moderacao | `POST /api/denuncias` | Criar denuncia |
 
-## Próximos passos sugeridos
+## WebSocket
 
-- Trocar o polling do chat por WebSocket/STOMP (a dependência já está no
-  `pom.xml`) para mensagens em tempo real.
-- Modelo de "post"/"desafio" no backend para o feed de comunidade deixar de
-  ser ilustrativo.
-- Upload real de fotos (S3/Cloud Storage) em vez de `fotosUrls` como lista de
-  URLs livres.
-- Job agendado (`@Scheduled`) para lembretes de 24h/1h antes da retirada.
-- Trocar para o perfil `prod` (PostgreSQL) na hora de publicar de verdade —
-  ajuste `DB_URL`, `DB_USER`, `DB_PASSWORD` e `JWT_SECRET` como variáveis de
-  ambiente (não deixe o valor padrão de `JWT_SECRET` em produção).
+As mensagens sao enviadas por REST para persistencia e publicadas no topico:
+
+```text
+/topic/solicitacoes/{solicitacaoId}
+```
+
+O cliente conecta pelo endpoint SockJS `/ws` e atualiza o chat em tempo real.
+
+## Seguranca e configuracao
+
+- Rotas publicas: autenticacao, documentacao, busca de itens e geolocalizacao.
+- Publicacao, edicao, mensagens, agendamento, confirmacao, avaliacao e dados
+    pessoais exigem JWT.
+- Senhas e colecoes sensiveis nao sao expostas nas respostas publicas.
+- Para producao, defina `DB_URL`, `DB_USER`, `DB_PASSWORD` e `JWT_SECRET`.
+- Substitua o segredo JWT padrao antes de publicar o sistema.
+
+## Limites atuais
+
+- Favoritos ficam somente no `localStorage` e nao sincronizam entre dispositivos.
+- Fotos aceitam URLs/data URLs; ainda nao existe storage dedicado.
+- Posts e desafios de comunidade ainda nao possuem modelo de backend.
+- Push notifications nativas ainda nao foram implementadas.
+- Arquivamento e algumas preferencias sao locais.
+- O mapa precisa de internet para carregar tiles do OpenStreetMap, mas nao exige token.
+
+## Verificacao
+
+```powershell
+cd reviva-frontend
+npm run build
+
+cd ..\reviva-api
+mvn test-compile -q
+mvn test -q
+```

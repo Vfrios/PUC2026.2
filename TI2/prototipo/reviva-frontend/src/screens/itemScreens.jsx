@@ -11,6 +11,7 @@ function CadastroItem({ go, notify, params, usuario }) {
   const [estado, setEstado] = useState(itemEditando?.estadoConservacao || "SEMINOVO");
   const [titulo, setTitulo] = useState(itemEditando?.titulo || "");
   const [descricao, setDescricao] = useState(itemEditando?.descricao || "");
+  const [pesoKg, setPesoKg] = useState(itemEditando?.pesoKg ?? "");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -93,7 +94,8 @@ function CadastroItem({ go, notify, params, usuario }) {
         uf: endereco?.uf || null,
         latitude: endereco?.latitude ?? null,
         longitude: endereco?.longitude ?? null,
-        impactoCo2Kg: CO2_ESTIMADO[cat] || 2,
+        impactoCo2Kg: pesoKg !== "" ? Number(pesoKg) : (CO2_ESTIMADO[cat] || 2),
+        pesoKg: pesoKg !== "" ? Number(pesoKg) : null,
         fotosUrls: fotos,
       };
       if (itemEditando) {
@@ -171,6 +173,23 @@ function CadastroItem({ go, notify, params, usuario }) {
         <div style={{ display: "flex", gap: 8 }}>
           <Chip active={tipo==="DOAR"} onClick={() => setTipo("DOAR")}>🎁 Doar</Chip>
           <Chip active={tipo==="TROCAR"} onClick={() => setTipo("TROCAR")}>🔁 Trocar</Chip>
+        </div>
+
+        <label style={fieldLabel}>Peso aproximado do item (kg)</label>
+        <div style={fieldBox}>
+          <input
+            type="number"
+            min="0.1"
+            step="0.1"
+            value={pesoKg}
+            onChange={e => setPesoKg(e.target.value)}
+            placeholder={`Ex: ${CO2_ESTIMADO[cat] || 2}`}
+            inputMode="decimal"
+            style={fieldInput}
+          />
+        </div>
+        <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 4 }}>
+          Usaremos esse peso para medir os materiais que deixaram de ser descartados, em linha com a ODS 12.
         </div>
 
         <label style={fieldLabel}>CEP</label>

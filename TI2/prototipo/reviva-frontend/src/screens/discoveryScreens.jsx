@@ -6,43 +6,6 @@ import { ListaItens } from "./itemScreens.jsx";
 import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, Archive, RotateCcw, X } from "lucide-react";
 import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox } from "./shared.jsx";
 
-function LocationSheet({ onClose, onSelect, notify }) {
-  const [cep, setCep] = useState("");
-  const [loading, setLoading] = useState(false);
-  const historico = JSON.parse(localStorage.getItem("reviva_localizacoes") || "[]");
-  const selecionar = local => { localStorage.setItem("reviva_localizacao_atual", local); onSelect(local); onClose(); };
-  const buscarCep = async () => {
-    const valor = onlyDigits(cep);
-    if (valor.length !== 8) { notify("Digite um CEP válido."); return; }
-    setLoading(true);
-    try {
-      const res = await api.buscarCep(valor);
-      const local = [res.bairro, res.cidade, res.uf].filter(Boolean).join(" · ");
-      const novos = [local, ...historico.filter(item => item !== local)].slice(0, 5);
-      localStorage.setItem("reviva_localizacoes", JSON.stringify(novos));
-      selecionar(local);
-    } catch (e) { notify(e.message || "Não foi possível localizar o CEP."); }
-    finally { setLoading(false); }
-  };
-  const usarGps = () => {
-    if (!("geolocation" in navigator)) { notify("Seu navegador não oferece localização automática."); return; }
-    setLoading(true);
-    navigator.geolocation.getCurrentPosition(async pos => {
-      try { const res = await api.reverseGeo(pos.coords.latitude, pos.coords.longitude); selecionar([res.bairro, res.cidade, res.uf].filter(Boolean).join(" · ") || "Localização atual"); }
-      catch (e) { notify(e.message || "Não foi possível detectar sua localização."); }
-      finally { setLoading(false); }
-    }, () => { setLoading(false); notify("Permita o acesso à localização para continuar."); });
-  };
-  return <div style={{ position: "absolute", inset: 0, zIndex: 40, background: "rgba(22,40,31,.32)", display: "flex", alignItems: "flex-end" }} onClick={onClose}>
-    <div onClick={e => e.stopPropagation()} style={{ width: "100%", background: "#fff", borderRadius: "22px 22px 0 0", padding: "18px 20px 24px", boxShadow: "0 -8px 24px rgba(0,0,0,.16)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><SectionTitle>Onde você está?</SectionTitle><button type="button" onClick={onClose} style={iconBtn} aria-label="Fechar localização"><X size={17} /></button></div>
-      <div style={{ ...fieldBox, marginTop: 4 }}><MapPin size={16} color={INK_SOFT} /><input value={cep} onChange={e => setCep(e.target.value)} placeholder="Digite seu CEP" inputMode="numeric" style={fieldInput} /><Button small loading={loading} onClick={buscarCep}>Buscar</Button></div>
-      <button type="button" onClick={usarGps} style={{ border: "none", background: "none", padding: "14px 0", color: "var(--role-primary)", fontWeight: 700, cursor: "pointer" }}><MapPin size={14} style={{ verticalAlign: "-2px", marginRight: 5 }} /> Usar minha localização atual</button>
-      {historico.length > 0 && <><div style={{ fontSize: 11, fontWeight: 700, color: INK_SOFT, marginBottom: 6 }}>Bairros recentes</div>{historico.map(local => <button type="button" key={local} onClick={() => selecionar(local)} style={{ display: "block", width: "100%", textAlign: "left", border: "none", borderTop: "1px solid #EDEBE1", background: "#fff", padding: "10px 0", color: INK, cursor: "pointer" }}>{local}</button>)}</>}
-    </div>
-  </div>;
-}
-
 function usePullRefresh(reload, notify) {
   const [pull, setPull] = useState(0);
   const start = useRef(0);
@@ -51,8 +14,6 @@ function usePullRefresh(reload, notify) {
 function HomeDoador({ go, usuario, compact, notify }) {
   const { loading, data: recebidas, reload } = useApiData(() => api.solicitacoesRecebidas(), [usuario?.id]);
   const { data: notificacoes } = useApiData(() => api.notificacoes(), [usuario?.id]);
-  const [localizacao, setLocalizacao] = useState(() => localStorage.getItem("reviva_localizacao_atual") || "Perto de você");
-  const [locationOpen, setLocationOpen] = useState(false);
   const pullProps = usePullRefresh(reload, notify);
   const destaque = (recebidas || [])[0];
   const pct = Math.min(1, (usuario?.kgResiduoEvitado || 0) / 100);
@@ -61,7 +22,6 @@ function HomeDoador({ go, usuario, compact, notify }) {
     <Screen>
       <div {...pullProps} style={{ position: "relative" }}>
       {pullProps.pull > 0 && <div style={{ height: pullProps.pull, textAlign: "center", fontSize: 11, color: INK_SOFT, paddingTop: 8 }}>Solte para atualizar</div>}
-      <TopBar title={localizacao} compact={compact} right={<button type="button" onClick={() => setLocationOpen(true)} style={iconBtn} aria-label="Alterar localização"><MapPin size={16} color="var(--role-primary-dark)" /></button>} />
       <div style={{ padding: "4px 20px 6px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
           <div style={{ fontSize: 12.5, color: INK_SOFT }}>Olá,</div>
@@ -71,7 +31,7 @@ function HomeDoador({ go, usuario, compact, notify }) {
       </div>
       <div style={{ padding: "14px 20px 0" }}>
         <div style={{ background: "linear-gradient(135deg,var(--role-primary),var(--role-primary-dark))", borderRadius: 22, padding: 18, color: "#fff", display: "flex", alignItems: "center", gap: 14 }}>
-          <ImpactRing pct={pct} size={72} label="kg evitados" value={Math.round(usuario?.kgResiduoEvitado || 0)} />
+          <ImpactRing pct={pct} size={72} label="kg reutilizados" value={Math.round(usuario?.kgResiduoEvitado || 0)} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12, opacity: .85 }}>Seu impacto até agora</div>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700 }}>{usuario?.itensDoados || 0} itens doados</div>
@@ -110,7 +70,6 @@ function HomeDoador({ go, usuario, compact, notify }) {
         ) : (
           <EmptyState Icon={Gift} text="Nenhuma solicitação pendente ainda. Publique um item para começar a receber pedidos." />
         )}
-      {locationOpen && <LocationSheet onClose={() => setLocationOpen(false)} onSelect={setLocalizacao} notify={notify} />}
       </div>
       </div>
     </Screen>
@@ -120,8 +79,6 @@ function HomeDoador({ go, usuario, compact, notify }) {
 function HomeReceptor({ go, favorites, toggleFav, usuario, onlineIds, compact, notify }) {
   const { loading, error, data: itens, reload } = useApiData(() => api.listarItens(), []);
   const { data: notificacoes } = useApiData(() => api.notificacoes(), [usuario?.id]);
-  const [localizacao, setLocalizacao] = useState(() => localStorage.getItem("reviva_localizacao_atual") || "Perto de você");
-  const [locationOpen, setLocationOpen] = useState(false);
   const [quickItem, setQuickItem] = useState(null);
   const pullProps = usePullRefresh(reload, notify);
   const quickTimer = useRef(null);
@@ -129,7 +86,6 @@ function HomeReceptor({ go, favorites, toggleFav, usuario, onlineIds, compact, n
     <Screen>
       <div {...pullProps} style={{ position: "relative" }}>
       {pullProps.pull > 0 && <div style={{ height: pullProps.pull, textAlign: "center", fontSize: 11, color: INK_SOFT, paddingTop: 8 }}>Solte para atualizar</div>}
-      <TopBar title={localizacao} compact={compact} right={<button type="button" onClick={() => setLocationOpen(true)} style={iconBtn} aria-label="Alterar localização"><MapPin size={16} color="var(--role-primary-dark)" /></button>} />
       <div style={{ padding: "4px 20px 6px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
           <div style={{ fontSize: 12.5, color: INK_SOFT }}>Perto de você</div>
@@ -166,7 +122,6 @@ function HomeReceptor({ go, favorites, toggleFav, usuario, onlineIds, compact, n
           {!loading && !error && (itens || []).length === 0 && <EmptyState Icon={Search} text="Nenhum item publicado ainda." />}
         </div>
       </div>
-      {locationOpen && <LocationSheet onClose={() => setLocationOpen(false)} onSelect={setLocalizacao} notify={notify} />}
       {quickItem && <div onClick={() => setQuickItem(null)} style={{ position: "absolute", inset: 0, zIndex: 35, background: "rgba(22,40,31,.3)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}><div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, padding: 18, width: "100%" }}><SectionTitle>Visualização rápida</SectionTitle><div style={{ fontWeight: 700, color: INK }}>{quickItem.titulo}</div><div style={{ fontSize: 12, color: INK_SOFT, marginTop: 5 }}>{quickItem.descricao || "Sem descrição"}</div><Button full style={{ marginTop: 14 }} onClick={() => go("detalhesItem", { itemId: quickItem.id })}>Ver item</Button></div></div>}
       </div>
     </Screen>
