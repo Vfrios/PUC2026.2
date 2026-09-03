@@ -6,7 +6,7 @@ const dbPath = path.join(__dirname, 'reviva-api', 'db', 'reviva.db');
 const db = new sqlite3.Database(dbPath);
 db.configure('busyTimeout', 15000);
 
-console.log('🚀 REVIVA - 2 USUÁRIOS INTERAGINDO');
+console.log('🚀 REVIVA - USUÁRIOS INTERAGINDO');
 console.log('='.repeat(60));
 
 const SENHA = 'UserTeste123';
@@ -14,11 +14,11 @@ const SENHA = 'UserTeste123';
 const SENHA_HASH = '$2a$10$coTOIiAp3zuep4u9z8lGJ.amF.bzyE5XK4BQ/VIi.kB.wtHS7x57W';
 const agora = () => Date.now();
 
-// ============ USUÁRIO 1: DOADOR ============
+// ============ USUÁRIO 1 ============
 const usuario1 = {
   nome: 'Rafael Monteiro',
   email: 'rafael.monteiro@reviva.com',
-  cpf: '111.222.333-44',
+  cpf: '529.982.247-25',
   telefone: '(31) 98888-2001',
   itens: 5,
   kg: 28.5,
@@ -36,11 +36,11 @@ const usuario1 = {
   online: true
 };
 
-// ============ USUÁRIO 2: RECEPTOR ============
+// ============ USUÁRIO 2 ============
 const usuario2 = {
   nome: 'Leticia Castro',
   email: 'leticia.castro@reviva.com',
-  cpf: '555.666.777-88',
+  cpf: '390.533.447-05',
   telefone: '(31) 98888-2002',
   itens: 2,
   kg: 6.3,
@@ -58,7 +58,7 @@ const usuario2 = {
   online: true
 };
 
-// ============ ITENS DO USUÁRIO 1 (DOADOR) ============
+// ============ ITENS DO USUÁRIO 1 ============
 const itensUsuario1 = [
   {
     titulo: 'Violao de Estudo',
@@ -98,7 +98,7 @@ const itensUsuario1 = [
   }
 ];
 
-// ============ ITENS DO USUÁRIO 2 (RECEPTOR) ============
+// ============ ITENS DO USUÁRIO 2 ============
 const itensUsuario2 = [
   {
     titulo: 'Livro de Culinaria Italiana',
@@ -197,9 +197,9 @@ async function main() {
     itensIds1.push({id: iid, ...item});
     
     await new Promise(r => {
-      db.run('INSERT INTO itens (id, bairro, categoria, cidade, descricao, estado_conservacao, impacto_co2kg, latitude, longitude, publicado_em, qr_code_token, status, tipo_publicacao, titulo, uf, doador_id, cep, complemento, numero, peso_kg) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-        [iid, item.bairro, item.categoria, 'Belo Horizonte', item.descricao, item.conservacao, item.co2,
-         usuario1.lat+(i*0.001), usuario1.lng-(i*0.001), agora()+i, i === 0 ? tokenRetirada : '', 'ATIVO',
+      db.run('INSERT INTO itens (id, bairro, categoria, cidade, descricao, estado_conservacao, expira_em, impacto_co2kg, latitude, longitude, publicado_em, qr_code_token, status, tipo_publicacao, titulo, uf, doador_id, cep, complemento, numero, peso_kg) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [iid, item.bairro, item.categoria, 'Belo Horizonte', item.descricao, item.conservacao,
+         agora()+60*24*60*60*1000, item.co2, usuario1.lat+(i*0.001), usuario1.lng-(i*0.001), agora()+i, i === 0 ? tokenRetirada : '', 'ATIVO',
          'TROCAR', item.titulo, 'MG', uid1, item.cep, 'Recepcao do predio', item.numero, item.peso],
         () => {
           cont.i++;
@@ -218,9 +218,9 @@ async function main() {
     itensIds2.push({id: iid, ...item});
     
     await new Promise(r => {
-      db.run('INSERT INTO itens (id, bairro, categoria, cidade, descricao, estado_conservacao, impacto_co2kg, latitude, longitude, publicado_em, qr_code_token, status, tipo_publicacao, titulo, uf, doador_id, cep, complemento, numero, peso_kg) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-        [iid, item.bairro, item.categoria, 'Belo Horizonte', item.descricao, item.conservacao, item.co2,
-         usuario2.lat+(i*0.001), usuario2.lng-(i*0.001), agora()+i+10, '', 'ATIVO',
+      db.run('INSERT INTO itens (id, bairro, categoria, cidade, descricao, estado_conservacao, expira_em, impacto_co2kg, latitude, longitude, publicado_em, qr_code_token, status, tipo_publicacao, titulo, uf, doador_id, cep, complemento, numero, peso_kg) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [iid, item.bairro, item.categoria, 'Belo Horizonte', item.descricao, item.conservacao,
+         agora()+60*24*60*60*1000, item.co2, usuario2.lat+(i*0.001), usuario2.lng-(i*0.001), agora()+i+10, '', 'ATIVO',
          'TROCAR', item.titulo, 'MG', uid2, item.cep, 'Recepcao do predio', item.numero, item.peso],
         () => {
           cont.i++;
@@ -315,14 +315,14 @@ async function main() {
     
     console.log('\n📋 LOGINS:');
     console.log('='.repeat(60));
-    console.log('Usuário 1 (Doador):');
+    console.log('Usuário 1 (pode doar e receber):');
     console.log('  Nome: Rafael Monteiro');
     console.log('  Email: rafael.monteiro@reviva.com');
     console.log('  Senha: UserTeste123');
     console.log('  CPF: 111.222.333-44');
     console.log('  Status: Online');
     console.log('');
-    console.log('Usuário 2 (Receptor):');
+    console.log('Usuário 2 (pode doar e receber):');
     console.log('  Nome: Leticia Castro');
     console.log('  Email: leticia.castro@reviva.com');
     console.log('  Senha: UserTeste123');
