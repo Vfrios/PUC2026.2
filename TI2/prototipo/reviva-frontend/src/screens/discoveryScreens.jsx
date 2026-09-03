@@ -142,7 +142,7 @@ function Busca({ go, favorites, toggleFav, usuario, onlineIds }) {
   const [localizacaoAuto, setLocalizacaoAuto] = useState(false);
   const [localizacaoErro, setLocalizacaoErro] = useState("");
   const qRef = useRef(q);
-  const [resultado, setResultado] = useState(null);
+  const [resultado, setResultado] = useState({});
 
   useEffect(() => { qRef.current = q; }, [q]);
 

@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Optional;
+
 /** Cobre: Agendamento (Doador/Receptor), Confirmação de Doação e Confirmação de Recebimento. */
 @RestController
 @RequestMapping("/api/agendamentos")
@@ -25,14 +27,13 @@ public class AgendamentoController {
     private final SolicitacaoRepository solicitacaoRepository;
 
         @GetMapping("/solicitacao/{solicitacaoId}")
-        public Agendamento buscarPorSolicitacao(@PathVariable String solicitacaoId,
+        public Optional<Agendamento> buscarPorSolicitacao(@PathVariable String solicitacaoId,
                              @AuthenticationPrincipal Usuario usuario) {
         Solicitacao solicitacao = solicitacaoRepository.findValidById(solicitacaoId)
             .orElseThrow(() -> new IllegalArgumentException("Solicitação não encontrada"));
         validarParticipante(solicitacao, usuario);
         return agendamentoRepository.findBySolicitacaoId(solicitacaoId)
-            .map(agendamentoService::garantirCodigo)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agendamento não encontrado"));
+            .map(agendamentoService::garantirCodigo);
         }
 
         @PostMapping("/solicitacao/{solicitacaoId}/cancelar")
