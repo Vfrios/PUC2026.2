@@ -22,6 +22,7 @@ public interface ItemRepository extends JpaRepository<Item, String> {
     @Query("""
            select i from Item i join i.doador d
            where i.status = 'ATIVO'
+             and (:doadorId is null or d.id <> :doadorId)
              and (i.expiraEm is null or i.expiraEm > CURRENT_TIMESTAMP)
              and (:categoria is null or i.categoria = :categoria)
              and (:tipo is null or i.tipoPublicacao = :tipo)
@@ -34,5 +35,6 @@ public interface ItemRepository extends JpaRepository<Item, String> {
                        @Param("tipo") Item.TipoPublicacao tipo,
                        @Param("termo") String termo,
                        @Param("cidade") String cidade,
-                       @Param("uf") String uf);
+                       @Param("uf") String uf,
+                       @Param("doadorId") String doadorId);
 }

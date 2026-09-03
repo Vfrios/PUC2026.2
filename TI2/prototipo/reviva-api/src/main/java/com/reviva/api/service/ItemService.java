@@ -29,8 +29,8 @@ public class ItemService {
         return itemRepository.save(item);
     }
 
-    public List<Item> buscar(Item.Categoria categoria, Item.TipoPublicacao tipo, String termo, String cidade, String uf) {
-        return itemRepository.buscar(categoria, tipo, termo, cidade, uf);
+    public List<Item> buscar(Item.Categoria categoria, Item.TipoPublicacao tipo, String termo, String cidade, String uf, Usuario usuario) {
+        return itemRepository.buscar(categoria, tipo, termo, cidade, uf, usuario == null ? null : usuario.getId());
     }
 
     public List<Item> meusItens(Usuario doador) {

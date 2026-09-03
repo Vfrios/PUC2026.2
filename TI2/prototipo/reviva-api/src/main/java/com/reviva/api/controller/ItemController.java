@@ -56,8 +56,9 @@ public class ItemController {
                                       @RequestParam(required = false) Item.TipoPublicacao tipo,
                                       @RequestParam(required = false) String termo,
                                       @RequestParam(required = false) String cidade,
-                                      @RequestParam(required = false) String uf) {
-        return ItemResponse.from(itemService.buscar(categoria, tipo, termo, cidade, uf));
+                                      @RequestParam(required = false) String uf,
+                                      @AuthenticationPrincipal Usuario usuario) {
+        return ItemResponse.from(itemService.buscar(categoria, tipo, termo, cidade, uf, usuario));
     }
 
     @GetMapping("/meus")
