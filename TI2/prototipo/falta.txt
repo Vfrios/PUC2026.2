@@ -1,3 +1,10 @@
 campo de cadastro de itens, nao da para pegar da galaeria no mobnile somente para tirar foto, deve ter a opção dinamica igual tem no iphone para selecionar foto ou tirar foto 
 busca de iteisn ainda filtra pela localização atual e nao pela localização selecionada 
 
+caso de isso
+CEP
+33350-000
+Digite o CEP para preencher rua, bairro e cidade automaticamente.
+Rua não informada · MG
+Bairro não informado · São José da Lapa
+liberar campo de informar rua bairro etc

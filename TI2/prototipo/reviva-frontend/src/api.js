@@ -116,7 +116,7 @@ export const api = {
 
   /* ---------------- Itens ---------------- */
   listarItens: ({ categoria, tipo, termo, cidade, uf } = {}) =>
-    request("/api/itens", { auth: false, params: { categoria, tipo, termo, cidade, uf } }),
+    request("/api/itens", { params: { categoria, tipo, termo, cidade: cidade?.trim(), uf: uf?.trim().toUpperCase() } }),
 
   itemPorId: (id) => request(`/api/itens/${id}`, { auth: false }),
 

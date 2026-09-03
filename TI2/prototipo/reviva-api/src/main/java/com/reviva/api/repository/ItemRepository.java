@@ -28,8 +28,8 @@ public interface ItemRepository extends JpaRepository<Item, String> {
              and (:tipo is null or i.tipoPublicacao = :tipo)
              and (:termo is null or lower(i.titulo) like lower(concat('%', :termo, '%'))
                   or lower(i.descricao) like lower(concat('%', :termo, '%')))
-             and (:cidade is null or lower(i.cidade) = lower(:cidade))
-             and (:uf is null or upper(i.uf) = upper(:uf))
+             and (:cidade is null or lower(trim(i.cidade)) = lower(trim(:cidade)))
+             and (:uf is null or upper(trim(i.uf)) = upper(trim(:uf)))
            """)
     List<Item> buscar(@Param("categoria") Item.Categoria categoria,
                        @Param("tipo") Item.TipoPublicacao tipo,
