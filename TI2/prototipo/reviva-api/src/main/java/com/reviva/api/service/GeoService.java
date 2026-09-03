@@ -144,11 +144,12 @@ public class GeoService {
         try {
             Map<String, Object> resultado = restClient.get()
                     .uri(uri -> uri.scheme("https").host("nominatim.openstreetmap.org").path("/reverse")
-                            .queryParam("format", "json")
+                            .queryParam("format", "jsonv2")
                             .queryParam("lat", latitude)
                             .queryParam("lon", longitude)
                             .queryParam("zoom", 10)
                             .queryParam("addressdetails", 1)
+                            .queryParam("email", "contato@reviva.com")
                             .build())
                     .retrieve()
                     .body(Map.class);

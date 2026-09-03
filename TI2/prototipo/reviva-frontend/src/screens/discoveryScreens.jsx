@@ -82,6 +82,11 @@ function HomeReceptor({ go, favorites, toggleFav, usuario, onlineIds, compact, n
   const [quickItem, setQuickItem] = useState(null);
   const pullProps = usePullRefresh(reload, notify);
   const quickTimer = useRef(null);
+
+  useEffect(() => {
+    const intervalo = setInterval(reload, 15000);
+    return () => clearInterval(intervalo);
+  }, []);
   return (
     <Screen>
       <div {...pullProps} style={{ position: "relative" }}>

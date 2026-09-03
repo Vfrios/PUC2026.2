@@ -388,6 +388,11 @@ function ListaItens({ go, favorites, toggleFav, usuario, onlineIds, params, embe
     [categoria, tipoFiltro, termo, uf, cidade]
   );
 
+  useEffect(() => {
+    const intervalo = setInterval(reload, 15000);
+    return () => clearInterval(intervalo);
+  }, []);
+
   const tituloRegiao = cidade ? ` em ${cidade}` : uf ? ` em ${uf}` : "";
 
   return (

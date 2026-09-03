@@ -52,6 +52,7 @@ async function request(path, { method = "GET", body, auth = true, params } = {})
     res = await fetch(url, {
       method,
       headers,
+      cache: "no-store",
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch (networkErr) {
@@ -152,7 +153,10 @@ export const api = {
   agendar: (solicitacaoId, dataHora, localEncontro) =>
     request("/api/agendamentos", { method: "POST", body: { solicitacaoId, dataHora, localEncontro } }),
 
-  agendamentoDaSolicitacao: (solicitacaoId) => request(`/api/agendamentos/solicitacao/${solicitacaoId}`),
+  agendamentoDaSolicitacao: (solicitacaoId) => request(`/api/agendamentos/solicitacao/${solicitacaoId}`).catch(error => {
+    if (error.status === 404) return null;
+    throw error;
+  }),
   cancelarAgendamento: (solicitacaoId) => request(`/api/agendamentos/solicitacao/${solicitacaoId}/cancelar`, { method: "POST" }),
   confirmarAgendamento: (id) => request(`/api/agendamentos/${id}/confirmar-agendamento`, { method: "POST" }),
 

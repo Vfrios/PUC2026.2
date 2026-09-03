@@ -145,8 +145,9 @@ O perfil `dev` usa o banco SQLite em `reviva-api/db/reviva.db`.
 No Render, o perfil `prod` usa o SQLite versionado em `reviva-api/db/reviva.db`,
 igual ao ambiente local. Configure `SPRING_PROFILES_ACTIVE=prod`. Para manter
 alterações feitas em produção após reinícios e novos deploys, monte um
-Persistent Disk do Render em `/app/db`; sem esse disco, o banco volta ao estado
-que estava no último build da imagem.
+Persistent Disk do Render em `/app/db`. Na primeira inicialização, o `reviva.db`
+incluído na imagem é copiado para o disco; depois disso, os dados gravados no
+Render são preservados e não são sobrescritos por novos deploys.
 
 Em outro terminal:
 

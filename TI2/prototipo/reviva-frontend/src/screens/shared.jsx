@@ -188,6 +188,19 @@ function useApiData(fetcher, deps, { skip = false } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, skip, reloadRef.current]);
 
+  useEffect(() => {
+    if (skip) return undefined;
+    const atualizarAoVoltar = () => {
+      if (document.visibilityState === "visible") reload();
+    };
+    window.addEventListener("focus", atualizarAoVoltar);
+    document.addEventListener("visibilitychange", atualizarAoVoltar);
+    return () => {
+      window.removeEventListener("focus", atualizarAoVoltar);
+      document.removeEventListener("visibilitychange", atualizarAoVoltar);
+    };
+  }, [skip]);
+
   return { ...state, reload };
 }
 
