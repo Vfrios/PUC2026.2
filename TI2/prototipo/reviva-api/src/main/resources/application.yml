@@ -53,9 +53,10 @@ spring:
     activate:
       on-profile: prod
   datasource:
-    url: ${SPRING_DATASOURCE_URL:${DB_URL:${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5432/reviva}}}
-    username: ${DB_USER:${DB_USERNAME:reviva}}
-    password: ${DB_PASSWORD:reviva}
-    driver-class-name: org.postgresql.Driver
+    url: jdbc:sqlite:./db/reviva.db?busy_timeout=15000&journal_mode=WAL
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 1
+      connection-timeout: 20000
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    database-platform: org.hibernate.community.dialect.SQLiteDialect

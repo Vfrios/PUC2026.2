@@ -142,10 +142,11 @@ mvn spring-boot:run
 API: http://localhost:8080. Swagger: http://localhost:8080/swagger-ui.html.
 O perfil `dev` usa o banco SQLite em `reviva-api/db/reviva.db`.
 
-No Render, configure `SPRING_PROFILES_ACTIVE=prod` e uma URL JDBC do PostgreSQL
-em `SPRING_DATASOURCE_URL` (ou `DB_URL`), no formato
-`jdbc:postgresql://...`. Configure também `DB_USER` e `DB_PASSWORD`; não use
-`postgres://...` diretamente e não use o SQLite do repositório em produção.
+No Render, o perfil `prod` usa o SQLite versionado em `reviva-api/db/reviva.db`,
+igual ao ambiente local. Configure `SPRING_PROFILES_ACTIVE=prod`. Para manter
+alterações feitas em produção após reinícios e novos deploys, monte um
+Persistent Disk do Render em `/app/db`; sem esse disco, o banco volta ao estado
+que estava no último build da imagem.
 
 Em outro terminal:
 

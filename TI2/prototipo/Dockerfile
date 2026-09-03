@@ -22,6 +22,7 @@ RUN mvn -B clean package -DskipTests
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 RUN mkdir -p db
+COPY reviva-api/db/reviva.db ./db/reviva.db
 COPY --from=backend-build /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
