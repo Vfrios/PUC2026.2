@@ -53,7 +53,9 @@ spring:
     activate:
       on-profile: prod
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/reviva}
-    username: ${DB_USER:reviva}
+    url: ${SPRING_DATASOURCE_URL:${DB_URL:${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5432/reviva}}}
+    username: ${DB_USER:${DB_USERNAME:reviva}}
     password: ${DB_PASSWORD:reviva}
     driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
