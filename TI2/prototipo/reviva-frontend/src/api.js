@@ -91,9 +91,6 @@ export const api = {
 
   me: () => request("/api/usuarios/me"),
 
-  trocarPerfilAtivo: (perfil) =>
-    request("/api/usuarios/me/perfil-ativo", { method: "PATCH", params: { perfil } }),
-
   atualizarLocalizacao: (latitude, longitude, raioBuscaKm) =>
     request("/api/usuarios/me/localizacao", { method: "PATCH", params: { latitude, longitude, raioBuscaKm } }),
 

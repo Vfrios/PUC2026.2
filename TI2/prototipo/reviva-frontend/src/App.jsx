@@ -83,7 +83,10 @@ export default function RevivaApp() {
       // usuário válido (ex.: sessão salva de um banco que já foi reiniciado).
       // Nos dois casos o certo é encerrar a sessão local e voltar ao login,
       // em vez de deixar o app "preso" tentando usar um token inválido.
-      if (e.status === 401 || e.status === 403) logout();
+      if (e.status === 401 || e.status === 403) {
+        logout();
+        throw e;
+      }
     }
   };
 
@@ -144,11 +147,19 @@ export default function RevivaApp() {
   };
 
   const handleRegister = async (payload) => {
-    const res = await api.registrar(payload);
-    setToken(res.token);
-    await refreshUsuario();
-    setHistory([]);
-    setNav({ screen: "onboarding", params: {} });
+    try {
+      const res = await api.registrar(payload);
+      setToken(res.token);
+      await refreshUsuario();
+      setHistory([]);
+      setNav({ screen: "onboarding", params: {} });
+    } catch (e) {
+      if (e.status === 409) {
+        setToken(null);
+        setUsuario(null);
+      }
+      throw e;
+    }
   };
 
   const logout = () => {
@@ -159,9 +170,7 @@ export default function RevivaApp() {
   };
 
   const setRole = async (r) => {
-    setUsuario(u => u ? { ...u, perfilAtivo: r.toUpperCase() } : u);
-    try { await api.trocarPerfilAtivo(r.toUpperCase()); }
-    catch (e) { notify("Não foi possível trocar o perfil: " + e.message); }
+    setNav({ screen: r.toUpperCase() === "RECEPTOR" ? "homeReceptor" : "homeDoador", params: {} });
   };
 
   const toggleFav = (item) => setFavorites(f => {

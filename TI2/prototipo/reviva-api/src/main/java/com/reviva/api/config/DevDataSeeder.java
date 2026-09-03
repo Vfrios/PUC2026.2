@@ -57,7 +57,6 @@ public class DevDataSeeder implements CommandLineRunner {
                 .pontos(245)
                 .seloAtual(Usuario.SeloTier.OURO)
                 .senhaHash(passwordEncoder.encode("reviva123"))
-                .perfilAtivo(Usuario.PerfilAtivo.DOADOR)
                 .build());
 
         Usuario receptor = usuarioRepository.save(Usuario.builder()
@@ -80,7 +79,6 @@ public class DevDataSeeder implements CommandLineRunner {
                 .pontos(85)
                 .seloAtual(Usuario.SeloTier.PRATA)
                 .senhaHash(passwordEncoder.encode("reviva123"))
-                .perfilAtivo(Usuario.PerfilAtivo.RECEPTOR)
                 .build());
 
         itemRepository.save(Item.builder()

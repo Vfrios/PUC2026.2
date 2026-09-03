@@ -35,14 +35,6 @@ public class UsuarioController {
         return UsuarioResponse.from(usuario);
     }
 
-    /** Mantido por compatibilidade com o front atual; não restringe mais nenhuma rota. */
-    @PatchMapping("/me/perfil-ativo")
-    public UsuarioResponse trocarPerfilAtivo(@AuthenticationPrincipal Usuario usuario,
-                                              @RequestParam Usuario.PerfilAtivo perfil) {
-        usuario.setPerfilAtivo(perfil);
-        return UsuarioResponse.from(usuarioRepository.save(usuario));
-    }
-
     @PatchMapping("/me/localizacao")
     public UsuarioResponse atualizarLocalizacao(@AuthenticationPrincipal Usuario usuario,
                                                  @RequestParam Double latitude,

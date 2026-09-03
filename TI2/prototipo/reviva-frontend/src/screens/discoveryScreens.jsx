@@ -183,16 +183,6 @@ function Busca({ go, favorites, toggleFav, usuario, onlineIds }) {
     );
   };
 
-  // Detecta a localização automaticamente ao abrir a tela: pede a posição do
-  // navegador (GPS/Wi-Fi), converte em cidade/UF via reverse geocoding e já
-  // filtra os itens perto do usuário — sem precisar digitar ou selecionar
-  // nada. Se a permissão for negada ou o GPS falhar, a busca manual segue
-  // funcionando normalmente, sem travar a tela.
-  useEffect(() => {
-    detectarLocalizacao();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return (
     <div>
       <TopBar title="Buscar" onBack={() => go(-1)} />

@@ -23,7 +23,6 @@ public interface ItemRepository extends JpaRepository<Item, String> {
            select i from Item i join i.doador d
            where i.status = 'ATIVO'
              and (:doadorId is null or d.id <> :doadorId)
-             and (i.expiraEm is null or i.expiraEm > CURRENT_TIMESTAMP)
              and (:categoria is null or i.categoria = :categoria)
              and (:tipo is null or i.tipoPublicacao = :tipo)
              and (:termo is null or lower(i.titulo) like lower(concat('%', :termo, '%'))

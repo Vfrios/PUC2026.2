@@ -30,7 +30,11 @@ public class ItemService {
     }
 
     public List<Item> buscar(Item.Categoria categoria, Item.TipoPublicacao tipo, String termo, String cidade, String uf, Usuario usuario) {
-        return itemRepository.buscar(categoria, tipo, termo, cidade, uf, usuario == null ? null : usuario.getId());
+        Instant agora = Instant.now();
+        return itemRepository.buscar(categoria, tipo, termo, cidade, uf, usuario == null ? null : usuario.getId())
+                .stream()
+                .filter(item -> item.getExpiraEm() == null || item.getExpiraEm().isAfter(agora))
+                .toList();
     }
 
     public List<Item> meusItens(Usuario doador) {

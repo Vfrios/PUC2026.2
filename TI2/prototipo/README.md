@@ -142,6 +142,17 @@ mvn spring-boot:run
 API: http://localhost:8080. Swagger: http://localhost:8080/swagger-ui.html.
 O perfil `dev` usa o banco SQLite em `reviva-api/db/reviva.db`.
 
+Para executar duas instâncias locais compartilhando os mesmos dados, configure
+`REVIVA_DB_PATH` com o caminho absoluto do mesmo arquivo nas duas instâncias:
+
+```powershell
+$env:REVIVA_DB_PATH = "C:\caminho\do\projeto\reviva-api\db\reviva.db"
+mvn spring-boot:run
+```
+
+O cadastro e o login usam essa mesma base. A conta não possui perfil persistido:
+qualquer usuário pode doar e receber; a escolha da tela é apenas local no frontend.
+
 No Render, o perfil `prod` usa o SQLite versionado em `reviva-api/db/reviva.db`,
 igual ao ambiente local. Configure `SPRING_PROFILES_ACTIVE=prod`. Para manter
 alterações feitas em produção após reinícios e novos deploys, monte um

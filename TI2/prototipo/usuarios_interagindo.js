@@ -5,7 +5,6 @@ const crypto = require('crypto');
 const dbPath = path.join(__dirname, 'reviva-api', 'db', 'reviva.db');
 const db = new sqlite3.Database(dbPath);
 db.configure('busyTimeout', 15000);
-db.run('PRAGMA journal_mode = WAL');
 
 console.log('🚀 REVIVA - 2 USUÁRIOS INTERAGINDO');
 console.log('='.repeat(60));

@@ -50,10 +50,6 @@ public class Usuario {
     private String numero;
     private String complemento;
 
-    @Enumerated(EnumType.STRING)
-    @Builder.Default
-    private PerfilAtivo perfilAtivo = PerfilAtivo.DOADOR;
-
     private Double latitude;
     private Double longitude;
 
@@ -102,6 +98,5 @@ public class Usuario {
     @Builder.Default
     private Instant criadoEm = Instant.now();
 
-    public enum PerfilAtivo { DOADOR, RECEPTOR }
     public enum SeloTier { BRONZE, PRATA, OURO, ESMERALDA }
 }

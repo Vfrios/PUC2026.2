@@ -100,7 +100,10 @@ function Auth({ go, onLogin, onRegister }) {
         senha,
       });
     } catch (e) {
-      setErro(e.message || "Não foi possível continuar.");
+      setErro(e.status === 409
+        ? "Este e-mail ou CPF já está cadastrado. Troque para Entrar e use sua senha."
+        : e.message || "Não foi possível continuar.");
+      if (e.status === 409) setMode("login");
     } finally {
       setLoading(false);
     }
