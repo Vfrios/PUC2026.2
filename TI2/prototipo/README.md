@@ -142,6 +142,10 @@ mvn spring-boot:run
 API: http://localhost:8080. Swagger: http://localhost:8080/swagger-ui.html.
 O perfil `dev` usa o banco SQLite em `reviva-api/db/reviva.db`.
 
+No Render, configure `SPRING_PROFILES_ACTIVE=prod` e `DB_URL` com a URL JDBC
+do PostgreSQL (`jdbc:postgresql://...`). O perfil `prod` usa também `DB_USER`
+e `DB_PASSWORD`; não use o SQLite do repositório para persistência em produção.
+
 Em outro terminal:
 
 ```powershell
