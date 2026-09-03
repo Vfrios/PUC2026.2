@@ -2,6 +2,7 @@ package com.reviva.api.controller;
 
 import com.reviva.api.dto.MensagemRequest;
 import com.reviva.api.model.Mensagem;
+import com.reviva.api.dto.MensagemResponse;
 import com.reviva.api.model.Solicitacao;
 import com.reviva.api.model.Usuario;
 import com.reviva.api.repository.MensagemRepository;
@@ -33,15 +34,16 @@ public class MensagemController {
     private final SimpMessagingTemplate messagingTemplate;
 
     @GetMapping
-    public List<Mensagem> listar(@PathVariable String solicitacaoId, @AuthenticationPrincipal Usuario usuario) {
+    public List<MensagemResponse> listar(@PathVariable String solicitacaoId, @AuthenticationPrincipal Usuario usuario) {
         Solicitacao solicitacao = buscarEValidarAcesso(solicitacaoId, usuario);
-        return mensagemRepository.findBySolicitacaoOrderByCriadaEmAsc(solicitacao);
+        return MensagemResponse.from(mensagemRepository.findBySolicitacaoOrderByCriadaEmAsc(solicitacao)
+                .stream().filter(mensagem -> mensagem.getRemetente() != null).toList());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Mensagem enviar(@PathVariable String solicitacaoId, @RequestBody @Valid MensagemRequest req,
-                            @AuthenticationPrincipal Usuario usuario) {
+    public MensagemResponse enviar(@PathVariable String solicitacaoId, @RequestBody @Valid MensagemRequest req,
+                                   @AuthenticationPrincipal Usuario usuario) {
         Solicitacao solicitacao = buscarEValidarAcesso(solicitacaoId, usuario);
         Mensagem mensagem = Mensagem.builder()
                 .solicitacao(solicitacao)
@@ -49,14 +51,18 @@ public class MensagemController {
                 .texto(req.texto())
                 .build();
         Mensagem salva = mensagemRepository.save(mensagem);
-        messagingTemplate.convertAndSend("/topic/solicitacoes/" + solicitacaoId, salva);
-        return salva;
+        MensagemResponse resposta = MensagemResponse.from(salva);
+        messagingTemplate.convertAndSend("/topic/solicitacoes/" + solicitacaoId, resposta);
+        return resposta;
     }
 
     /** Só o doador do item ou o receptor da solicitação podem ver/enviar mensagens dela. */
     private Solicitacao buscarEValidarAcesso(String solicitacaoId, Usuario usuario) {
-        Solicitacao solicitacao = solicitacaoRepository.findById(solicitacaoId)
+        Solicitacao solicitacao = solicitacaoRepository.findValidById(solicitacaoId)
                 .orElseThrow(() -> new IllegalArgumentException("Solicitação não encontrada"));
+        if (solicitacao.getItem() == null || solicitacao.getReceptor() == null) {
+            throw new IllegalArgumentException("Esta conversa possui dados inválidos e não está disponível");
+        }
         boolean ehDoador = solicitacao.getItem().getDoador().getId().equals(usuario.getId());
         boolean ehReceptor = solicitacao.getReceptor().getId().equals(usuario.getId());
         if (!ehDoador && !ehReceptor) {

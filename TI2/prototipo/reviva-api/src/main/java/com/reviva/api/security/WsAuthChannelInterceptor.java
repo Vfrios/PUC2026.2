@@ -43,6 +43,11 @@ public class WsAuthChannelInterceptor implements ChannelInterceptor {
             Solicitacao solicitacao = solicitacaoRepository.findById(solicitacaoId)
                     .orElseThrow(() -> new IllegalArgumentException("Solicitação não encontrada."));
 
+                if (solicitacao.getItem() == null || solicitacao.getItem().getDoador() == null
+                    || solicitacao.getReceptor() == null) {
+                throw new IllegalArgumentException("Conversa indisponível.");
+                }
+
             boolean ehDoador = solicitacao.getItem().getDoador().getId().equals(usuarioId);
             boolean ehReceptor = solicitacao.getReceptor().getId().equals(usuarioId);
             if (!ehDoador && !ehReceptor) {

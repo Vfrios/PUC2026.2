@@ -1,7 +1,9 @@
 package com.reviva.api.controller;
 
 import com.reviva.api.dto.UsuarioResponse;
+import com.reviva.api.dto.ItemResponse;
 import com.reviva.api.model.Usuario;
+import com.reviva.api.repository.ItemRepository;
 import com.reviva.api.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,6 +20,15 @@ import org.springframework.web.bind.annotation.*;
 public class UsuarioController {
 
     private final UsuarioRepository usuarioRepository;
+    private final ItemRepository itemRepository;
+
+    @GetMapping("/{id}/itens")
+    public java.util.List<ItemResponse> itensPublicos(@PathVariable String id) {
+        if (!usuarioRepository.existsById(id)) {
+            throw new IllegalArgumentException("Usuário não encontrado");
+        }
+        return ItemResponse.from(itemRepository.findPublicadosByDoadorId(id));
+    }
 
     @GetMapping("/me")
     public UsuarioResponse perfil(@AuthenticationPrincipal Usuario usuario) {

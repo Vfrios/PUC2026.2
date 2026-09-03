@@ -98,6 +98,8 @@ export const api = {
 
   reputacaoDe: (usuarioId) => request(`/api/usuarios/${usuarioId}/reputacao`),
 
+  itensDeUsuario: (usuarioId) => request(`/api/usuarios/${usuarioId}/itens`, { auth: false }),
+
   /* ---------------- Geolocalização (CEP) ---------------- */
   // Preenche bairro/cidade/lat/long automaticamente a partir do CEP ao
   // cadastrar item ou atualizar localização — não usamos CPF (dado sensível

@@ -1,10 +1,12 @@
 package com.reviva.api.service;
 
 import com.reviva.api.model.Notificacao;
+import com.reviva.api.model.Solicitacao;
 import com.reviva.api.model.Usuario;
 import com.reviva.api.repository.NotificacaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.time.Instant;
@@ -32,13 +34,18 @@ public class NotificacaoService {
         return notificacaoRepository.findByUsuarioOrderByCriadaEmDesc(usuario);
     }
 
-    public long limpar(Usuario usuario) {
-        return notificacaoRepository.deleteByUsuario(usuario);
+    public Instant limiteExpiracao(int dias) {
+        return Instant.now().minus(Math.max(1, dias), ChronoUnit.DAYS);
     }
 
+    @Transactional
+    public long limpar(Usuario usuario) {
+        return notificacaoRepository.deleteByUsuarioId(usuario.getId());
+    }
+
+    @Transactional
     public long excluirExpiradas(Usuario usuario, int dias) {
-        Instant limite = Instant.now().minus(Math.max(1, dias), ChronoUnit.DAYS);
-        return notificacaoRepository.deleteByUsuarioAndCriadaEmBefore(usuario, limite);
+        return notificacaoRepository.deleteByUsuarioIdAndCriadaEmBefore(usuario.getId(), limiteExpiracao(dias));
     }
 
     public void marcarComoLida(Notificacao notificacao) {

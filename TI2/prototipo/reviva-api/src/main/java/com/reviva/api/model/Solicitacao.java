@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import java.time.Instant;
 
@@ -28,6 +30,7 @@ public class Solicitacao {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "item_id")
+    @NotFound(action = NotFoundAction.IGNORE)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Item item;

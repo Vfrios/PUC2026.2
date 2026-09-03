@@ -24,6 +24,7 @@ const SCREEN_LABELS = {
   agendamentoReceptor:"Agendamento", confirmRecebimento:"Confirmação de recebimento",
   avaliarDoador:"Avaliar doador", historico:"Histórico", perfil:"Perfil", reputacao:"Reputação",
   comunidades:"Comunidades", favoritos:"Favoritos",
+  perfilPublico:"Perfil do anunciante",
   notificacoes:"Notificações", moderacao:"Moderação",
 };
 
@@ -187,7 +188,7 @@ export default function RevivaApp() {
     case "homeDoador": ScreenView = <discoveryScreens.HomeDoador go={go} usuario={usuario} compact={conteudoRolado} notify={notify} />; break;
     case "cadastroItem": ScreenView = <itemScreens.CadastroItem go={go} notify={notify} params={params} usuario={usuario} />; break;
     case "gerenciarItens": ScreenView = <itemScreens.GerenciarItens go={go} notify={notify} />; break;
-    case "chatDoador": ScreenView = <tradeScreens.Chat go={go} role="doador" notify={notify} params={params} usuario={usuario} />; break;
+    case "chatDoador": ScreenView = <tradeScreens.Chat go={go} role="doador" notify={notify} params={params} usuario={usuario} onlineIds={onlineIds} />; break;
     case "inbox": ScreenView = <tradeScreens.Inbox go={go} usuario={usuario} />; break;
     case "agendamentoDoador": ScreenView = <tradeScreens.Agendamento go={go} role="doador" notify={notify} params={params} />; break;
     case "confirmDoacao": ScreenView = <tradeScreens.ConfirmDoacao go={go} notify={notify} params={params} refreshUsuario={refreshUsuario} />; break;
@@ -198,12 +199,13 @@ export default function RevivaApp() {
     case "listaItens": ScreenView = <itemScreens.ListaItens go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={params} />; break;
     case "detalhesItem": ScreenView = <itemScreens.DetalhesItem go={go} notify={notify} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={params} />; break;
     case "solicitacao": ScreenView = <itemScreens.Solicitacao go={go} notify={notify} params={params} />; break;
-    case "chatReceptor": ScreenView = <tradeScreens.Chat go={go} role="receptor" notify={notify} params={params} usuario={usuario} />; break;
+    case "chatReceptor": ScreenView = <tradeScreens.Chat go={go} role="receptor" notify={notify} params={params} usuario={usuario} onlineIds={onlineIds} />; break;
     case "agendamentoReceptor": ScreenView = <tradeScreens.Agendamento go={go} role="receptor" notify={notify} params={params} />; break;
     case "confirmRecebimento": ScreenView = <tradeScreens.ConfirmRecebimento go={go} notify={notify} params={params} refreshUsuario={refreshUsuario} />; break;
     case "avaliarDoador": ScreenView = <tradeScreens.Avaliar go={go} notify={notify} params={params} />; break;
     case "historico": ScreenView = <accountScreens.Historico go={go} />; break;
     case "perfil": ScreenView = <accountScreens.Perfil go={go} usuario={usuario} favorites={favorites} notify={notify} onLogout={logout} />; break;
+    case "perfilPublico": ScreenView = <accountScreens.PerfilPublico go={go} usuario={usuario} onlineIds={onlineIds} favorites={favorites} toggleFav={toggleFav} params={params} />; break;
     case "reputacao": ScreenView = <accountScreens.Reputacao go={go} usuario={usuario} />; break;
     case "comunidades": ScreenView = <accountScreens.Comunidades go={go} notify={notify} usuario={usuario} />; break;
     case "favoritos": ScreenView = <accountScreens.Favoritos go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} />; break;

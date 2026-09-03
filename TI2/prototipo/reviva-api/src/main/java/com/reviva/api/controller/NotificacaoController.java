@@ -1,6 +1,7 @@
 package com.reviva.api.controller;
 
 import com.reviva.api.model.Notificacao;
+import com.reviva.api.dto.NotificacaoResponse;
 import com.reviva.api.model.Usuario;
 import com.reviva.api.repository.NotificacaoRepository;
 import com.reviva.api.service.NotificacaoService;
@@ -23,9 +24,10 @@ public class NotificacaoController {
     private int expiracaoDias;
 
     @GetMapping
-    public List<Notificacao> listar(@AuthenticationPrincipal Usuario usuario) {
-        notificacaoService.excluirExpiradas(usuario, expiracaoDias);
-        return notificacaoService.listar(usuario);
+    public List<NotificacaoResponse> listar(@AuthenticationPrincipal Usuario usuario) {
+        return NotificacaoResponse.from(
+                notificacaoService.listar(usuario),
+                notificacaoService.limiteExpiracao(expiracaoDias));
     }
 
     @PostMapping("/{id}/lida")

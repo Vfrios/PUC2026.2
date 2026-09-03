@@ -1,10 +1,13 @@
 package com.reviva.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import java.time.Instant;
 
@@ -22,10 +25,13 @@ public class Notificacao {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "usuario_id")
+    @JsonIgnore
     private Usuario usuario;
 
     @ManyToOne
     @JoinColumn(name = "solicitacao_id")
+    @NotFound(action = NotFoundAction.IGNORE)
+    @JsonIgnore
     private Solicitacao solicitacao;
 
     @Column(nullable = false)

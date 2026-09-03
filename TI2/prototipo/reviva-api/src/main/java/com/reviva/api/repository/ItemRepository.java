@@ -16,8 +16,11 @@ public interface ItemRepository extends JpaRepository<Item, String> {
 
     List<Item> findByCategoriaAndStatus(Item.Categoria categoria, Item.StatusItem status);
 
+    @Query("select i from Item i join i.doador d where d.id = :doadorId and i.status <> 'REMOVIDO' and (i.expiraEm is null or i.expiraEm > CURRENT_TIMESTAMP) order by i.publicadoEm desc")
+    List<Item> findPublicadosByDoadorId(@Param("doadorId") String doadorId);
+
     @Query("""
-           select i from Item i
+           select i from Item i join i.doador d
            where i.status = 'ATIVO'
              and (i.expiraEm is null or i.expiraEm > CURRENT_TIMESTAMP)
              and (:categoria is null or i.categoria = :categoria)

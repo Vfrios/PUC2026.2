@@ -87,6 +87,39 @@ function Perfil({ go, usuario, onLogout, favorites = {}, notify }) {
   );
 }
 
+function PerfilPublico({ go, usuario, onlineIds, favorites, toggleFav, params }) {
+  const doador = params?.doador;
+  const { loading, error, data: itens, reload } = useApiData(
+    () => api.itensDeUsuario(doador?.id),
+    [doador?.id],
+    { skip: !doador?.id }
+  );
+
+  if (!doador?.id) return <div><TopBar title="Perfil" onBack={() => go(-1)} /><EmptyState Icon={User} text="Anunciante não encontrado." /></div>;
+
+  return (
+    <div>
+      <TopBar title="Perfil do anunciante" onBack={() => go(-1)} />
+      <div style={{ padding: "0 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <Avatar label={doador.nome} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: INK }}>{doador.nome}</div>
+            <div style={{ fontSize: 11.5, color: INK_SOFT, display: "flex", alignItems: "center", gap: 6 }}><Stars value={doador.reputacaoScore} /> {(doador.reputacaoScore || 0).toFixed(1)} <span>{onlineIds?.has(doador.id) ? "· online" : "· offline"}</span></div>
+          </div>
+        </div>
+        <SectionTitle>Itens cadastrados</SectionTitle>
+        {loading && <Loading label="Carregando itens..." />}
+        {error && <ErrorBox message={error} onRetry={reload} />}
+        {!loading && !error && (itens || []).length === 0 && <EmptyState Icon={Gift} text="Esta pessoa não possui itens disponíveis no momento." />}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {(itens || []).map(item => <ItemCard key={item.id} item={item} usuario={usuario} onlineIds={onlineIds} favorite={!!favorites?.[item.id]} onFav={toggleFav} onClick={() => go("detalhesItem", { itemId: item.id })} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---- REPUTAÇÃO ---- */
 function Reputacao({ go, usuario }) {
   const idx = badgeIndex(usuario?.seloAtual);
@@ -198,28 +231,32 @@ function Favoritos({ go, favorites, toggleFav, usuario, onlineIds }) {
 function Notificacoes({ go, role }) {
   const { loading, error, data: notificacoes, reload } = useApiData(() => api.notificacoes(), []);
   const [acao, setAcao] = useState(false);
+  const [acaoErro, setAcaoErro] = useState("");
+  const expiradas = (notificacoes || []).filter(n => n.expirada);
   const marcarEAbrir = async (n) => {
     try {
       await api.marcarNotificacaoLida(n.id);
-      if (n.tipo === "CHAT" && n.solicitacao?.id) {
+      if (n.tipo === "CHAT" && n.solicitacaoId) {
         go("chatDoador", {
-          solicitacaoId: n.solicitacao.id,
-          otherName: n.solicitacao.receptor?.nome,
-          itemTitulo: n.solicitacao.item?.titulo,
-          itemId: n.solicitacao.item?.id,
+          solicitacaoId: n.solicitacaoId,
+          otherId: n.receptor?.id,
+          otherName: n.receptor?.nome,
+          itemTitulo: n.item?.titulo,
+          itemId: n.item?.id,
         });
         return;
       }
-      reload();
-    } catch {}
+      await reload();
+    } catch (e) { setAcaoErro(e.message || "Não foi possível abrir a notificação."); }
   };
   const limpar = async (expiradas = false) => {
     setAcao(true);
+    setAcaoErro("");
     try {
       if (expiradas) await api.excluirNotificacoesExpiradas();
       else await api.limparNotificacoes();
-      reload();
-    } catch {}
+      await reload();
+    } catch (e) { setAcaoErro(e.message || "Não foi possível atualizar as notificações."); }
     finally { setAcao(false); }
   };
   return (
@@ -228,8 +265,9 @@ function Notificacoes({ go, role }) {
       <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 8 }}>
         {!loading && !error && (notificacoes || []).length > 0 && <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
           <Button small variant="ghost" loading={acao} onClick={() => limpar(false)}>Limpar todas</Button>
-          <Button small variant="soft" loading={acao} onClick={() => limpar(true)}>Excluir expiradas</Button>
+          {expiradas.length > 0 && <Button small variant="soft" loading={acao} onClick={() => limpar(true)}>Excluir expiradas</Button>}
         </div>}
+        {acaoErro && <ErrorBox message={acaoErro} />}
         {loading && <Loading />}
         {error && <ErrorBox message={error} onRetry={reload} />}
         {!loading && !error && (notificacoes || []).length === 0 && <EmptyState Icon={Bell} text="Nenhuma notificação por aqui ainda." />}
@@ -242,7 +280,7 @@ function Notificacoes({ go, role }) {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, color: INK, fontWeight: n.lida ? 500 : 700, lineHeight: 1.35 }}>{n.titulo}</div>
-                <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 3 }}>há {timeAgo(n.criadaEm)}</div>
+                <div style={{ fontSize: 11, color: n.expirada ? "#9C4327" : INK_SOFT, marginTop: 3 }}>{n.expirada ? "expirada" : `há ${timeAgo(n.criadaEm)}`}</div>
               </div>
             </div>
           );
@@ -297,4 +335,4 @@ function Moderacao({ go, notify, params }) {
   );
 }
 
-export { Historico, Perfil, Reputacao, Comunidades, Favoritos, Notificacoes, Moderacao };
+export { Historico, Perfil, PerfilPublico, Reputacao, Comunidades, Favoritos, Notificacoes, Moderacao };

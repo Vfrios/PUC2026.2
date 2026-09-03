@@ -342,7 +342,7 @@ function GerenciarItens({ go, notify }) {
                         <div style={{ fontSize: 12.5, fontWeight: 700, color: INK }}>{s.receptor?.nome}</div>
                       </div>
                       {s.mensagem && <div style={{ fontSize: 12, color: INK_SOFT, margin: "6px 0" }}>"{s.mensagem}"</div>}
-                        <div style={{ display: "flex", gap: 8, marginTop: 8 }} onClick={() => go("chatDoador", { solicitacaoId: s.id, otherName: s.receptor?.nome, itemTitulo: it.titulo, itemId: it.id })}>
+                        <div style={{ display: "flex", gap: 8, marginTop: 8 }} onClick={() => go("chatDoador", { solicitacaoId: s.id, otherId: s.receptor?.id, otherName: s.receptor?.nome, itemTitulo: it.titulo, itemId: it.id })}>
                           <Button small variant="ghost" style={{ flex: 1 }}>Abrir conversa</Button>
                         </div>
                     </div>
@@ -451,7 +451,7 @@ function DetalhesItem({ go, notify, favorites, toggleFav, usuario, onlineIds, pa
         </div>
         {item.descricao && <div style={{ fontSize: 13, color: INK_SOFT, lineHeight: 1.55, marginTop: 12 }}>{item.descricao}</div>}
         {item.doador && (
-          <div style={{ marginTop: 14, background: "#fff", border: "1px solid #EDEBE1", borderRadius: 16, padding: 12, display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => go("reputacao")}>
+          <div style={{ marginTop: 14, background: "#fff", border: "1px solid #EDEBE1", borderRadius: 16, padding: 12, display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => go("perfilPublico", { doador: item.doador })}>
             <Avatar label={item.doador.nome} />
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 13.5, color: INK }}>{item.doador.nome}</div>
@@ -490,6 +490,7 @@ function Solicitacao({ go, notify, params }) {
       notify("Mensagem enviada! A conversa está disponível no Inbox.");
       go("chatReceptor", {
         solicitacaoId: solicitacao.id,
+        otherId: solicitacao.item?.doador?.id,
         otherName: solicitacao.item?.doador?.nome,
         itemTitulo: solicitacao.item?.titulo,
         itemId: solicitacao.item?.id || itemId,

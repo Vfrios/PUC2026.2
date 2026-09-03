@@ -103,7 +103,8 @@ function Inbox({ go, usuario }) {
           const naoLidas = s.mensagensNaoLidas || s.unreadCount || 0;
           const souDoador = s.item?.doador?.id === usuario?.id;
           const outroNome = souDoador ? s.receptor?.nome : s.item?.doador?.nome;
-          return <div key={s.id} onTouchStart={event => tocar(s.id, event)} onTouchEnd={event => soltar(s.id, event)} onClick={() => go(souDoador ? "chatDoador" : "chatReceptor", { solicitacaoId: s.id, otherName: outroNome, itemTitulo: s.item?.titulo, itemId: s.item?.id })} style={{ transform: `translateX(${deslocamento[s.id] || 0}px)`, transition: "transform .2s", display: "flex", alignItems: "center", gap: 10, padding: 12, marginBottom: 8, background: "#fff", border: "1px solid #EDEBE1", borderRadius: 14, cursor: "pointer" }}>
+          const outroId = souDoador ? s.receptor?.id : s.item?.doador?.id;
+          return <div key={s.id} onTouchStart={event => tocar(s.id, event)} onTouchEnd={event => soltar(s.id, event)} onClick={() => go(souDoador ? "chatDoador" : "chatReceptor", { solicitacaoId: s.id, otherId: outroId, otherName: outroNome, itemTitulo: s.item?.titulo, itemId: s.item?.id })} style={{ transform: `translateX(${deslocamento[s.id] || 0}px)`, transition: "transform .2s", display: "flex", alignItems: "center", gap: 10, padding: 12, marginBottom: 8, background: "#fff", border: "1px solid #EDEBE1", borderRadius: 14, cursor: "pointer" }}>
             <Avatar label={outroNome} size={40} />
             <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{outroNome || "Conversa"}</div><div style={{ fontSize: 11.5, color: INK_SOFT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.item?.titulo || "Conversa"}</div></div>
             {naoLidas > 0 && <span style={{ minWidth: 20, height: 20, borderRadius: 10, padding: "0 6px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--role-primary)", color: "#fff", fontSize: 10, fontWeight: 700 }}>{naoLidas}</span>}
@@ -114,8 +115,8 @@ function Inbox({ go, usuario }) {
   );
 }
 
-function Chat({ go, role, notify, params, usuario }) {
-  const { solicitacaoId, otherName, itemTitulo, itemId } = params || {};
+function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
+  const { solicitacaoId, otherId, otherName, itemTitulo, itemId } = params || {};
   const { data: item } = useApiData(() => api.itemPorId(itemId), [itemId], { skip: !itemId });
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
@@ -178,8 +179,8 @@ function Chat({ go, role, notify, params, usuario }) {
     const texto = draft;
     setDraft("");
     try {
-      await api.enviarMensagem(solicitacaoId, texto);
-      carregar();
+        const enviada = await api.enviarMensagem(solicitacaoId, texto);
+        setMessages(atual => atual.some((m) => m.id === enviada.id) ? atual : [...atual, enviada]);
     } catch (e) {
       notify(e.message || "Não foi possível enviar a mensagem.");
       setDraft(texto);
@@ -208,7 +209,8 @@ function Chat({ go, role, notify, params, usuario }) {
           horario,
         });
         try {
-          await api.enviarMensagem(solicitacaoId, texto);
+          const enviada = await api.enviarMensagem(solicitacaoId, texto);
+          setMessages(atual => atual.some(m => m.id === enviada.id) ? atual : [...atual, enviada]);
           await carregar();
           notify("Localização compartilhada.");
         } catch (e) {
@@ -236,7 +238,7 @@ function Chat({ go, role, notify, params, usuario }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <TopBar title={otherName || "Conversa"} onBack={() => go(-1)} right={<button type="button" onClick={() => go("inbox")} style={{ ...iconBtn, width: 30, height: 30 }} aria-label="Abrir inbox" title="Abrir inbox"><MessageCircle size={15} color="var(--role-primary-dark)" /></button>} />
+      <TopBar title={<div><div>{otherName || "Conversa"}</div><div style={{ fontSize: 10.5, fontWeight: 500, color: otherId && onlineIds.has(otherId) ? "#2D8A57" : INK_SOFT }}>{otherId && onlineIds.has(otherId) ? "online" : "offline"}</div></div>} onBack={() => go(-1)} right={<button type="button" onClick={() => go("inbox")} style={{ ...iconBtn, width: 30, height: 30 }} aria-label="Abrir inbox" title="Abrir inbox"><MessageCircle size={15} color="var(--role-primary-dark)" /></button>} />
       <div onClick={() => itemId && go("detalhesItem", { itemId })} style={{ margin: "0 16px 8px", padding: 8, display: "flex", alignItems: "center", gap: 8, border: "1px solid #EDEBE1", borderRadius: 12, background: "#fff", cursor: itemId ? "pointer" : "default" }}>
         {itemFoto ? <img src={itemFoto} alt="" style={{ width: 38, height: 38, objectFit: "cover", borderRadius: 8 }} /> : <Avatar label={otherName} size={38} />}
         <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 12.5, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item?.titulo || itemTitulo || "Item da conversa"}</div><div style={{ fontSize: 10.5, color: itemStatus === "Doado" ? "#9C4327" : "var(--role-primary)" }}>{itemStatus}</div></div>

@@ -33,12 +33,13 @@ const usuarioEspecial = {
   complemento: 'Casa 2 - Fundos',
   bairro: 'Santo Antonio',
   online: true,
+  const agora = () => Date.now();
   em_conversa_com: true
 };
 
-// ============ ITENS DO USUÁRIO ESPECIAL ============
+      db.run('INSERT INTO usuarios (id, criado_em, email, email_verificado, foto_url, itens_doados, kg_residuo_evitado, latitude, longitude, nome, perfil_ativo, pontos, raio_busca_km, reputacao_score, selo_atual, senha_hash, telefone, telefone_verificado, cpf, cep, numero, complemento, bairro, cidade, estado, status_online) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
 const itensEspeciais = [
-  {
+          uid, agora(), usuarioEspecial.email, 1,
     titulo: 'Kit Jardinagem Completo',
     categoria: 'OUTROS',
     descricao: 'Kit com vasos, ferramentas e sementes organicas para iniciantes',
@@ -68,7 +69,7 @@ const itensEspeciais = [
 ];
 
 // ============ CONVERSA BACANA ============
-const conversaCompleta = [
+          [iid, item.bairro, item.categoria, 'Belo Horizonte', item.descricao, item.conservacao, item.co2, usuarioEspecial.lat+(i*0.001), usuarioEspecial.lng-(i*0.001), agora()+i, '', 'ATIVO', 'TROCAR', item.titulo, 'MG', uid],
   { remetente: 'sofia', texto: 'Ola! Tudo bem? Vi que voce tem uns itens incriveis para doar! Parabens pela iniciativa! 🌟', tempo: 1 },
   { remetente: 'alvo', texto: 'Ola Sofia! Muito obrigado! Fico feliz que tenha gostado. O Reviva me ajudou muito a desapegar de coisas boas que nao usava mais.', tempo: 2 },
   { remetente: 'sofia', texto: 'Que legal! Eu estou comecando agora na plataforma. Estou procurando especialmente itens de cozinha e jardinagem.', tempo: 3 },
@@ -101,14 +102,14 @@ async function main() {
         usuarioEspecial.nome, usuarioEspecial.perfil, usuarioEspecial.pontos, usuarioEspecial.raio,
         usuarioEspecial.reputacao, usuarioEspecial.selo, SENHA, usuarioEspecial.telefone, 1,
         usuarioEspecial.cpf, usuarioEspecial.cep, usuarioEspecial.numero, usuarioEspecial.complemento,
-        usuarioEspecial.bairro, 'Belo Horizonte', 'MG', 1
+          [sid, agora(), conversaCompleta[0].texto, 'ACEITA', itemRealId, USUARIO_ALVO],
       ],
       (err) => {
         if (err) {
           console.error('❌ Erro:', err.message);
         } else {
           cont.u++;
-          console.log('✅ Usuário criado:', usuarioEspecial.nome);
+              [crypto.randomUUID(), agora(), 0, 'CHAT', 'Sofia Albuquerque enviou uma mensagem sobre '+itemConversa.titulo, USUARIO_ALVO],
           console.log('   Email:', usuarioEspecial.email);
           console.log('   Senha:', SENHA);
           console.log('   CPF:', usuarioEspecial.cpf);
@@ -121,7 +122,7 @@ async function main() {
   // 2. Inserir itens
   for (let i = 0; i < itensEspeciais.length; i++) {
     const item = itensEspeciais[i];
-    const iid = crypto.randomUUID();
+                [crypto.randomUUID(), agora() + index * 30 * 1000, msg.texto, remetenteId, sid],
     
     await new Promise(r => {
       db.run('INSERT INTO itens (id, bairro, categoria, cidade, descricao, estado_conservacao, impacto_co2kg, latitude, longitude, publicado_em, qr_code_token, status, tipo_publicacao, titulo, uf, doador_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
@@ -136,14 +137,14 @@ async function main() {
             r();
           });
         });
-    });
+                        [aid, agora(), agora()+60*1000, agora()+86400*1000, 0, 0, 'Praca da Liberdade - Entrada Principal', 'CONCLUIDO', sid],
   }
 
   // 3. Criar conversa completa
   console.log('\n📊 Criando conversa detalhada...\n');
   
   const itemConversa = itensEspeciais[0]; // Kit de Jardinagem
-  const sid = crypto.randomUUID();
+                            [crypto.randomUUID(), 'Sofia e uma pessoa incrivel! A troca foi perfeita e o kit de jardinagem estava impecavel! Super recomendo!', agora()+100*1000, 5, aid, uid, USUARIO_ALVO],
   
   await new Promise(r => {
     // Buscar o ID do item de jardinagem

@@ -38,7 +38,7 @@ public class SecurityConfig {
     // Rotas liberadas apenas para LEITURA (GET) sem login — navegar/buscar itens
     // e comunidades não exige conta, mas publicar/editar/entrar exige.
     private static final String[] ROTAS_PUBLICAS_LEITURA = {
-            "/api/itens", "/api/itens/*", "/api/comunidades", "/api/geo/**"
+            "/api/itens", "/api/itens/*", "/api/usuarios/*/itens", "/api/comunidades", "/api/geo/**"
     };
 
     @Bean

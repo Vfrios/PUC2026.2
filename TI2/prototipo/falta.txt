@@ -1,15 +1,7 @@
-configurar a notificação que nao esta sendo levada para a tela de conversas 
-Limpar todas
-Excluir expiradas
-Sofia Albuquerque enviou uma mensagem sobre Kit Jardinagem Completo
-há 20678 d
-Gustavo Pereira enviou uma mensagem
-há 20678 d
-Eduardo Santos enviou uma mensagem
-há 20678 d
-Camila Rodrigues enviou uma mensagem
-há 20678 d
-Ricardo Almeida enviou uma mensagem
-há 20678 d 
+configurações
+1- mudar senha
+3- editar tempo de expiração de notificações
 
-dias bugados , limpar e excluir nao funciona , excluir so deve aparecer se tiver notificação expirada
+em Reputação e selos - Verificação
+
+adicionar um botao para solicitar verificação de conta

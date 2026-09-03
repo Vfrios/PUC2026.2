@@ -1,5 +1,7 @@
 package com.reviva.api.model;
 
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,6 +29,7 @@ public class Item {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "doador_id")
+    @NotFound(action = NotFoundAction.IGNORE)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Usuario doador;

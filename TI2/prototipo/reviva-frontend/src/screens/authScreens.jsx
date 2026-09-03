@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { api, getToken, setToken, ApiError, wsUrl } from "../api.js";
 import { Client as StompClient } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, Archive, RotateCcw, X } from "lucide-react";
+import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Eye, EyeOff, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, Archive, RotateCcw, X } from "lucide-react";
 import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox } from "./shared.jsx";
 function Splash({ onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 1200); return () => clearTimeout(t); }, []);
@@ -28,6 +28,7 @@ function Auth({ go, onLogin, onRegister }) {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
   const [cpf, setCpf] = useState("");
   const [cep, setCep] = useState("");
   const [numero, setNumero] = useState("");
@@ -162,7 +163,13 @@ function Auth({ go, onLogin, onRegister }) {
         <label style={fieldLabel}>E-mail</label>
         <div style={fieldBox}><Mail size={16} color={INK_SOFT} /><input type="email" name="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@email.com" style={fieldInput} /></div>
         <label style={fieldLabel}>Senha</label>
-        <div style={fieldBox}><Lock size={16} color={INK_SOFT} /><input type="password" name="senha" autoComplete={mode === "registro" ? "new-password" : "current-password"} value={senha} onChange={e => setSenha(e.target.value)} placeholder={mode === "registro" ? "mínimo 8 caracteres" : "••••••••"} style={fieldInput} /></div>
+        <div style={fieldBox}>
+          <Lock size={16} color={INK_SOFT} />
+          <input type={mostrarSenha ? "text" : "password"} name="senha" autoComplete={mode === "registro" ? "new-password" : "current-password"} value={senha} onChange={e => setSenha(e.target.value)} placeholder={mode === "registro" ? "mínimo 8 caracteres" : "••••••••"} style={fieldInput} />
+          <button type="button" onClick={() => setMostrarSenha(visivel => !visivel)} aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"} title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"} style={{ border: "none", background: "none", padding: 0, color: INK_SOFT, cursor: "pointer", display: "flex" }}>
+            {mostrarSenha ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
 
         {erro && <div style={{ marginTop: 10, fontSize: 12, color: "#9C4327", background: "#FBE8E0", padding: "8px 10px", borderRadius: 10 }}>{erro}</div>}
 
