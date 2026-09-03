@@ -13,7 +13,7 @@ spring:
 
 reviva:
   jwt:
-    secret: ${JWT_SECRET:troque-esta-chave-em-producao-para-algo-bem-longo-e-aleatorio}
+    secret: ${JWT_SECRET:reviva-dev-jwt-secret-2026-chave-com-256-bits-minimo}
     expiration-minutes: 1440
   notificacoes:
     expiracao-dias: ${NOTIFICACOES_EXPIRACAO_DIAS:30}
