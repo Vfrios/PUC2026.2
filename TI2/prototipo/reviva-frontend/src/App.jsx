@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { api, getToken, setToken, wsUrl } from "./api.js";
+import { ChevronUp } from "lucide-react";
 import { Client as StompClient } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { ROLE_COLORS, StatusBar, Toast, BottomNav } from "./screens/shared.jsx";
@@ -38,6 +39,7 @@ export default function RevivaApp() {
   const [usuario, setUsuario] = useState(null);
   const [conteudoRolado, setConteudoRolado] = useState(false);
   const [onlineIds, setOnlineIds] = useState(() => new Set());
+  const scrollContainerRef = useRef(null);
   const usuarioRef = useRef(null);
   useEffect(() => { usuarioRef.current = usuario; }, [usuario]);
 
@@ -266,9 +268,26 @@ export default function RevivaApp() {
           <div style={{ width: "100%", height: "100%", background: "#FBFAF4", display: "flex", flexDirection: "column", position: "relative" }}>
             <div className="reviva-notch" />
             <StatusBar />
-            <div style={{ flex: 1, overflowY: "auto" }} onScroll={e => setConteudoRolado(e.currentTarget.scrollTop > 20)}>
+            <div ref={scrollContainerRef} style={{ flex: 1, overflowY: "auto" }} onScroll={e => setConteudoRolado(e.currentTarget.scrollTop > 300)}>
               {ScreenView}
             </div>
+            {screen === "busca" && conteudoRolado && <button
+              type="button"
+              aria-label="Voltar ao topo"
+              title="Voltar ao topo"
+              onClick={() => scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+              style={{
+                position: "absolute", right: 18, bottom: 76, width: 46, height: 46,
+                border: "none", borderRadius: "50%", background: "var(--role-primary)",
+                color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", zIndex: 55, boxShadow: "0 8px 20px rgba(22,40,31,.28)",
+                transition: "transform .2s ease, box-shadow .2s ease, background .2s ease",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 10px 24px rgba(22,40,31,.36)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 20px rgba(22,40,31,.28)"; }}
+              onMouseDown={e => { e.currentTarget.style.transform = "scale(.94)"; }}
+              onMouseUp={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+            ><ChevronUp size={22} strokeWidth={2.5} /></button>}
             {showNav && <BottomNav active={screen} go={go} />}
             <Toast text={toast} show={!!toast} />
           </div>
