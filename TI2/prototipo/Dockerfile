@@ -21,8 +21,9 @@ RUN mvn -B clean package -DskipTests
 # --- Stage 3: runtime ---
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
-RUN mkdir -p db
-COPY reviva-api/db/reviva.db ./db-seed/reviva.db
+ENV REVIVA_DB_PATH=/data/reviva.db
+RUN mkdir -p /data /app/db-seed
+COPY reviva-api/db/reviva.db /app/db-seed/reviva.db
 COPY --from=backend-build /app/target/*.jar app.jar
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh

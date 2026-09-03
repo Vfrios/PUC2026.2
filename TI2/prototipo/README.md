@@ -153,6 +153,25 @@ mvn spring-boot:run
 O cadastro e o login usam essa mesma base. A conta não possui perfil persistido:
 qualquer usuário pode doar e receber; a escolha da tela é apenas local no frontend.
 
+### Railway (teste com SQLite)
+
+Use um único serviço Railway com o `Dockerfile` da raiz. Em **Settings > Build**,
+selecione o builder `Dockerfile` (ou informe `Dockerfile` como arquivo de configuração)
+e deixe o Start Command vazio, pois o `ENTRYPOINT` já inicia a aplicação.
+
+Crie um **Volume** Railway montado em `/data`. Configure as variáveis:
+
+```text
+SPRING_PROFILES_ACTIVE=prod
+REVIVA_DB_PATH=/data/reviva.db
+JWT_SECRET=<uma-chave-fixa-com-pelo-menos-32-caracteres>
+```
+
+O frontend e a API serão servidos pelo mesmo domínio; não configure
+`VITE_API_URL` nesse cenário. O frontend usa URLs relativas e o navegador acessa
+`/api` no próprio domínio Railway. Depois de criar o Volume, faça um novo deploy.
+Sem Volume, o arquivo `.db` pode ser perdido a cada redeploy ou reinício.
+
 No Render, o perfil `prod` usa o SQLite versionado em `reviva-api/db/reviva.db`,
 igual ao ambiente local. Configure `SPRING_PROFILES_ACTIVE=prod`. Para manter
 alterações feitas em produção após reinícios e novos deploys, monte um

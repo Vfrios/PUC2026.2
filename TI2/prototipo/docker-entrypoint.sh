@@ -1,9 +1,10 @@
 #!/bin/sh
 set -eu
 
-mkdir -p /app/db
-if [ ! -f /app/db/reviva.db ]; then
-  cp /app/db-seed/reviva.db /app/db/reviva.db
+DB_PATH="${REVIVA_DB_PATH:-/data/reviva.db}"
+mkdir -p "$(dirname "$DB_PATH")"
+if [ ! -f "$DB_PATH" ]; then
+  cp /app/db-seed/reviva.db "$DB_PATH"
 fi
 
 exec java -jar /app/app.jar
