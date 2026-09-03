@@ -4,6 +4,8 @@ const crypto = require('crypto');
 
 const dbPath = path.join(__dirname, 'reviva-api', 'db', 'reviva.db');
 const db = new sqlite3.Database(dbPath);
+db.configure('busyTimeout', 15000);
+db.run('PRAGMA journal_mode = WAL');
 
 console.log('🚀 REVIVA - 2 USUÁRIOS INTERAGINDO');
 console.log('='.repeat(60));
@@ -17,7 +19,6 @@ const agora = () => Date.now();
 const usuario1 = {
   nome: 'Rafael Monteiro',
   email: 'rafael.monteiro@reviva.com',
-  perfil: 'DOADOR',
   cpf: '111.222.333-44',
   telefone: '(31) 98888-2001',
   itens: 5,
@@ -40,7 +41,6 @@ const usuario1 = {
 const usuario2 = {
   nome: 'Leticia Castro',
   email: 'leticia.castro@reviva.com',
-  perfil: 'RECEPTOR',
   cpf: '555.666.777-88',
   telefone: '(31) 98888-2002',
   itens: 2,
@@ -129,21 +129,36 @@ const itensUsuario2 = [
 
 // ============ CONVERSA COMPLETA ============
 const conversa = [
-  { remetente: 'leticia', texto: 'Ola Rafael! Vi que voce tem um violao para doar! Eu sempre quis aprender a tocar! 🎸', tempo: 1 },
-  { remetente: 'rafael', texto: 'Ola Leticia! Que otimo! Ele esta em otimo estado, comprei para aprender mas acabei nao tendo tempo.', tempo: 2 },
-  { remetente: 'leticia', texto: 'Eu entendo! A correria do dia a dia e complicada mesmo. Voce tem mais algum item de musica?', tempo: 3 },
-  { remetente: 'rafael', texto: 'No momento so o violao mesmo. Mas vi que voce tem um livro de culinaria italiana! Eu adoro cozinhar!', tempo: 4 },
-  { remetente: 'leticia', texto: 'Sim! Ganhei de presente mas ja tenho varios livros de culinaria. Podemos fazer uma troca!', tempo: 5 },
-  { remetente: 'rafael', texto: 'Perfeito! Troco o violao pelo seu livro de culinaria italiana. O que acha?', tempo: 6 },
-  { remetente: 'leticia', texto: 'Fechado! Vi que voce tambem tem um fone de ouvido bluetooth. Eu estou precisando de um para estudar!', tempo: 7 },
-  { remetente: 'rafael', texto: 'Tenho sim! Ele e muito bom, a bateria dura bastante. Podemos incluir na troca se voce tiver mais algo.', tempo: 8 },
-  { remetente: 'leticia', texto: 'Tenho uma luminaria de mesa artesanal linda! Ficaria otima no seu escritorio.', tempo: 9 },
-  { remetente: 'rafael', texto: 'Nossa, eu estava mesmo procurando uma luminaria! Fechado entao! Violao + Fone = Livro + Luminaria!', tempo: 10 },
-  { remetente: 'leticia', texto: 'Perfeito! Vi que voce mora no Santo Antonio, no mesmo predio que eu! Que coincidencia!', tempo: 11 },
-  { remetente: 'rafael', texto: 'Serio? Que otimo! Entao podemos nos encontrar na recepcao do predio!', tempo: 12 },
-  { remetente: 'leticia', texto: 'Perfeito! Que tal hoje a noite, umas 19h?', tempo: 13 },
-  { remetente: 'rafael', texto: 'Combinado! Vou separar o violao e o fone. Ate logo!', tempo: 14 },
-  { remetente: 'leticia', texto: 'Ate logo! Vou confirmar tudo pelo aplicativo. 😊', tempo: 15 }
+  { remetente: 'leticia', texto: 'Ola Rafael! Vi que voce tem um violao para doar. Eu sempre quis aprender a tocar!', tempo: 1 },
+  { remetente: 'rafael', texto: 'Ola Leticia! Ele esta em otimo estado, com cordas novas e uma capa.', tempo: 2 },
+  { remetente: 'leticia', texto: 'Que legal! Voce pode me mandar uma foto dele e das medidas?', tempo: 3 },
+  { remetente: 'rafael', texto: 'Claro. Ele tem 1 metro e 5 centimetros e deixei as fotos no anuncio.', tempo: 4 },
+  { remetente: 'leticia', texto: 'Vi as fotos. Tambem gostei do fone de ouvido, estou precisando de um para estudar.', tempo: 5 },
+  { remetente: 'rafael', texto: 'O fone funciona perfeitamente e a bateria dura quase o dia todo.', tempo: 6 },
+  { remetente: 'leticia', texto: 'Eu tenho um livro de culinaria italiana e uma luminaria artesanal para trocar.', tempo: 7 },
+  { remetente: 'rafael', texto: 'Eu adoro cozinhar e estava procurando uma luminaria para a mesa do escritorio.', tempo: 8 },
+  { remetente: 'leticia', texto: 'Podemos fazer a troca: violao e fone pelo livro e pela luminaria.', tempo: 9 },
+  { remetente: 'rafael', texto: 'Para mim esta otimo. Vou conferir se o fone esta carregado antes de separar tudo.', tempo: 10 },
+  { remetente: 'leticia', texto: 'Sem pressa. Quero que os dois lados fiquem confortaveis com a troca.', tempo: 11 },
+  { remetente: 'rafael', texto: 'Conferi agora: o violao esta afinado e o fone esta com o case e o cabo.', tempo: 12 },
+  { remetente: 'leticia', texto: 'Perfeito! O livro esta bem conservado e a luminaria funciona normalmente.', tempo: 13 },
+  { remetente: 'rafael', texto: 'Voce prefere fazer a retirada na portaria do seu predio?', tempo: 14 },
+  { remetente: 'leticia', texto: 'Sim, moramos no mesmo bairro e a portaria fica aberta ate tarde.', tempo: 15 },
+  { remetente: 'rafael', texto: 'Moro no Santo Antonio tambem. Podemos nos encontrar na recepcao.', tempo: 16 },
+  { remetente: 'leticia', texto: 'Que coincidencia! Hoje depois das 19h funciona para voce?', tempo: 17 },
+  { remetente: 'rafael', texto: 'Funciona sim. Vou criar o agendamento pelo aplicativo para deixar tudo registrado.', tempo: 18 },
+  { remetente: 'rafael', texto: '{"tipo":"AGENDAMENTO_CRIADO","dataHora":"2026-09-03T22:00:00Z","local":"Portaria do Ed. Alameda, Funcionarios"}', tempo: 19 },
+  { remetente: 'leticia', texto: 'Recebi o agendamento. A data, o horario e o local estao corretos.', tempo: 20 },
+  { remetente: 'leticia', texto: '{"tipo":"AGENDAMENTO_CONFIRMADO"}', tempo: 21 },
+  { remetente: 'rafael', texto: 'Perfeito, vou levar os dois itens embalados para nao danificar nada.', tempo: 22 },
+  { remetente: 'rafael', texto: 'Quando chegar, vou mostrar o codigo de retirada para voce confirmar no app.', tempo: 23 },
+  { remetente: 'leticia', texto: 'Combinado. Assim que eu receber os itens, confiro tudo e digito o codigo.', tempo: 24 },
+  { remetente: 'leticia', texto: 'Cheguei na portaria. Estou usando uma blusa azul.', tempo: 25 },
+  { remetente: 'rafael', texto: 'Tambem cheguei. Estou com o violao na capa preta e uma sacola verde.', tempo: 26 },
+  { remetente: 'leticia', texto: 'Recebi o violao e o fone, esta tudo conforme combinamos.', tempo: 27 },
+  { remetente: 'leticia', texto: '{"tipo":"RETIRADA_CONFIRMADA"}', tempo: 28 },
+  { remetente: 'rafael', texto: 'Troca concluida com sucesso. Obrigado pela confianca!', tempo: 29 },
+  { remetente: 'leticia', texto: 'Eu que agradeco! Vou avaliar a troca pelo aplicativo.', tempo: 30 }
 ];
 
 let cont = { u: 0, i: 0, f: 0, s: 0, m: 0, a: 0, av: 0, n: 0 };
@@ -156,18 +171,18 @@ async function main() {
   
   // Inserir usuário 1
   await new Promise(r => {
-    db.run('INSERT INTO usuarios (id, criado_em, email, email_verificado, foto_url, itens_doados, kg_residuo_evitado, latitude, longitude, nome, perfil_ativo, pontos, raio_busca_km, reputacao_score, selo_atual, senha_hash, telefone, telefone_verificado, cep, complemento, numero, cpf) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    db.run('INSERT INTO usuarios (id, criado_em, email, email_verificado, foto_url, itens_doados, kg_residuo_evitado, latitude, longitude, nome, pontos, raio_busca_km, reputacao_score, selo_atual, senha_hash, telefone, telefone_verificado, cep, complemento, numero, cpf) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
       [uid1, agora(), usuario1.email, 1, 'https://loremflickr.com/200/200/face,portrait/all?lock='+usuario1.lock,
-       usuario1.itens, usuario1.kg, usuario1.lat, usuario1.lng, usuario1.nome, usuario1.perfil, usuario1.pontos, usuario1.raio,
+      usuario1.itens, usuario1.kg, usuario1.lat, usuario1.lng, usuario1.nome, usuario1.pontos, usuario1.raio,
        usuario1.reputacao, usuario1.selo, SENHA_HASH, usuario1.telefone, 1, usuario1.cep, usuario1.complemento, usuario1.numero, usuario1.cpf],
       err => { if (err) console.error('❌ Usuário 1:', err.message); else { cont.u++; console.log('✅ Usuário 1:', usuario1.nome); } r(); });
   });
   
   // Inserir usuário 2
   await new Promise(r => {
-    db.run('INSERT INTO usuarios (id, criado_em, email, email_verificado, foto_url, itens_doados, kg_residuo_evitado, latitude, longitude, nome, perfil_ativo, pontos, raio_busca_km, reputacao_score, selo_atual, senha_hash, telefone, telefone_verificado, cep, complemento, numero, cpf) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    db.run('INSERT INTO usuarios (id, criado_em, email, email_verificado, foto_url, itens_doados, kg_residuo_evitado, latitude, longitude, nome, pontos, raio_busca_km, reputacao_score, selo_atual, senha_hash, telefone, telefone_verificado, cep, complemento, numero, cpf) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
       [uid2, agora()+50, usuario2.email, 1, 'https://loremflickr.com/200/200/face,portrait/all?lock='+usuario2.lock,
-       usuario2.itens, usuario2.kg, usuario2.lat, usuario2.lng, usuario2.nome, usuario2.perfil, usuario2.pontos, usuario2.raio,
+      usuario2.itens, usuario2.kg, usuario2.lat, usuario2.lng, usuario2.nome, usuario2.pontos, usuario2.raio,
        usuario2.reputacao, usuario2.selo, SENHA_HASH, usuario2.telefone, 1, usuario2.cep, usuario2.complemento, usuario2.numero, usuario2.cpf],
       err => { if (err) console.error('❌ Usuário 2:', err.message); else { cont.u++; console.log('✅ Usuário 2:', usuario2.nome); } r(); });
   });
@@ -176,6 +191,7 @@ async function main() {
   
   // Inserir itens do usuário 1
   const itensIds1 = [];
+  const tokenRetirada = String(Math.floor(10000 + Math.random() * 90000));
   for (let i = 0; i < itensUsuario1.length; i++) {
     const item = itensUsuario1[i];
     const iid = crypto.randomUUID();
@@ -184,7 +200,7 @@ async function main() {
     await new Promise(r => {
       db.run('INSERT INTO itens (id, bairro, categoria, cidade, descricao, estado_conservacao, impacto_co2kg, latitude, longitude, publicado_em, qr_code_token, status, tipo_publicacao, titulo, uf, doador_id, cep, complemento, numero, peso_kg) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [iid, item.bairro, item.categoria, 'Belo Horizonte', item.descricao, item.conservacao, item.co2,
-         usuario1.lat+(i*0.001), usuario1.lng-(i*0.001), agora()+i, '', 'ATIVO',
+         usuario1.lat+(i*0.001), usuario1.lng-(i*0.001), agora()+i, i === 0 ? tokenRetirada : '', 'ATIVO',
          'TROCAR', item.titulo, 'MG', uid1, item.cep, 'Recepcao do predio', item.numero, item.peso],
         () => {
           cont.i++;
@@ -254,8 +270,8 @@ async function main() {
                   // Criar agendamento
                   const aid = crypto.randomUUID();
                   
-                  db.run('INSERT INTO agendamentos (id, confirmacao_doador_em, confirmacao_receptor_em, data_hora, lembrete1h_enviado, lembrete24h_enviado, local_encontro, status, solicitacao_id) VALUES (?,?,?,?,?,?,?,?,?)',
-                    [aid, agora(), agora()+60*1000, agora()+43200*1000, 0, 0, 'Recepcao do predio - Santo Antonio', 'CONCLUIDO', sid],
+                  db.run('INSERT INTO agendamentos (id, confirmacao_agendamento_receptor_em, confirmacao_doador_em, confirmacao_receptor_em, data_hora, lembrete1h_enviado, lembrete24h_enviado, local_encontro, status, solicitacao_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                    [aid, agora()-180*1000, agora()-120*1000, agora()-60*1000, agora()+43200*1000, 0, 0, 'Recepcao do predio - Santo Antonio', 'CONCLUIDO', sid],
                     () => {
                       cont.a++;
                       console.log('\n  📅 Agendamento: Recepcao do predio');
@@ -317,7 +333,7 @@ async function main() {
     
     console.log('\n💬 RESUMO DA INTERAÇÃO:');
     console.log('='.repeat(60));
-    console.log('• 15 mensagens trocadas');
+    console.log('• 31 mensagens trocadas');
     console.log('• Troca combinada: Violão + Fone = Livro + Luminária');
     console.log('• Encontro na recepção do prédio');
     console.log('• Avaliações mútuas de 5 estrelas');

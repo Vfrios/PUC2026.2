@@ -73,6 +73,28 @@ function parseLocationMessage(texto) {
   }
 }
 
+function parseTradeEvent(texto) {
+  if (!texto) return null;
+  try {
+    const payload = JSON.parse(texto);
+    return ["AGENDAMENTO_CRIADO", "AGENDAMENTO_CONFIRMADO", "RETIRADA_CONFIRMADA"].includes(payload?.tipo) ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+function TradeEventMessage({ event }) {
+  const labels = {
+    AGENDAMENTO_CONFIRMADO: [CheckCircle2, "Agendamento confirmado", "O receptor confirmou a data, hora e local da retirada."],
+    RETIRADA_CONFIRMADA: [CheckCircle2, "Retirada confirmada", "A doação foi concluída com sucesso."],
+  };
+  if (event.tipo === "AGENDAMENTO_CRIADO") {
+    return <div style={{ background: "var(--role-soft)", color: "var(--role-primary-dark)", padding: "11px 13px", borderRadius: 14, fontSize: 12.5 }}><strong>Agendamento criado</strong><div style={{ marginTop: 4 }}>{fmtDateTime(event.dataHora)}{event.local ? ` · ${event.local}` : ""}</div></div>;
+  }
+  const [Icon, title, detail] = labels[event.tipo];
+  return <div style={{ background: "#F1EFE6", color: INK, padding: "11px 13px", borderRadius: 14, fontSize: 12.5, display: "flex", gap: 9, alignItems: "center" }}><Icon size={18} color="var(--role-primary-dark)" /><div><strong>{title}</strong><div style={{ marginTop: 2, color: INK_SOFT }}>{detail}</div></div></div>;
+}
+
 function Inbox({ go, usuario }) {
   const { loading, error, data: conversas, reload } = useApiData(() => api.conversas(), [usuario?.id]);
   const [arquivadas, setArquivadas] = useState(() => JSON.parse(localStorage.getItem("reviva_inbox_arquivadas") || "[]"));
@@ -118,12 +140,15 @@ function Inbox({ go, usuario }) {
 function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
   const { solicitacaoId, otherId, otherName, itemTitulo, itemId } = params || {};
   const { data: item } = useApiData(() => api.itemPorId(itemId), [itemId], { skip: !itemId });
+  const papelAtual = item?.doador?.id === usuario?.id ? "doador" : "receptor";
+  const { data: agendamento, reload: recarregarAgendamento } = useApiData(() => api.agendamentoDaSolicitacao(solicitacaoId), [solicitacaoId], { skip: !solicitacaoId });
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
   const [sending, setSending] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
   const scrollRef = useRef(null);
   const fotoRef = useRef(null);
   const cameraRef = useRef(null);
@@ -161,6 +186,14 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
             if (atual.some((m) => m.id === nova.id)) return atual; // evita duplicar
             return [...atual, nova];
           });
+          try {
+            const evento = JSON.parse(nova.texto);
+            if (["AGENDAMENTO_CRIADO", "AGENDAMENTO_CONFIRMADO", "RETIRADA_CONFIRMADA"].includes(evento?.tipo)) {
+              recarregarAgendamento();
+            }
+          } catch {
+            // Mensagens normais não alteram o estado do agendamento.
+          }
         });
       },
     });
@@ -192,6 +225,38 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
   const avisarAnexo = (mensagem) => {
     setMenuAberto(false);
     notify(mensagem);
+  };
+
+  const abrirConfirmacao = () => {
+    if (!agendamento || agendamento.status === "CANCELADO") {
+      go(papelAtual === "doador" ? "agendamentoDoador" : "agendamentoReceptor", params);
+      return;
+    }
+    go(papelAtual === "doador" ? "confirmDoacao" : "confirmRecebimento", { ...params, agendamento });
+  };
+
+  const confirmarAgendamento = async () => {
+    try {
+      await api.confirmarAgendamento(agendamento.id);
+      notify("Agendamento confirmado.");
+      recarregarAgendamento();
+    } catch (e) {
+      notify(e.message || "Não foi possível confirmar o agendamento.");
+    }
+  };
+
+  const cancelarTroca = async () => {
+    if (!window.confirm("Deseja cancelar esta troca? O agendamento será cancelado.")) return;
+    setCancelando(true);
+    try {
+      await api.cancelarAgendamento(solicitacaoId);
+      notify("Troca cancelada.");
+      recarregarAgendamento();
+    } catch (e) {
+      notify(e.message || "Não foi possível cancelar a troca.");
+    } finally {
+      setCancelando(false);
+    }
   };
 
   const compartilharLocalizacao = () => {
@@ -251,16 +316,17 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
         {messages.map((m) => {
           const mine = usuario && m.remetente?.id === usuario.id;
           const localizacao = parseLocationMessage(m.texto);
+          const evento = parseTradeEvent(m.texto);
           return (
             <div key={m.id} style={{
-              alignSelf: mine ? "flex-end" : "flex-start",
-              background: localizacao ? "transparent" : (mine ? "var(--role-primary)" : "#F1EFE6"),
+              alignSelf: evento || localizacao ? "center" : (mine ? "flex-end" : "flex-start"),
+              background: evento || localizacao ? "transparent" : (mine ? "var(--role-primary)" : "#F1EFE6"),
               color: mine ? "#fff" : INK, padding: "9px 13px", borderRadius: 16,
               borderBottomRightRadius: mine ? 4 : 16, borderBottomLeftRadius: mine ? 16 : 4,
-              fontSize: 13.5, maxWidth: localizacao ? "88%" : "78%",
+              fontSize: 13.5, maxWidth: evento || localizacao ? "88%" : "78%",
             }}>
-              {localizacao ? <LocationMessage {...localizacao} /> : <div>{m.texto}</div>}
-              {mine && <div style={{ fontSize: 10, marginTop: 3, textAlign: "right", color: m.lida ? "#9BE7FF" : "rgba(255,255,255,.72)" }} aria-label={m.lida ? "Lido" : m.entregue ? "Entregue" : "Enviado"}>
+              {evento ? <TradeEventMessage event={evento} /> : localizacao ? <LocationMessage {...localizacao} /> : <div>{m.texto}</div>}
+              {mine && !evento && <div style={{ fontSize: 10, marginTop: 3, textAlign: "right", color: m.lida ? "#9BE7FF" : "rgba(255,255,255,.72)" }} aria-label={m.lida ? "Lido" : m.entregue ? "Entregue" : "Enviado"}>
                 {m.lida ? "✅✅" : m.entregue ? "✅✅" : "✅"}
               </div>}
             </div>
@@ -276,20 +342,27 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
       </div>}
       <div style={{ padding: 12, display: "flex", gap: 8, alignItems: "center", borderTop: "1px solid #EDEBE1" }}>
         <button onClick={() => setMenuAberto(aberto => !aberto)} style={{ ...iconBtn, background: menuAberto ? "var(--role-primary)" : "var(--role-soft)" }} aria-label="Mais opções" title="Mais opções"><Plus size={18} color={menuAberto ? "#fff" : "var(--role-primary-dark)"} /></button>
-        <button onClick={() => go(role === "doador" ? "agendamentoDoador" : "agendamentoReceptor", params)} style={{ ...iconBtn, background: "var(--role-soft)" }}><Calendar size={17} color="var(--role-primary-dark)" /></button>
+        <button onClick={() => go(papelAtual === "doador" ? "agendamentoDoador" : "agendamentoReceptor", params)} style={{ ...iconBtn, background: "var(--role-soft)" }}><Calendar size={17} color="var(--role-primary-dark)" /></button>
         <input value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Escreva uma mensagem..." style={{ ...fieldInput, flex: 1, border: "1px solid #E9E7DC", borderRadius: 20, padding: "10px 14px" }} />
         <button onClick={send} disabled={sending} style={{ ...iconBtn, background: "var(--role-primary)" }}><Send size={16} color="#fff" /></button>
       </div>
-      <div style={{ padding: "0 16px 14px" }}>
-        <Button full variant="soft" icon={Calendar} onClick={() => go(role === "doador" ? "agendamentoDoador" : "agendamentoReceptor", params)}>Combinar retirada</Button>
+      <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <Button full variant="soft" icon={agendamento?.status !== "CONFIRMADO" ? Calendar : (papelAtual === "receptor" && !agendamento.confirmacaoAgendamentoReceptorEm ? CheckCircle2 : QrCode)} disabled={agendamento?.status === "CANCELADO" || agendamento?.status === "CONCLUIDO" || (papelAtual === "doador" && !agendamento?.confirmacaoAgendamentoReceptorEm)} onClick={papelAtual === "receptor" && agendamento?.status === "CONFIRMADO" && !agendamento.confirmacaoAgendamentoReceptorEm ? confirmarAgendamento : abrirConfirmacao}>
+          {agendamento?.status === "CONFIRMADO" ? (papelAtual === "receptor" && !agendamento.confirmacaoAgendamentoReceptorEm ? "Confirmar agendamento" : papelAtual === "doador" ? "Gerar código" : "Digitar código") : agendamento?.status === "CANCELADO" ? "Troca cancelada" : agendamento?.status === "CONCLUIDO" ? "Troca concluída" : "Combinar retirada"}
+        </Button>
+        {agendamento && agendamento.status !== "CONCLUIDO" && agendamento.status !== "CANCELADO" && (
+          <Button full variant="ghost" icon={X} loading={cancelando} onClick={cancelarTroca}>Cancelar troca</Button>
+        )}
       </div>
     </div>
   );
 }
 
 /* ---- AGENDAMENTO ---- */
-function Agendamento({ go, role, notify, params }) {
-  const { solicitacaoId, otherName, itemTitulo } = params || {};
+function Agendamento({ go, role, notify, params, usuario }) {
+  const { solicitacaoId, otherName, itemTitulo, itemId } = params || {};
+  const { data: item } = useApiData(() => api.itemPorId(itemId), [itemId], { skip: !itemId });
+  const papelAtual = item?.doador?.id === usuario?.id ? "doador" : "receptor";
   const [data, setData] = useState(dataLocalAtual);
   const [hora, setHora] = useState(horaLocalAtual);
   const [local, setLocal] = useState("Portaria do Ed. Alameda, Funcionários");
@@ -305,7 +378,7 @@ function Agendamento({ go, role, notify, params }) {
       const iso = new Date(`${data}T${hora || "10:00"}:00`).toISOString();
       const agendamento = await api.agendar(solicitacaoId, iso, local);
       notify(`Retirada agendada para ${fmtDateTime(iso)}`);
-      go(role === "doador" ? "confirmDoacao" : "confirmRecebimento", { agendamento, otherName, itemTitulo });
+      go(papelAtual === "doador" ? "chatDoador" : "chatReceptor", { ...params, agendamento, otherName, itemTitulo, itemId });
     } catch (e) {
       setErro(e.message || "Não foi possível agendar.");
     } finally {
@@ -339,9 +412,19 @@ function Agendamento({ go, role, notify, params }) {
 function ConfirmDoacao({ go, notify, params, refreshUsuario }) {
   const { agendamento, otherName } = params || {};
   const [loading, setLoading] = useState(false);
+  const [agendamentoAtual, setAgendamentoAtual] = useState(agendamento);
+  const [gerandoCodigo, setGerandoCodigo] = useState(false);
+  useEffect(() => {
+    if (!agendamento?.id) return;
+    setGerandoCodigo(true);
+    api.gerarCodigoRetirada(agendamento.id)
+      .then(setAgendamentoAtual)
+      .catch(e => notify(e.message || "Não foi possível gerar o código."))
+      .finally(() => setGerandoCodigo(false));
+  }, [agendamento?.id]);
   if (!agendamento) return <div><TopBar title="Confirmação" onBack={() => go(-1)} /><EmptyState Icon={QrCode} text="Nenhum agendamento em andamento." /></div>;
 
-  const token = agendamento.solicitacao?.item?.qrCodeToken;
+  const token = agendamentoAtual?.codigoRetirada || agendamentoAtual?.solicitacao?.item?.qrCodeToken;
 
   const confirmar = async () => {
     setLoading(true);
@@ -371,11 +454,13 @@ function ConfirmDoacao({ go, notify, params, refreshUsuario }) {
       </div>
       <div style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: INK }}>Hoje é dia de retirada!</div>
       <div style={{ fontSize: 13, color: INK_SOFT, marginTop: 6, maxWidth: 260 }}>Mostre este código para {otherName || "o receptor"} digitar no app dele e confirmar automaticamente.</div>
+      {gerandoCodigo && <div style={{ marginTop: 16, fontSize: 12, color: INK_SOFT }}>Gerando código...</div>}
       {token && (
         <div style={{ marginTop: 16, background: "#F1EFE6", borderRadius: 12, padding: "12px 18px", fontFamily: "monospace", fontSize: 12, color: INK, wordBreak: "break-all" }}>{token}</div>
       )}
+      {!token && !gerandoCodigo && <div style={{ marginTop: 16, fontSize: 12, color: "#9C4327" }}>O código ainda não foi gerado.</div>}
       <div style={{ marginTop: 26, width: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
-        <Button full loading={loading} onClick={confirmar}>Confirmar retirada manualmente</Button>
+        <Button full loading={loading} disabled={!token || gerandoCodigo} onClick={confirmar}>Confirmar retirada manualmente</Button>
         <Button full variant="ghost" icon={AlertTriangle} onClick={async () => { try { await api.reportarProblema(agendamento.id); } catch {} go("moderacao", params); }}>Relatar um problema</Button>
       </div>
       </div>

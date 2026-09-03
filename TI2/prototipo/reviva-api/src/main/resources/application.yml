@@ -39,8 +39,11 @@ spring:
     # Arquivo local: cresce e persiste entre reinícios (ao contrário do H2 em
     # memória de antes). A pasta "db" é criada automaticamente pelo SQLite se
     # não existir; ver Dockerfile para garantir que ela também exista lá.
-    url: jdbc:sqlite:./db/reviva.db
+    url: jdbc:sqlite:./db/reviva.db?busy_timeout=15000&journal_mode=WAL
     driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 1
+      connection-timeout: 20000
   jpa:
     database-platform: org.hibernate.community.dialect.SQLiteDialect
 

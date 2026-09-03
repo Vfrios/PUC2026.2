@@ -4,6 +4,8 @@ const crypto = require('crypto');
 
 const dbPath = path.join(__dirname, 'reviva-api', 'db', 'reviva.db');
 const db = new sqlite3.Database(dbPath);
+db.configure('busyTimeout', 15000);
+db.run('PRAGMA journal_mode = WAL');
 
 console.log('🚀 REVIVA - USUÁRIO ESPECIAL + CONVERSA');
 console.log('='.repeat(60));
@@ -11,6 +13,7 @@ console.log('='.repeat(60));
 // Usar senha em texto normal
 const SENHA = 'UserTeste123';
 const USUARIO_ALVO = '71a633a1-2318-4658-b26e-fe5d6dcd350e';
+const agora = () => Date.now();
 
 // ============ USUÁRIO ESPECIAL ============
 const usuarioEspecial = {
@@ -33,13 +36,11 @@ const usuarioEspecial = {
   complemento: 'Casa 2 - Fundos',
   bairro: 'Santo Antonio',
   online: true,
-  const agora = () => Date.now();
   em_conversa_com: true
 };
 
-      db.run('INSERT INTO usuarios (id, criado_em, email, email_verificado, foto_url, itens_doados, kg_residuo_evitado, latitude, longitude, nome, perfil_ativo, pontos, raio_busca_km, reputacao_score, selo_atual, senha_hash, telefone, telefone_verificado, cpf, cep, numero, complemento, bairro, cidade, estado, status_online) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
 const itensEspeciais = [
-          uid, agora(), usuarioEspecial.email, 1,
+  {
     titulo: 'Kit Jardinagem Completo',
     categoria: 'OUTROS',
     descricao: 'Kit com vasos, ferramentas e sementes organicas para iniciantes',
@@ -69,7 +70,7 @@ const itensEspeciais = [
 ];
 
 // ============ CONVERSA BACANA ============
-          [iid, item.bairro, item.categoria, 'Belo Horizonte', item.descricao, item.conservacao, item.co2, usuarioEspecial.lat+(i*0.001), usuarioEspecial.lng-(i*0.001), agora()+i, '', 'ATIVO', 'TROCAR', item.titulo, 'MG', uid],
+const conversa = [
   { remetente: 'sofia', texto: 'Ola! Tudo bem? Vi que voce tem uns itens incriveis para doar! Parabens pela iniciativa! 🌟', tempo: 1 },
   { remetente: 'alvo', texto: 'Ola Sofia! Muito obrigado! Fico feliz que tenha gostado. O Reviva me ajudou muito a desapegar de coisas boas que nao usava mais.', tempo: 2 },
   { remetente: 'sofia', texto: 'Que legal! Eu estou comecando agora na plataforma. Estou procurando especialmente itens de cozinha e jardinagem.', tempo: 3 },

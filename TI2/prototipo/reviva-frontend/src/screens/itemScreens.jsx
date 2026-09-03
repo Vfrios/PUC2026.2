@@ -263,6 +263,12 @@ function GerenciarItens({ go, notify }) {
 
   const reload = () => { reloadItens(); reloadSolic(); };
 
+  const itensVisiveis = (itens || []).filter(it => {
+    if (aba === "doados") return it.status === "DOADO";
+    if (aba === "arquivados") return it.status !== "DOADO" && (it.status === "REMOVIDO" || it.expirado);
+    return it.status !== "DOADO" && it.status !== "REMOVIDO" && !it.expirado;
+  });
+
   const statusLabel = { ATIVO: "Ativo", EM_NEGOCIACAO: "Em negociação", DOADO: "Doado", REMOVIDO: "Removido" };
   const statusStyle = (s) => ({
     background: s === "DOADO" ? "#EDEBE1" : s === "ATIVO" ? "var(--role-soft)" : s === "REMOVIDO" ? "#F1EFE6" : "#FDEFD9",
@@ -307,15 +313,16 @@ function GerenciarItens({ go, notify }) {
       <TopBar title="Gerenciar itens" onBack={() => go(-1)} />
       <div style={{ padding: "0 20px 12px", display: "flex", gap: 8 }}>
         <Chip active={aba === "ativos"} onClick={() => setAba("ativos")}>Ativos</Chip>
+        <Chip active={aba === "doados"} onClick={() => setAba("doados")}>Doados</Chip>
         <Chip active={aba === "arquivados"} onClick={() => setAba("arquivados")}>Arquivados</Chip>
       </div>
       <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
         {loading && <Loading label="Buscando seus itens..." />}
         {error && <ErrorBox message={error} onRetry={reload} />}
-        {!loading && !error && (itens || []).filter(it => (it.status === "REMOVIDO" || it.expirado) === (aba === "arquivados")).length === 0 && (
-          <EmptyState Icon={aba === "arquivados" ? Archive : Gift} text={aba === "arquivados" ? "Nenhum item arquivado." : "Você ainda não publicou nenhum item. Toque em 'Doar' para cadastrar o primeiro."} />
+        {!loading && !error && itensVisiveis.length === 0 && (
+          <EmptyState Icon={aba === "arquivados" ? Archive : aba === "doados" ? CheckCircle2 : Gift} text={aba === "arquivados" ? "Nenhum item arquivado." : aba === "doados" ? "Nenhum item doado ainda." : "Você ainda não publicou nenhum item. Toque em 'Doar' para cadastrar o primeiro."} />
         )}
-        {(itens || []).filter(it => (it.status === "REMOVIDO" || it.expirado) === (aba === "arquivados")).map((it) => {
+        {itensVisiveis.map((it) => {
           const relacionadas = solicPorItem(it.id);
           const aberto = expandido === it.id;
           return (

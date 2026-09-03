@@ -41,6 +41,14 @@ public class Agendamento {
 
     private Instant confirmacaoDoadorEm;
     private Instant confirmacaoReceptorEm;
+    private Instant confirmacaoAgendamentoReceptorEm;
+
+    @Transient
+    public String getCodigoRetirada() {
+        return solicitacao != null && solicitacao.getItem() != null
+                ? solicitacao.getItem().getQrCodeToken()
+                : null;
+    }
 
     public enum StatusAgendamento { CONFIRMADO, CONCLUIDO, CANCELADO, PROBLEMA_REPORTADO }
 }

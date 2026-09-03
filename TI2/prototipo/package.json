@@ -5,9 +5,12 @@
     "setup": "cd reviva-frontend && npm install",
     "start:frontend": "npm run dev --prefix reviva-frontend",
     "start:backend": "cd reviva-api && mvn spring-boot:run",
-    "dev": "npm run setup && npx concurrently -n \"FRONT,API\" -c \"cyan,green\" \"npm run start:frontend\" \"npm run start:backend\""
+    "dev": "npm run setup && concurrently -n \"FRONT,API\" -c \"cyan,green\" \"npm run start:frontend\" \"npm run start:backend\""
   },
   "dependencies": {
     "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
   }
 }

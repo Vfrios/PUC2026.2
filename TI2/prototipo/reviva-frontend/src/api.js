@@ -152,7 +152,12 @@ export const api = {
   agendar: (solicitacaoId, dataHora, localEncontro) =>
     request("/api/agendamentos", { method: "POST", body: { solicitacaoId, dataHora, localEncontro } }),
 
+  agendamentoDaSolicitacao: (solicitacaoId) => request(`/api/agendamentos/solicitacao/${solicitacaoId}`),
+  cancelarAgendamento: (solicitacaoId) => request(`/api/agendamentos/solicitacao/${solicitacaoId}/cancelar`, { method: "POST" }),
+  confirmarAgendamento: (id) => request(`/api/agendamentos/${id}/confirmar-agendamento`, { method: "POST" }),
+
   confirmarPorDoador: (id) => request(`/api/agendamentos/${id}/confirmar-doador`, { method: "POST" }),
+  gerarCodigoRetirada: (id) => request(`/api/agendamentos/${id}/gerar-codigo`, { method: "POST" }),
 
   confirmarPorReceptor: (id) => request(`/api/agendamentos/${id}/confirmar-receptor`, { method: "POST" }),
 
