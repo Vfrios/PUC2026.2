@@ -1,8 +1,8 @@
 package com.reviva.api.model;
 
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,8 +15,7 @@ import java.time.Instant;
  * Solicitação (cobre a tela de Chat). Simples e via REST (poll no front);
  * ver README para o caminho de evolução para WebSocket/STOMP.
  */
-@Entity
-@Table(name = "mensagens")
+@Document("mensagens")
 @Data
 @Builder
 @NoArgsConstructor
@@ -24,20 +23,14 @@ import java.time.Instant;
 public class Mensagem {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "solicitacao_id")
-    @NotFound(action = NotFoundAction.IGNORE)
+    @DBRef(lazy = false)
     private Solicitacao solicitacao;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "remetente_id")
-    @NotFound(action = NotFoundAction.IGNORE)
+    @DBRef(lazy = false)
     private Usuario remetente;
 
-    @Column(nullable = false, length = 2000)
     private String texto;
 
     @Builder.Default

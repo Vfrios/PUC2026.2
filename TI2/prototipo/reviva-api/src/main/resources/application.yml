@@ -5,11 +5,11 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    open-in-view: false
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/reviva}
+      database: ${MONGODB_DATABASE:reviva}
+      auto-index-creation: true
 
 reviva:
   jwt:
@@ -29,34 +29,3 @@ logging:
     org.springframework.web: INFO
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
-
----
-spring:
-  config:
-    activate:
-      on-profile: dev
-  datasource:
-    # Arquivo local: cresce e persiste entre reinícios (ao contrário do H2 em
-    # memória de antes). A pasta "db" é criada automaticamente pelo SQLite se
-    # não existir; ver Dockerfile para garantir que ela também exista lá.
-    url: jdbc:sqlite:${REVIVA_DB_PATH:./db/reviva.db}?busy_timeout=15000&journal_mode=DELETE
-    driver-class-name: org.sqlite.JDBC
-    hikari:
-      maximum-pool-size: 1
-      connection-timeout: 20000
-  jpa:
-    database-platform: org.hibernate.community.dialect.SQLiteDialect
-
----
-spring:
-  config:
-    activate:
-      on-profile: prod
-  datasource:
-    url: jdbc:sqlite:${REVIVA_DB_PATH:./db/reviva.db}?busy_timeout=15000&journal_mode=DELETE
-    driver-class-name: org.sqlite.JDBC
-    hikari:
-      maximum-pool-size: 1
-      connection-timeout: 20000
-  jpa:
-    database-platform: org.hibernate.community.dialect.SQLiteDialect

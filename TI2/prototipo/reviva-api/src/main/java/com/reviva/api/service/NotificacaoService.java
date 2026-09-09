@@ -40,12 +40,12 @@ public class NotificacaoService {
 
     @Transactional
     public long limpar(Usuario usuario) {
-        return notificacaoRepository.deleteByUsuarioId(usuario.getId());
+        return notificacaoRepository.deleteByUsuario_Id(usuario.getId());
     }
 
     @Transactional
     public long excluirExpiradas(Usuario usuario, int dias) {
-        return notificacaoRepository.deleteByUsuarioIdAndCriadaEmBefore(usuario.getId(), limiteExpiracao(dias));
+        return notificacaoRepository.deleteByUsuario_IdAndCriadaEmBefore(usuario.getId(), limiteExpiracao(dias));
     }
 
     public void marcarComoLida(Notificacao notificacao) {

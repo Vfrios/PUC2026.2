@@ -12,5 +12,5 @@ mvn spring-boot:run
 
 - API: http://localhost:8080
 - Swagger UI: http://localhost:8080/swagger-ui.html
-- Console H2: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:mem:reviva`)
+- Banco: MongoDB Atlas configurado por `MONGODB_URI` e `MONGODB_DATABASE`
 - Login de demonstração: `doador@reviva.com` / `receptor@reviva.com`, senha `reviva123`

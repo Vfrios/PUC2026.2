@@ -1,6 +1,8 @@
 package com.reviva.api.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,8 +11,7 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 
 /** Denúncia/report da tela de Moderação. Pode referenciar um item, chat ou agendamento. */
-@Entity
-@Table(name = "denuncias")
+@Document("denuncias")
 @Data
 @Builder
 @NoArgsConstructor
@@ -18,28 +19,21 @@ import java.time.Instant;
 public class Denuncia {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "denunciante_id")
+    @DBRef(lazy = false)
     private Usuario denunciante;
 
-    @ManyToOne
-    @JoinColumn(name = "denunciado_id")
+    @DBRef(lazy = false)
     private Usuario denunciado;
 
-    @ManyToOne
-    @JoinColumn(name = "agendamento_id")
+    @DBRef(lazy = false)
     private Agendamento agendamento;
 
-    @Enumerated(EnumType.STRING)
     private Motivo motivo;
 
-    @Column(length = 1000)
     private String detalhes;
 
-    @Enumerated(EnumType.STRING)
     @Builder.Default
     private StatusDenuncia status = StatusDenuncia.ABERTA;
 

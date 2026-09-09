@@ -1,2 +1,6 @@
 target/
 node_modules/
+atlas-credentials.env
+.env
+minhas_extensoes.txt
+falta.txt

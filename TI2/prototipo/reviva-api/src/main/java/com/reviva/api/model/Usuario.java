@@ -1,7 +1,10 @@
 package com.reviva.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,8 +20,7 @@ import java.util.Set;
  * Usuário da plataforma. Um mesmo usuário pode alternar entre os perfis
  * Doador e Receptor a qualquer momento (ver ChooseProfile / Perfil no app).
  */
-@Entity
-@Table(name = "usuarios")
+@Document("usuarios")
 @Data
 @Builder
 @NoArgsConstructor
@@ -26,21 +28,17 @@ import java.util.Set;
 public class Usuario {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(nullable = false)
     private String nome;
 
-    @Column(nullable = false, unique = true)
+    @Indexed(unique = true)
     private String email;
 
-    // SQLite nao consegue adicionar uma coluna UNIQUE durante o ddl-auto=update.
-    // A unicidade tambem e validada no AuthController antes de salvar.
-    @Column
+    // A unicidade e garantida pelo indice unico do MongoDB e validada no cadastro.
+    @Indexed(name = "cpf_unique", unique = true, sparse = true)
     private String cpf;
 
-    @Column(nullable = false)
     @JsonIgnore // nunca devolver o hash da senha nas respostas da API
     private String senhaHash;
 
@@ -78,7 +76,6 @@ public class Usuario {
     @Builder.Default
     private Integer pontos = 0;
 
-    @Enumerated(EnumType.STRING)
     @Builder.Default
     private SeloTier seloAtual = SeloTier.BRONZE;
 
@@ -89,7 +86,7 @@ public class Usuario {
     // (loop infinito -> StackOverflowError no meio da resposta HTTP, que o
     // navegador reporta como ERR_INCOMPLETE_CHUNKED_ENCODING).
     @Builder.Default
-    @OneToMany(mappedBy = "doador", cascade = CascadeType.ALL)
+    @DBRef(lazy = false)
     @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude

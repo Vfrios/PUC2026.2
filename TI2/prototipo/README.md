@@ -1,8 +1,7 @@
 # Reviva — Doação e Troca de Objetos
 
 Projeto completo com **backend Java 21 + Spring Boot 3** e **frontend React (Vite)**,
-conectados por REST e WebSocket, usando SQLite em desenvolvimento e PostgreSQL
-preparado para producao.
+conectados por REST e WebSocket, usando **MongoDB Atlas** como banco de dados.
 
 ```
 reviva-projeto/
@@ -15,7 +14,7 @@ reviva-projeto/
 O projeto e dividido em dois aplicativos:
 
 ```text
-reviva-api/       API Java com Spring Boot, JPA e SQLite/PostgreSQL
+reviva-api/       API Java com Spring Boot, Spring Data MongoDB e MongoDB Atlas
 reviva-frontend/  Interface React executada pelo Vite
 ```
 
@@ -126,13 +125,25 @@ O frontend se comunica com a API por REST e recebe novas mensagens por WebSocket
 ## Stack tecnologica
 
 - Backend: Java 21, Spring Boot 3.3.2, Spring Web, Security, Validation,
-    Data JPA, WebSocket, JWT, SQLite, PostgreSQL e Springdoc.
+    Data MongoDB, WebSocket, JWT, MongoDB Atlas e Springdoc.
 - Frontend: React 18, Vite, Tailwind CSS, Lucide, STOMP.js, SockJS, Leaflet,
     react-leaflet e OpenStreetMap.
 
 ## Como executar
 
-Pre-requisitos: JDK 21, Maven, Node.js e npm.
+Pre-requisitos: JDK 21, Maven, Node.js, npm e uma instância MongoDB Atlas.
+
+Configure a conexão antes de iniciar a API:
+
+```powershell
+$env:MONGODB_URI = "mongodb+srv://USUARIO:SENHA@SEU-CLUSTER.xxxxx.mongodb.net/?retryWrites=true&w=majority&appName=Reviva"
+$env:MONGODB_DATABASE = "reviva"
+```
+
+Substitua todos os valores de exemplo pela URI copiada em **MongoDB Atlas >
+Connect > Drivers > Node.js**. A URI não pode conter literalmente
+`cluster.mongodb.net`, `<usuario>`, `<senha>` ou `<cluster>`. Se a senha tiver
+`@`, `:`, `/`, `?` ou `#`, aplique URL encoding antes de inseri-la na URI.
 
 ```powershell
 cd reviva-api
@@ -140,44 +151,57 @@ mvn spring-boot:run
 ```
 
 API: http://localhost:8080. Swagger: http://localhost:8080/swagger-ui.html.
-O perfil `dev` usa o banco SQLite em `reviva-api/db/reviva.db`.
+Os perfis `dev` e `prod` usam a conexão MongoDB definida por `MONGODB_URI`.
 
-Para executar duas instâncias locais compartilhando os mesmos dados, configure
-`REVIVA_DB_PATH` com o caminho absoluto do mesmo arquivo nas duas instâncias:
+Os dados já foram migrados para o Atlas. Para inserir dados de produção, use a
+API; não há mais scripts locais de transferência ou dependência do SQLite.
+
+Os comandos de carga e limpeza carregam automaticamente as variáveis de
+`atlas-credentials.env` (`MONGODB_USERNAME`, `MONGODB_PASSWORD` e `MONGODB_URI`):
 
 ```powershell
-$env:REVIVA_DB_PATH = "C:\caminho\do\projeto\reviva-api\db\reviva.db"
-mvn spring-boot:run
+npm run seed:mongodb
+npm run clear:mongodb
 ```
 
-O cadastro e o login usam essa mesma base. A conta não possui perfil persistido:
+Para iniciar o backend no PowerShell usando o mesmo arquivo sem colar a senha:
+
+```powershell
+Get-Content .\atlas-credentials.env | ForEach-Object {
+    if ($_ -match '^\s*([^#][^=]*)=(.*)$') {
+        [Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2].Trim().Trim('"'), 'Process')
+    }
+}
+Push-Location .\reviva-api
+mvn spring-boot:run
+Pop-Location
+```
+
+O cadastro e o login usam a mesma base MongoDB definida pela URI. A conta não possui perfil persistido:
 qualquer usuário pode doar e receber; a escolha da tela é apenas local no frontend.
 
-### Railway (teste com SQLite)
+O arquivo SQLite legado foi removido do projeto após a migração. Um backup foi
+mantido fora da pasta do projeto. E-mail e CPF agora possuem índices únicos no
+MongoDB; e-mails são normalizados para minúsculas no cadastro e login.
+
+### Railway/Render com MongoDB Atlas
 
 Use um único serviço Railway com o `Dockerfile` da raiz. Em **Settings > Build**,
 selecione o builder `Dockerfile` (ou informe `Dockerfile` como arquivo de configuração)
 e deixe o Start Command vazio, pois o `ENTRYPOINT` já inicia a aplicação.
 
-Crie um **Volume** Railway montado em `/data`. Configure as variáveis:
+Configure as variáveis no serviço:
 
 ```text
 SPRING_PROFILES_ACTIVE=prod
-REVIVA_DB_PATH=/data/reviva.db
+MONGODB_URI=mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/?retryWrites=true&w=majority
+MONGODB_DATABASE=reviva
 JWT_SECRET=<uma-chave-fixa-com-pelo-menos-32-caracteres>
 ```
 
 O frontend e a API serão servidos pelo mesmo domínio; não configure
 `VITE_API_URL` nesse cenário. O frontend usa URLs relativas e o navegador acessa
-`/api` no próprio domínio Railway. Depois de criar o Volume, faça um novo deploy.
-Sem Volume, o arquivo `.db` pode ser perdido a cada redeploy ou reinício.
-
-No Render, o perfil `prod` usa o SQLite versionado em `reviva-api/db/reviva.db`,
-igual ao ambiente local. Configure `SPRING_PROFILES_ACTIVE=prod`. Para manter
-alterações feitas em produção após reinícios e novos deploys, monte um
-Persistent Disk do Render em `/app/db`. Na primeira inicialização, o `reviva.db`
-incluído na imagem é copiado para o disco; depois disso, os dados gravados no
-Render são preservados e não são sobrescritos por novos deploys.
+`/api` no próprio domínio.
 
 Em outro terminal:
 

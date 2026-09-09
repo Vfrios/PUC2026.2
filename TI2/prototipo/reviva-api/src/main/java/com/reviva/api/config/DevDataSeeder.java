@@ -13,7 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
- * Popula o banco H2 com dados de demonstração ao subir a aplicação em modo
+ * Popula o banco MongoDB com dados de demonstração ao subir a aplicação em modo
  * dev, para você já abrir o front e ver algo de verdade sem precisar
  * cadastrar tudo na mão. Só roda se o banco ainda estiver vazio.
  *
@@ -34,7 +34,7 @@ public class DevDataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (usuarioRepository.count() > 0) {
-            return; // já tem dados (ex: reinício sem perder o H2), não duplica
+            return; // já tem dados (ex: reinício sem perder o MongoDB), não duplica
         }
 
         Usuario doador = usuarioRepository.save(Usuario.builder()

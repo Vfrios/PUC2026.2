@@ -1,18 +1,17 @@
 package com.reviva.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
 
 import java.time.Instant;
 
-@Entity
-@Table(name = "notificacoes")
+@Document("notificacoes")
 @Data
 @Builder
 @NoArgsConstructor
@@ -20,24 +19,18 @@ import java.time.Instant;
 public class Notificacao {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "usuario_id")
     @JsonIgnore
+    @DBRef(lazy = false)
     private Usuario usuario;
 
-    @ManyToOne
-    @JoinColumn(name = "solicitacao_id")
-    @NotFound(action = NotFoundAction.IGNORE)
     @JsonIgnore
+    @DBRef(lazy = false)
     private Solicitacao solicitacao;
 
-    @Column(nullable = false)
     private String titulo;
 
-    @Enumerated(EnumType.STRING)
     private Tipo tipo;
 
     @Builder.Default

@@ -1,6 +1,8 @@
 package com.reviva.api.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
@@ -10,8 +12,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 
-@Entity
-@Table(name = "avaliacoes")
+@Document("avaliacoes")
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,25 +20,20 @@ import java.time.Instant;
 public class Avaliacao {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "agendamento_id")
+    @DBRef(lazy = false)
     private Agendamento agendamento;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "avaliador_id")
+    @DBRef(lazy = false)
     private Usuario avaliador;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "avaliado_id")
+    @DBRef(lazy = false)
     private Usuario avaliado;
 
     @Min(1) @Max(5)
     private int nota;
 
-    @Column(length = 1000)
     private String comentario;
 
     @Builder.Default

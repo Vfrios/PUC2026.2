@@ -1,6 +1,9 @@
 package com.reviva.api.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,8 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 
-@Entity
-@Table(name = "agendamentos")
+@Document("agendamentos")
 @Data
 @Builder
 @NoArgsConstructor
@@ -17,19 +19,15 @@ import java.time.Instant;
 public class Agendamento {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @OneToOne(optional = false)
-    @JoinColumn(name = "solicitacao_id")
+    @DBRef(lazy = false)
     private Solicitacao solicitacao;
 
-    @Column(nullable = false)
     private Instant dataHora;
 
     private String localEncontro;
 
-    @Enumerated(EnumType.STRING)
     @Builder.Default
     private StatusAgendamento status = StatusAgendamento.CONFIRMADO;
 

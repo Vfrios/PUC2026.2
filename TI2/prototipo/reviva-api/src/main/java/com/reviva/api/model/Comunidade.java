@@ -1,7 +1,9 @@
 package com.reviva.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,8 +14,7 @@ import lombok.ToString;
 import java.util.HashSet;
 import java.util.Set;
 
-@Entity
-@Table(name = "comunidades")
+@Document("comunidades")
 @Data
 @Builder
 @NoArgsConstructor
@@ -21,10 +22,8 @@ import java.util.Set;
 public class Comunidade {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(nullable = false)
     private String nome;
 
     private String descricao;
@@ -36,10 +35,7 @@ public class Comunidade {
     // relatado nas outras rotas). Use GET /api/comunidades/{id}/membros (a criar
     // se precisar da lista) em vez de expor isso aqui.
     @Builder.Default
-    @ManyToMany
-    @JoinTable(name = "comunidade_membros",
-            joinColumns = @JoinColumn(name = "comunidade_id"),
-            inverseJoinColumns = @JoinColumn(name = "usuario_id"))
+    @DBRef(lazy = false)
     @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude

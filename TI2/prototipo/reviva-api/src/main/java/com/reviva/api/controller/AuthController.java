@@ -8,6 +8,7 @@ import com.reviva.api.repository.UsuarioRepository;
 import com.reviva.api.security.JwtService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +27,8 @@ public class AuthController {
     @PostMapping("/registrar")
     @ResponseStatus(HttpStatus.CREATED)
     public TokenResponse registrar(@RequestBody @Valid RegistroRequest req) {
-        if (usuarioRepository.existsByEmail(req.email())) {
+        String email = normalizarEmail(req.email());
+        if (usuarioRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "E-mail já cadastrado");
         }
         String cpf = somenteDigitos(req.cpf());
@@ -42,20 +44,24 @@ public class AuthController {
         }
         Usuario usuario = Usuario.builder()
                 .nome(req.nome())
-                .email(req.email())
+            .email(email)
                 .cpf(cpf)
                 .cep(cep)
                 .numero(req.numero())
                 .complemento(req.complemento())
                 .senhaHash(passwordEncoder.encode(req.senha()))
                 .build();
-        usuario = usuarioRepository.save(usuario);
+        try {
+            usuario = usuarioRepository.save(usuario);
+        } catch (DuplicateKeyException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "E-mail ou CPF ja cadastrado");
+        }
         return TokenResponse.of(jwtService.gerarToken(usuario.getId(), usuario.getEmail()));
     }
 
     @PostMapping("/login")
     public TokenResponse login(@RequestBody @Valid LoginRequest req) {
-        Usuario usuario = usuarioRepository.findByEmail(req.email())
+        Usuario usuario = usuarioRepository.findByEmail(normalizarEmail(req.email()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais inválidas"));
         if (!passwordEncoder.matches(req.senha(), usuario.getSenhaHash())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais inválidas");
@@ -65,6 +71,10 @@ public class AuthController {
 
     private static String somenteDigitos(String valor) {
         return valor == null ? "" : valor.replaceAll("\\D", "");
+    }
+
+    private static String normalizarEmail(String valor) {
+        return valor == null ? "" : valor.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     private static boolean cpfValido(String cpf) {

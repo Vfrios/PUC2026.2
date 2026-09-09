@@ -1,8 +1,8 @@
 package com.reviva.api.model;
 
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,8 +15,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "itens")
+@Document("itens")
 @Data
 @Builder
 @NoArgsConstructor
@@ -24,32 +23,23 @@ import java.util.List;
 public class Item {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "doador_id")
-    @NotFound(action = NotFoundAction.IGNORE)
+    @DBRef(lazy = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Usuario doador;
 
-    @Column(nullable = false)
     private String titulo;
 
-    @Column(length = 2000)
     private String descricao;
 
-    @Enumerated(EnumType.STRING)
     private Categoria categoria;
 
-    @Enumerated(EnumType.STRING)
     private EstadoConservacao estadoConservacao;
 
-    @Enumerated(EnumType.STRING)
     private TipoPublicacao tipoPublicacao;
 
-    @Enumerated(EnumType.STRING)
     @Builder.Default
     private StatusItem status = StatusItem.ATIVO;
 
@@ -75,8 +65,6 @@ public class Item {
     // columnDefinition = TEXT: cada foto é salva como data URL em base64 (ver
     // CadastroItem/comprimirImagem no frontend); sem isso o Hibernate usa
     // VARCHAR(255) por padrão e o base64 (várias dezenas de KB) seria truncado.
-    @ElementCollection(fetch = FetchType.EAGER)
-    @Column(name = "foto_url", columnDefinition = "TEXT")
     @Builder.Default
     private List<String> fotosUrls = new ArrayList<>();
 

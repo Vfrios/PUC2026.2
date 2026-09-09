@@ -21,9 +21,6 @@ RUN mvn -B clean package -DskipTests
 # --- Stage 3: runtime ---
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
-ENV REVIVA_DB_PATH=/data/reviva.db
-RUN mkdir -p /data /app/db-seed
-COPY reviva-api/db/reviva.db /app/db-seed/reviva.db
 COPY --from=backend-build /app/target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "set -eu; DB_PATH=\"${REVIVA_DB_PATH:-/data/reviva.db}\"; mkdir -p \"$(dirname \"$DB_PATH\")\"; if [ ! -f \"$DB_PATH\" ]; then cp /app/db-seed/reviva.db \"$DB_PATH\"; fi; exec java -jar /app/app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
