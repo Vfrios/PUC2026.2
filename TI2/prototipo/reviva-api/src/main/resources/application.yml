@@ -25,7 +25,6 @@ logging:
   level:
     root: INFO
     com.reviva.api: DEBUG
-    org.hibernate.SQL: WARN
     org.springframework.web: INFO
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"

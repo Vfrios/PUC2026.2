@@ -219,7 +219,7 @@ Usuario 1 ---- N Denuncia
 
 - Perfil padrão: `dev`.
 - Porta: `8080`, sobrescrita por `PORT`.
-- Banco: `./db/reviva.db`, sobrescrito por `REVIVA_DB_PATH`.
+- Banco: MongoDB Atlas, configurado por `MONGODB_URI` e `MONGODB_DATABASE`.
 - JWT: segredo por `JWT_SECRET` e validade padrão de 1440 minutos.
 - Notificações: expiração padrão de 30 dias.
 - Swagger: `http://localhost:8080/swagger-ui.html`.
@@ -331,12 +331,11 @@ Controllers não devem construir respostas com entidades JPA completas. Services
 - Criar índices para e-mail, CPF, status/expiração de item, item da solicitação e usuário de notificação.
 - Fotos base64 permanecem compatíveis, mas devem migrar futuramente para armazenamento de objetos.
 
-### Migração
+### Operação do banco
 
-- `migrar_sqlite_para_mongodb.js --dry-run` valida contagens sem escrever.
-- `migrar_sqlite_para_mongodb.js` faz upsert idempotente por ID.
-- O script converte a tabela de fotos para `fotosUrls` e a tabela de membros para referências em `membros`.
-- Fazer backup do SQLite antes da migração e validar contagens por coleção depois.
+- O seed usa upsert idempotente por ID nas coleções do MongoDB.
+- Fotos são armazenadas no campo `fotosUrls` e membros como referências em `membros`.
+- Fazer backup e validar as coleções do MongoDB antes de alterações estruturais.
 
 ## 13. Integrações externas
 
@@ -351,6 +350,6 @@ Controllers não devem construir respostas com entidades JPA completas. Services
 
 - Health check deve verificar processo, conexão com banco e configuração mínima de JWT.
 - Logs devem conter timestamp, nível, classe e contexto da operação sem dados pessoais.
-- Monitorar taxa de 4xx, 5xx, tempo de resposta, falhas de WebSocket e crescimento do SQLite.
+- Monitorar taxa de 4xx, 5xx, tempo de resposta, falhas de WebSocket e crescimento das coleções MongoDB.
 - Alertar quando o volume estiver próximo do limite ou quando backups falharem.
 - Desligamento deve permitir concluir transações em andamento antes de encerrar.

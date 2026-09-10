@@ -153,8 +153,8 @@ mvn spring-boot:run
 API: http://localhost:8080. Swagger: http://localhost:8080/swagger-ui.html.
 Os perfis `dev` e `prod` usam a conexão MongoDB definida por `MONGODB_URI`.
 
-Os dados já foram migrados para o Atlas. Para inserir dados de produção, use a
-API; não há mais scripts locais de transferência ou dependência do SQLite.
+Os dados ficam no MongoDB Atlas. Para inserir dados de produção, use a API;
+não há banco local nem scripts de transferência.
 
 Os comandos de carga e limpeza carregam automaticamente as variáveis de
 `atlas-credentials.env` (`MONGODB_USERNAME`, `MONGODB_PASSWORD` e `MONGODB_URI`):
@@ -180,8 +180,7 @@ Pop-Location
 O cadastro e o login usam a mesma base MongoDB definida pela URI. A conta não possui perfil persistido:
 qualquer usuário pode doar e receber; a escolha da tela é apenas local no frontend.
 
-O arquivo SQLite legado foi removido do projeto após a migração. Um backup foi
-mantido fora da pasta do projeto. E-mail e CPF agora possuem índices únicos no
+E-mail e CPF possuem índices únicos no
 MongoDB; e-mails são normalizados para minúsculas no cadastro e login.
 
 ### Railway/Render com MongoDB Atlas

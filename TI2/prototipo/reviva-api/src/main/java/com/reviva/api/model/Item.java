@@ -58,13 +58,7 @@ public class Item {
     /** Peso aproximado do item, usado como medida principal de material reutilizado. */
     private Double pesoKg;
 
-    // fetch = EAGER: por padrão @ElementCollection é LAZY. Com
-    // spring.jpa.open-in-view=false a sessão do Hibernate fecha antes do
-    // Jackson serializar a resposta, e tentar ler essa lista lazy fora da
-    // sessão derruba a conexão no meio do JSON (ERR_INCOMPLETE_CHUNKED_ENCODING).
-    // columnDefinition = TEXT: cada foto é salva como data URL em base64 (ver
-    // CadastroItem/comprimirImagem no frontend); sem isso o Hibernate usa
-    // VARCHAR(255) por padrão e o base64 (várias dezenas de KB) seria truncado.
+    // As fotos são armazenadas como data URLs em base64 no documento MongoDB.
     @Builder.Default
     private List<String> fotosUrls = new ArrayList<>();
 

@@ -38,13 +38,13 @@ Este documento define os controles de segurança e a estratégia de verificaçã
 - Coordenadas são solicitadas pelo navegador no momento da ação e devem ter finalidade clara.
 - A localização compartilhada no chat é enviada como mensagem estruturada e abre mapa externo apenas mediante clique.
 - O frontend não deve incluir token, senha, CPF completo ou endereço completo em mensagens de erro.
-- Banco SQLite de produção deve ser colocado em volume persistente e com acesso de arquivo restrito ao processo da API.
+- MongoDB Atlas de produção deve usar TLS, credenciais protegidas e lista de IPs restrita.
 
 ### Segurança de comunicação e configuração
 
 - Produção deve usar HTTPS para proteger JWT, mensagens e coordenadas em trânsito.
 - `JWT_SECRET` deve ser uma chave fixa, aleatória e com pelo menos 32 caracteres; o valor de desenvolvimento não pode ser usado em produção.
-- `SPRING_PROFILES_ACTIVE`, `REVIVA_DB_PATH`, `PORT` e `NOTIFICACOES_EXPIRACAO_DIAS` são configurações externas.
+- `SPRING_PROFILES_ACTIVE`, `MONGODB_URI`, `MONGODB_DATABASE`, `PORT` e `NOTIFICACOES_EXPIRACAO_DIAS` são configurações externas.
 - WebSocket deve validar o token recebido no handshake e restringir a inscrição ao tópico da solicitação permitida.
 - CORS, origem do frontend e cabeçalhos de segurança devem ser restritos ao domínio publicado.
 - Logs devem omitir senha, token, CPF, conteúdo de mensagem e coordenadas exatas.

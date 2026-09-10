@@ -29,11 +29,8 @@ public class Comunidade {
     private String descricao;
     private String bairroReferencia;
 
-    // LAZY por padrão em @ManyToMany + open-in-view=false: sem @JsonIgnore
-    // aqui o Jackson tentava ler a coleção fora da sessão do Hibernate e
-    // quebrava a resposta no meio (mesmo bug do ERR_INCOMPLETE_CHUNKED_ENCODING
-    // relatado nas outras rotas). Use GET /api/comunidades/{id}/membros (a criar
-    // se precisar da lista) em vez de expor isso aqui.
+    // Evita serializar a coleção de membros diretamente na resposta da comunidade.
+    // Use o endpoint específico de membros quando essa lista for necessária.
     @Builder.Default
     @DBRef(lazy = false)
     @JsonIgnore
