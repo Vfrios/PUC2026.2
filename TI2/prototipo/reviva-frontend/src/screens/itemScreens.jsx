@@ -263,6 +263,11 @@ function GerenciarItens({ go, notify }) {
 
   const reload = () => { reloadItens(); reloadSolic(); };
 
+  useEffect(() => {
+    const intervalo = setInterval(reloadSolic, 15000);
+    return () => clearInterval(intervalo);
+  }, [reloadSolic]);
+
   const itensVisiveis = (itens || []).filter(it => {
     if (aba === "doados") return it.status === "DOADO";
     if (aba === "arquivados") return it.status !== "DOADO" && (it.status === "REMOVIDO" || it.expirado);
@@ -275,7 +280,7 @@ function GerenciarItens({ go, notify }) {
     color: s === "DOADO" || s === "REMOVIDO" ? INK_SOFT : s === "ATIVO" ? "var(--role-primary-dark)" : "#9C6B14",
   });
 
-  const solicPorItem = (itemId) => (solicitacoes || []).filter(s => s.item?.id === itemId);
+  const solicPorItem = (itemId) => (solicitacoes || []).filter(s => String(s.item?.id) === String(itemId));
 
   const remover = async (item) => {
     setAcaoLoading(item.id);

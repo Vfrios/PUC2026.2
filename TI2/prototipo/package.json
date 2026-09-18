@@ -6,6 +6,8 @@
     "start:frontend": "npm run dev --prefix reviva-frontend",
     "start:backend": "node start-backend.cjs",
     "seed:mongodb": "node --env-file=atlas-credentials.env reviva_massa_completa.js",
+    "migrate:mongodb-ids": "node --env-file=atlas-credentials.env migrate-mongo-ids-to-objectid.js",
+    "migrate:mongodb-ids:apply": "node --env-file=atlas-credentials.env migrate-mongo-ids-to-objectid.js --apply",
     "clear:mongodb": "node --env-file=atlas-credentials.env limpar_banco.js --confirm",
     "dev": "npm run setup && concurrently -n \"FRONT,API\" -c \"cyan,green\" \"npm run start:frontend\" \"npm run start:backend\""
   },

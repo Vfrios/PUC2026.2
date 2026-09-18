@@ -82,7 +82,6 @@ O frontend se comunica com a API por REST e recebe novas mensagens por WebSocket
 - Mensagens de texto persistidas no banco.
 - Atualizacao em tempo real por WebSocket/STOMP.
 - Indicadores visuais de mensagem enviada, entregue e lida.
-- Arquivamento de conversa por gesto de deslizar.
 - Menu de anexos com galeria, camera e compartilhamento de localizacao.
 - Aviso de seguranca para manter a interacao dentro da plataforma.
 
@@ -163,6 +162,24 @@ Os comandos de carga e limpeza carregam automaticamente as variáveis de
 npm run seed:mongodb
 npm run clear:mongodb
 ```
+
+Os IDs do MongoDB devem usar `ObjectId` em todas as colecoes e referencias
+`DBRef`. A carga inicial ja segue esse padrao. Se o cluster tiver dados antigos
+com IDs string de 24 caracteres, faça um backup e execute primeiro a auditoria:
+
+```powershell
+npm run migrate:mongodb-ids
+```
+
+Somente depois de revisar a quantidade informada pelo comando, aplique a
+migracao:
+
+```powershell
+npm run migrate:mongodb-ids:apply
+```
+
+O comando com `--apply` converte IDs string hexadecimais e seus `DBRef`,
+detecta colisoes e nao deve ser executado sem backup do banco.
 
 Para iniciar o backend no PowerShell usando o mesmo arquivo sem colar a senha:
 
@@ -296,7 +313,7 @@ O cliente conecta pelo endpoint SockJS `/ws` e atualiza o chat em tempo real.
 - Fotos aceitam URLs/data URLs; ainda nao existe storage dedicado.
 - Posts e desafios de comunidade ainda nao possuem modelo de backend.
 - Push notifications nativas ainda nao foram implementadas.
-- Arquivamento e algumas preferencias sao locais.
+- Algumas preferencias sao locais.
 - O mapa precisa de internet para carregar tiles do OpenStreetMap, mas nao exige token.
 
 ## Verificacao

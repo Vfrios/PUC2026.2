@@ -37,19 +37,19 @@ public class SolicitacaoController {
     /** Conversas em todos os itens publicados pelo usuário logado. */
     @GetMapping("/recebidas")
     public List<SolicitacaoResponse> recebidas(@AuthenticationPrincipal Usuario doador) {
-        return SolicitacaoResponse.from(solicitacaoRepository.findByItem_DoadorOrderByCriadaEmDesc(doador));
+        return SolicitacaoResponse.from(solicitacaoRepository.findByItem_Doador_IdOrderByCriadaEmDesc(doador.getId()));
     }
 
     /** Caixa de mensagens: inclui conversas iniciadas ou recebidas pelo usuário. */
     @GetMapping("/conversas")
     public List<SolicitacaoResponse> conversas(@AuthenticationPrincipal Usuario usuario) {
         return SolicitacaoResponse.from(
-                solicitacaoRepository.findByItem_DoadorOrReceptorOrderByCriadaEmDesc(usuario, usuario));
+                solicitacaoRepository.findByItem_Doador_IdOrReceptor_IdOrderByCriadaEmDesc(usuario.getId(), usuario.getId()));
     }
 
     /** Solicitações que o usuário logado enviou para itens de outros. */
     @GetMapping("/enviadas")
     public List<SolicitacaoResponse> enviadas(@AuthenticationPrincipal Usuario receptor) {
-        return SolicitacaoResponse.from(solicitacaoRepository.findByReceptorOrderByCriadaEmDesc(receptor));
+        return SolicitacaoResponse.from(solicitacaoRepository.findByReceptor_IdOrderByCriadaEmDesc(receptor.getId()));
     }
 }

@@ -83,7 +83,7 @@ A aplicação não usa papéis persistidos separados. A escolha visual entre doa
 5. Mensagens devem permanecer persistidas no banco.
 6. O chat deve receber novas mensagens em tempo real via WebSocket/STOMP.
 7. O cliente deve evitar duplicar mensagens recebidas por REST e WebSocket.
-8. O usuário deve arquivar conversa por gesto de deslizar; o arquivamento atual é local ao navegador.
+8. O Inbox mantém todas as conversas disponíveis enquanto elas existirem no backend.
 9. O chat deve orientar a manter negociações dentro da plataforma.
 10. O usuário deve compartilhar localização atual, foto, câmera e referência de local conforme os recursos disponíveis no navegador.
 
@@ -153,7 +153,7 @@ A aplicação não usa papéis persistidos separados. A escolha visual entre doa
 - O agendamento só pode ser acessado por doador ou receptor da solicitação.
 - O item fica `DOADO` quando a retirada é concluída ou quando o doador usa a confirmação rápida.
 - A denúncia de uma ocorrência não remove automaticamente item nem usuário.
-- Favoritos e arquivamento do Inbox são dados locais do navegador no protótipo.
+- Favoritos são dados locais do navegador no protótipo.
 
 ## 6. Critérios gerais de aceite
 

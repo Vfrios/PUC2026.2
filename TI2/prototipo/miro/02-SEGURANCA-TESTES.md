@@ -60,7 +60,7 @@ Este documento define os controles de segurança e a estratégia de verificaçã
 | Média | Não há menção a limitação de tentativas de login | Adicionar rate limit, atraso progressivo e alerta de tentativas repetidas |
 | Média | Link de Google Maps recebe coordenadas por URL | Pedir confirmação antes de abrir serviço externo e documentar compartilhamento com terceiro |
 | Média | Texto de mensagem pode conter abuso ou dados pessoais | Criar moderação, bloqueio, denúncia e política de retenção |
-| Baixa | Favoritos e arquivamento são apenas locais | Sincronizar com backend se a experiência exigir continuidade entre dispositivos |
+| Baixa | Favoritos são apenas locais | Sincronizar com backend se a experiência exigir continuidade entre dispositivos |
 
 ## 5. Pirâmide de testes
 

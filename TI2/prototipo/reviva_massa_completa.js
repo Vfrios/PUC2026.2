@@ -1,4 +1,4 @@
-const { MongoClient, DBRef } = require("mongodb");
+const { MongoClient, DBRef, ObjectId } = require("mongodb");
 const crypto = require("crypto");
 
 const uri = process.env.MONGODB_URI;
@@ -36,7 +36,10 @@ const itensBase = [
   ["Televisao 42", "ELETRONICOS", "TV LED de 42 polegadas.", 4, 10], ["Suporte de Parede", "MOVEIS", "Suporte articulado para TV.", 1.5, 2],
   ["Fritadeira", "COZINHA", "Fritadeira eletrica sem oleo.", 2, 3], ["Balanca Digital", "OUTROS", "Balanca digital de cozinha.", 0.5, 0.5],
 ];
-function id(seed) { return crypto.createHash("sha256").update(`reviva-seed:${seed}`).digest("hex").slice(0, 24); }
+function id(seed) {
+  const hex = crypto.createHash("sha256").update(`reviva-seed:${seed}`).digest("hex").slice(0, 24);
+  return new ObjectId(hex);
+}
 function ref(collection, value) { return new DBRef(collection, value); }
 function dataUrl(seed) { return `https://loremflickr.com/900/650/object/all?lock=${seed}`; }
 

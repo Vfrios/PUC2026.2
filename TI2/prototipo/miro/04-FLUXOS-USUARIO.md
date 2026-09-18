@@ -221,7 +221,7 @@ O visitante não precisa estar autenticado. O navegador deve permitir entrada de
 2. Interface solicita confirmação.
 3. Ao confirmar, frontend remove token e dados de sessão local.
 4. Aplicação retorna à tela de login.
-5. Dados locais de favoritos e arquivamento podem ser preservados no dispositivo, pois não representam autenticação.
+5. Dados locais de favoritos podem ser preservados no dispositivo, pois não representam autenticação.
 
 ## 6. Fluxo da tela 5 para as telas 6 e 7: descobrir e demonstrar interesse
 
@@ -331,7 +331,7 @@ Detalhes do item
 6. Mensagem nova é enviada por `POST /api/solicitacoes/{id}/mensagens`.
 7. Backend persiste e publica no tópico STOMP da solicitação.
 8. O outro navegador recebe mensagem em tempo real.
-9. Usuário pode arquivar Inbox por gesto de deslizar; o estado é local.
+9. Conversas permanecem disponíveis no Inbox até serem removidas pelo fluxo de dados do backend.
 
 ## 10. Fluxo da tela 11: compartilhamento de localização
 

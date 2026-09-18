@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { api, getToken, setToken, ApiError, wsUrl } from "../api.js";
 import { Client as StompClient } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, Archive, RotateCcw, X } from "lucide-react";
+import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, RotateCcw, X } from "lucide-react";
 import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox } from "./shared.jsx";
 
 const dataAtual = new Date();
@@ -97,22 +97,7 @@ function TradeEventMessage({ event }) {
 
 function Inbox({ go, usuario }) {
   const { loading, error, data: conversas, reload } = useApiData(() => api.conversas(), [usuario?.id]);
-  const [arquivadas, setArquivadas] = useState(() => JSON.parse(localStorage.getItem("reviva_inbox_arquivadas") || "[]"));
-  const [deslocamento, setDeslocamento] = useState({});
-  const inicioToque = useRef({});
-  const visiveis = (conversas || []).filter(s => !arquivadas.includes(s.id));
-
-  const arquivar = (id) => {
-    const novas = [...arquivadas, id];
-    setArquivadas(novas);
-    localStorage.setItem("reviva_inbox_arquivadas", JSON.stringify(novas));
-  };
-  const tocar = (id, event) => { inicioToque.current[id] = event.touches[0].clientX; };
-  const soltar = (id, event) => {
-    const distancia = event.changedTouches[0].clientX - (inicioToque.current[id] || 0);
-    setDeslocamento(atual => ({ ...atual, [id]: 0 }));
-    if (distancia < -70) arquivar(id);
-  };
+  const visiveis = conversas || [];
 
   return (
     <div>
@@ -126,7 +111,7 @@ function Inbox({ go, usuario }) {
           const souDoador = s.item?.doador?.id === usuario?.id;
           const outroNome = souDoador ? s.receptor?.nome : s.item?.doador?.nome;
           const outroId = souDoador ? s.receptor?.id : s.item?.doador?.id;
-          return <div key={s.id} onTouchStart={event => tocar(s.id, event)} onTouchEnd={event => soltar(s.id, event)} onClick={() => go(souDoador ? "chatDoador" : "chatReceptor", { solicitacaoId: s.id, otherId: outroId, otherName: outroNome, itemTitulo: s.item?.titulo, itemId: s.item?.id })} style={{ transform: `translateX(${deslocamento[s.id] || 0}px)`, transition: "transform .2s", display: "flex", alignItems: "center", gap: 10, padding: 12, marginBottom: 8, background: "#fff", border: "1px solid #EDEBE1", borderRadius: 14, cursor: "pointer" }}>
+          return <div key={s.id} onClick={() => go(souDoador ? "chatDoador" : "chatReceptor", { solicitacaoId: s.id, otherId: outroId, otherName: outroNome, itemTitulo: s.item?.titulo, itemId: s.item?.id })} style={{ display: "flex", alignItems: "center", gap: 10, padding: 12, marginBottom: 8, background: "#fff", border: "1px solid #EDEBE1", borderRadius: 14, cursor: "pointer" }}>
             <Avatar label={outroNome} size={40} />
             <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{outroNome || "Conversa"}</div><div style={{ fontSize: 11.5, color: INK_SOFT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.item?.titulo || "Conversa"}</div></div>
             {naoLidas > 0 && <span style={{ minWidth: 20, height: 20, borderRadius: 10, padding: "0 6px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--role-primary)", color: "#fff", fontSize: 10, fontWeight: 700 }}>{naoLidas}</span>}
