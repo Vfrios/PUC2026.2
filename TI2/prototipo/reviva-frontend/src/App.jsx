@@ -3,12 +3,15 @@ import { api, getToken, setToken, wsUrl } from "./api.js";
 import { ChevronUp } from "lucide-react";
 import { Client as StompClient } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { ROLE_COLORS, StatusBar, Toast, BottomNav } from "./screens/shared.jsx";
-import * as authScreens from "./screens/authScreens.jsx";
-import * as discoveryScreens from "./screens/discoveryScreens.jsx";
-import * as itemScreens from "./screens/itemScreens.jsx";
-import * as tradeScreens from "./screens/tradeScreens.jsx";
-import * as accountScreens from "./screens/accountScreens.jsx";
+import { ROLE_COLORS, StatusBar, Toast, BottomNav } from "./shared/index.jsx";
+import * as onboardingScreens from "./onboarding/index.jsx";
+import * as authScreens from "./auth/index.jsx";
+import * as conjunto1Screens from "./conjuntos/conjunto-01-publicacao-gestao/index.jsx";
+import * as conjunto2Screens from "./conjuntos/conjunto-02-descoberta-detalhes/index.jsx";
+import * as conjunto3Screens from "./conjuntos/conjunto-03-solicitacao-chat/index.jsx";
+import * as conjunto4Screens from "./conjuntos/conjunto-04-perfil-reputacao/index.jsx";
+import * as conjunto5Screens from "./conjuntos/conjunto-05-comunidades-favoritos/index.jsx";
+import * as conjunto6Screens from "./conjuntos/conjunto-06-endereco-seguranca/index.jsx";
 
 /* ============================================================
    APP SHELL
@@ -192,36 +195,36 @@ export default function RevivaApp() {
 
   let ScreenView;
   switch (screen) {
-    case "splash": ScreenView = <authScreens.Splash onDone={finishSplash} />; break;
+    case "splash": ScreenView = <onboardingScreens.Splash onDone={finishSplash} />; break;
     case "auth": ScreenView = <authScreens.Auth go={go} onLogin={handleLogin} onRegister={handleRegister} />; break;
-    case "onboarding": ScreenView = <authScreens.Onboarding go={go} />; break;
-    case "chooseProfile": ScreenView = <authScreens.ChooseProfile go={go} setRole={setRole} />; break;
-    case "homeDoador": ScreenView = <discoveryScreens.HomeDoador go={go} usuario={usuario} compact={conteudoRolado} notify={notify} />; break;
-    case "cadastroItem": ScreenView = <itemScreens.CadastroItem go={go} notify={notify} params={params} usuario={usuario} />; break;
-    case "gerenciarItens": ScreenView = <itemScreens.GerenciarItens go={go} notify={notify} />; break;
-    case "chatDoador": ScreenView = <tradeScreens.Chat go={go} role="doador" notify={notify} params={params} usuario={usuario} onlineIds={onlineIds} />; break;
-    case "inbox": ScreenView = <tradeScreens.Inbox go={go} usuario={usuario} />; break;
-    case "agendamentoDoador": ScreenView = <tradeScreens.Agendamento go={go} role="doador" notify={notify} params={params} usuario={usuario} />; break;
-    case "confirmDoacao": ScreenView = <tradeScreens.ConfirmDoacao go={go} notify={notify} params={params} usuario={usuario} refreshUsuario={refreshUsuario} />; break;
-    case "avaliarReceptor": ScreenView = <tradeScreens.Avaliar go={go} notify={notify} params={params} />; break;
-    case "dashboardImpacto": ScreenView = <tradeScreens.DashboardImpacto go={go} usuario={usuario} />; break;
-    case "homeReceptor": ScreenView = <discoveryScreens.HomeReceptor go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} compact={conteudoRolado} notify={notify} />; break;
-    case "busca": ScreenView = <discoveryScreens.Busca go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} />; break;
-    case "listaItens": ScreenView = <itemScreens.ListaItens go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={params} />; break;
-    case "detalhesItem": ScreenView = <itemScreens.DetalhesItem go={go} notify={notify} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={params} />; break;
-    case "solicitacao": ScreenView = <itemScreens.Solicitacao go={go} notify={notify} params={params} />; break;
-    case "chatReceptor": ScreenView = <tradeScreens.Chat go={go} role="receptor" notify={notify} params={params} usuario={usuario} onlineIds={onlineIds} />; break;
-    case "agendamentoReceptor": ScreenView = <tradeScreens.Agendamento go={go} role="receptor" notify={notify} params={params} usuario={usuario} />; break;
-    case "confirmRecebimento": ScreenView = <tradeScreens.ConfirmRecebimento go={go} notify={notify} params={params} usuario={usuario} refreshUsuario={refreshUsuario} />; break;
-    case "avaliarDoador": ScreenView = <tradeScreens.Avaliar go={go} notify={notify} params={params} />; break;
-    case "historico": ScreenView = <accountScreens.Historico go={go} />; break;
-    case "perfil": ScreenView = <accountScreens.Perfil go={go} usuario={usuario} favorites={favorites} notify={notify} onLogout={logout} />; break;
-    case "perfilPublico": ScreenView = <accountScreens.PerfilPublico go={go} usuario={usuario} onlineIds={onlineIds} favorites={favorites} toggleFav={toggleFav} params={params} />; break;
-    case "reputacao": ScreenView = <accountScreens.Reputacao go={go} usuario={usuario} />; break;
-    case "comunidades": ScreenView = <accountScreens.Comunidades go={go} notify={notify} usuario={usuario} />; break;
-    case "favoritos": ScreenView = <accountScreens.Favoritos go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} />; break;
-    case "notificacoes": ScreenView = <accountScreens.Notificacoes go={go} role={role} />; break;
-    case "moderacao": ScreenView = <accountScreens.Moderacao go={go} notify={notify} params={params} />; break;
+    case "onboarding": ScreenView = <onboardingScreens.Onboarding go={go} />; break;
+    case "chooseProfile": ScreenView = <onboardingScreens.ChooseProfile go={go} setRole={setRole} />; break;
+    case "homeDoador": ScreenView = <conjunto2Screens.HomeDoador go={go} usuario={usuario} compact={conteudoRolado} notify={notify} />; break;
+    case "cadastroItem": ScreenView = <conjunto1Screens.CadastroItem go={go} notify={notify} params={params} usuario={usuario} />; break;
+    case "gerenciarItens": ScreenView = <conjunto1Screens.GerenciarItens go={go} notify={notify} />; break;
+    case "chatDoador": ScreenView = <conjunto3Screens.Chat go={go} role="doador" notify={notify} params={params} usuario={usuario} onlineIds={onlineIds} />; break;
+    case "inbox": ScreenView = <conjunto3Screens.Inbox go={go} usuario={usuario} />; break;
+    case "agendamentoDoador": ScreenView = <conjunto3Screens.Agendamento go={go} role="doador" notify={notify} params={params} usuario={usuario} />; break;
+    case "confirmDoacao": ScreenView = <conjunto3Screens.ConfirmDoacao go={go} notify={notify} params={params} usuario={usuario} refreshUsuario={refreshUsuario} />; break;
+    case "avaliarReceptor": ScreenView = <conjunto3Screens.Avaliar go={go} notify={notify} params={params} />; break;
+    case "dashboardImpacto": ScreenView = <conjunto3Screens.DashboardImpacto go={go} usuario={usuario} />; break;
+    case "homeReceptor": ScreenView = <conjunto2Screens.HomeReceptor go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} compact={conteudoRolado} notify={notify} />; break;
+    case "busca": ScreenView = <conjunto2Screens.Busca go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} />; break;
+    case "listaItens": ScreenView = <conjunto2Screens.ListaItens go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={params} />; break;
+    case "detalhesItem": ScreenView = <conjunto2Screens.DetalhesItem go={go} notify={notify} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={params} />; break;
+    case "solicitacao": ScreenView = <conjunto3Screens.Solicitacao go={go} notify={notify} params={params} />; break;
+    case "chatReceptor": ScreenView = <conjunto3Screens.Chat go={go} role="receptor" notify={notify} params={params} usuario={usuario} onlineIds={onlineIds} />; break;
+    case "agendamentoReceptor": ScreenView = <conjunto3Screens.Agendamento go={go} role="receptor" notify={notify} params={params} usuario={usuario} />; break;
+    case "confirmRecebimento": ScreenView = <conjunto3Screens.ConfirmRecebimento go={go} notify={notify} params={params} usuario={usuario} refreshUsuario={refreshUsuario} />; break;
+    case "avaliarDoador": ScreenView = <conjunto3Screens.Avaliar go={go} notify={notify} params={params} />; break;
+    case "historico": ScreenView = <conjunto4Screens.Historico go={go} />; break;
+    case "perfil": ScreenView = <conjunto4Screens.Perfil go={go} usuario={usuario} favorites={favorites} notify={notify} onLogout={logout} />; break;
+    case "perfilPublico": ScreenView = <conjunto4Screens.PerfilPublico go={go} usuario={usuario} onlineIds={onlineIds} favorites={favorites} toggleFav={toggleFav} params={params} />; break;
+    case "reputacao": ScreenView = <conjunto4Screens.Reputacao go={go} usuario={usuario} />; break;
+    case "comunidades": ScreenView = <conjunto5Screens.Comunidades go={go} notify={notify} usuario={usuario} />; break;
+    case "favoritos": ScreenView = <conjunto5Screens.Favoritos go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} />; break;
+    case "notificacoes": ScreenView = <conjunto6Screens.Notificacoes go={go} role={role} />; break;
+    case "moderacao": ScreenView = <conjunto4Screens.Moderacao go={go} notify={notify} params={params} />; break;
     default: ScreenView = <div />;
   }
 

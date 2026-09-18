@@ -80,6 +80,7 @@
   </dependencies>
 
   <build>
+    <sourceDirectory>${project.basedir}/src/main/api</sourceDirectory>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>
