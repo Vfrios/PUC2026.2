@@ -1,2 +1,2 @@
-export { Historico, Perfil, PerfilPublico, Reputacao, Moderacao } from "../../screens/accountScreens.jsx";
-export { Avaliar } from "../../screens/tradeScreens.jsx";
+export { Historico, Perfil, PerfilPublico, Reputacao, Moderacao } from "./accountScreens.jsx";
+export { Avaliar } from "../conjunto-03-solicitacao-chat/tradeScreens.jsx";

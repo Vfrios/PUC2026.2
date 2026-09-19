@@ -1,1 +1,1 @@
-export { CadastroItem, GerenciarItens } from "../../screens/itemScreens.jsx";
+export { CadastroItem, GerenciarItens } from "./itemScreens.jsx";

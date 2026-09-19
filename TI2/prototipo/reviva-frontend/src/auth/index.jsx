@@ -1,1 +1,1 @@
-export { Auth } from "../screens/authScreens.jsx";
+export { Auth } from "./authScreens.jsx";

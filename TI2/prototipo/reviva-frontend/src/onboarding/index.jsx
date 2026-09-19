@@ -1,1 +1,1 @@
-export { Onboarding, Splash, ChooseProfile } from "../screens/authScreens.jsx";
+export { Onboarding, Splash, ChooseProfile } from "../auth/authScreens.jsx";

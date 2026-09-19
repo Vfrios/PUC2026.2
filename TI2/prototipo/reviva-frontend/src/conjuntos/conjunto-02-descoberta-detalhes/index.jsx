@@ -1,2 +1,2 @@
-export { Busca, HomeDoador, HomeReceptor } from "../../screens/discoveryScreens.jsx";
-export { ListaItens, DetalhesItem } from "../../screens/itemScreens.jsx";
+export { Busca, HomeDoador, HomeReceptor } from "./discoveryScreens.jsx";
+export { ListaItens, DetalhesItem } from "../conjunto-01-publicacao-gestao/itemScreens.jsx";

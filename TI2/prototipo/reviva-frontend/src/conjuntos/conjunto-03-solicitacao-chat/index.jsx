@@ -1,2 +1,2 @@
-export { Solicitacao } from "../../screens/itemScreens.jsx";
-export { Inbox, Chat, Agendamento, ConfirmDoacao, ConfirmRecebimento, Avaliar, DashboardImpacto } from "../../screens/tradeScreens.jsx";
+export { Solicitacao } from "../conjunto-01-publicacao-gestao/itemScreens.jsx";
+export { Inbox, Chat, Agendamento, ConfirmDoacao, ConfirmRecebimento, Avaliar, DashboardImpacto } from "./tradeScreens.jsx";

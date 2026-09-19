@@ -1,1 +1,1 @@
-export { Comunidades, Favoritos } from "../../screens/accountScreens.jsx";
+export { Comunidades, Favoritos } from "../conjunto-04-perfil-reputacao/accountScreens.jsx";

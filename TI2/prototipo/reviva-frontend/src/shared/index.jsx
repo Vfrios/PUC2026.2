@@ -1,1 +1,1 @@
-export * from "../screens/shared.jsx";
+export * from "./shared.jsx";
