@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraLogin - Cadastro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <div class="card">
+        <div class="brand"><h1>AuraLogin</h1></div>
+        <p class="subtitle">Crie sua conta</p>
+
+        <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
+
+        <form th:action="@{/register}" method="post">
+            <div class="form-group">
+                <label for="fullName">Nome completo</label>
+                <input type="text" id="fullName" name="fullName" th:value="${fullName}">
+            </div>
+            <div class="form-group">
+                <label for="username">Usuario</label>
+                <input type="text" id="username" name="username" th:value="${username}">
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" th:value="${email}">
+            </div>
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" name="password" placeholder="Minimo 6 caracteres">
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">Confirmar senha</label>
+                <input type="password" id="confirmPassword" name="confirmPassword">
+            </div>
+            <button type="submit" class="btn">Cadastrar</button>
+        </form>
+
+        <div class="links" style="justify-content:center;">
+            <a th:href="@{/login}">Voltar para o login</a>
+        </div>
+    </div>
+</body>
+</html>

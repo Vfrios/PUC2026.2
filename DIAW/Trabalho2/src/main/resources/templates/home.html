@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraLogin - Inicio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <div class="card home-wrapper">
+        <div class="brand"><h1>AuraLogin</h1></div>
+        <h2>Bem-vindo(a), <span th:text="${username}">usuario</span>!</h2>
+        <p>Voce esta autenticado com sucesso.</p>
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="logout-btn">Sair</button>
+        </form>
+    </div>
+</body>
+</html>

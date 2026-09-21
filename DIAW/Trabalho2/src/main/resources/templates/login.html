@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraLogin - Entrar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <div class="card">
+        <div class="brand"><h1>AuraLogin</h1></div>
+        <p class="subtitle">Entre com sua conta para continuar</p>
+
+        <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
+        <div th:if="${infoMessage}" class="alert alert-success" th:text="${infoMessage}"></div>
+
+        <form th:action="@{/login}" method="post">
+            <div class="form-group">
+                <label for="usernameOrEmail">Usuario ou email</label>
+                <input type="text" id="usernameOrEmail" name="usernameOrEmail" required autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn">Entrar</button>
+        </form>
+
+        <div class="links">
+            <a th:href="@{/recoverpassword}">Esqueceu a senha?</a>
+            <a th:href="@{/register}">Criar conta</a>
+        </div>
+
+        <p class="footer-text">Demo: usuario <strong>demo</strong> / senha <strong>demo1234</strong></p>
+    </div>
+</body>
+</html>
