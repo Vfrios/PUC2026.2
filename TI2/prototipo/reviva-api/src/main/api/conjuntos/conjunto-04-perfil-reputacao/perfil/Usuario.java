@@ -45,6 +45,10 @@ public class Usuario {
     private String telefone;
     private String fotoUrl;
     private String cep;
+    private String logradouro;
+    private String bairro;
+    private String cidade;
+    private String uf;
     private String numero;
     private String complemento;
 

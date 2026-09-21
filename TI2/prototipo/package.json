@@ -9,6 +9,8 @@
     "migrate:mongodb-ids": "node --env-file=atlas-credentials.env migrate-mongo-ids-to-objectid.js",
     "migrate:mongodb-ids:apply": "node --env-file=atlas-credentials.env migrate-mongo-ids-to-objectid.js --apply",
     "clear:mongodb": "node --env-file=atlas-credentials.env limpar_banco.js --confirm",
+    "delete:mongodb-ids:preview": "node --env-file=atlas-credentials.env delete_users_by_ids.js",
+    "delete:mongodb-ids": "node --env-file=atlas-credentials.env delete_users_by_ids.js --confirm",
     "dev": "npm run setup && concurrently -n \"FRONT,API\" -c \"cyan,green\" \"npm run start:frontend\" \"npm run start:backend\""
   },
   "dependencies": {

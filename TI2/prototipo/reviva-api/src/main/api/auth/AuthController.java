@@ -31,22 +31,43 @@ public class AuthController {
         if (usuarioRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "E-mail já cadastrado");
         }
-        String cpf = somenteDigitos(req.cpf());
+        String documento = somenteDigitos(req.cpf());
+        String telefone = somenteDigitos(req.telefone() != null ? req.telefone() : req.celular());
         String cep = somenteDigitos(req.cep());
-        if (!cpfValido(cpf)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CPF invalido");
+        String logradouro = normalizarTexto(req.rua() != null ? req.rua() : req.logradouro());
+        String bairro = normalizarTexto(req.bairro());
+        String cidade = normalizarTexto(req.cidade());
+        String uf = normalizarTexto(req.uf()).toUpperCase();
+
+        if (!documentoValido(documento)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CPF/CNPJ invalido");
         }
-        if (cep.length() != 8) {
+        if (telefone.length() != 10 && telefone.length() != 11) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Celular invalido");
+        }
+        if (!cep.isEmpty() && cep.length() != 8) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CEP invalido");
         }
-        if (usuarioRepository.existsByCpf(cpf)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "CPF ja cadastrado");
+        boolean enderecoManualValido = (!cep.isEmpty()) || (!logradouro.isEmpty() && !bairro.isEmpty() && !cidade.isEmpty() && !uf.isEmpty());
+        if (!enderecoManualValido) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe o CEP ou preencha rua, bairro, cidade e UF manualmente");
+        }
+        if (req.tipoPessoa() == null || req.tipoPessoa().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tipoPessoa nao pode estar em branco");
+        }
+        if (usuarioRepository.existsByCpf(documento)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "CPF/CNPJ ja cadastrado");
         }
         Usuario usuario = Usuario.builder()
                 .nome(req.nome())
-            .email(email)
-                .cpf(cpf)
+                .email(email)
+                .cpf(documento)
+                .telefone(telefone)
                 .cep(cep)
+                .logradouro(logradouro)
+                .bairro(bairro)
+                .cidade(cidade)
+                .uf(uf)
                 .numero(req.numero())
                 .complemento(req.complemento())
                 .senhaHash(passwordEncoder.encode(req.senha()))
@@ -77,6 +98,17 @@ public class AuthController {
         return valor == null ? "" : valor.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
+    private static String normalizarTexto(String valor) {
+        return valor == null ? "" : valor.trim();
+    }
+
+    private static boolean documentoValido(String documento) {
+        if (documento == null) return false;
+        if (documento.length() == 11) return cpfValido(documento);
+        if (documento.length() == 14) return cnpjValido(documento);
+        return false;
+    }
+
     private static boolean cpfValido(String cpf) {
         if (cpf == null || cpf.length() != 11 || cpf.chars().distinct().count() == 1) return false;
 
@@ -91,5 +123,28 @@ public class AuthController {
         int digito2 = 11 - (soma % 11);
         if (digito2 >= 10) digito2 = 0;
         return digito2 == Character.digit(cpf.charAt(10), 10);
+    }
+
+    private static boolean cnpjValido(String cnpj) {
+        if (cnpj == null || cnpj.length() != 14 || cnpj.chars().distinct().count() == 1) return false;
+
+        int[] pesosPrimeiro = {5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2};
+        int[] pesosSegundo = {6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2};
+
+        int soma = 0;
+        for (int i = 0; i < 12; i++) {
+            soma += Character.digit(cnpj.charAt(i), 10) * pesosPrimeiro[i];
+        }
+        int digito1 = soma % 11;
+        digito1 = digito1 < 2 ? 0 : 11 - digito1;
+        if (digito1 != Character.digit(cnpj.charAt(12), 10)) return false;
+
+        soma = 0;
+        for (int i = 0; i < 13; i++) {
+            soma += Character.digit(cnpj.charAt(i), 10) * pesosSegundo[i];
+        }
+        int digito2 = soma % 11;
+        digito2 = digito2 < 2 ? 0 : 11 - digito2;
+        return digito2 == Character.digit(cnpj.charAt(13), 10);
     }
 }

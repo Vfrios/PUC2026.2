@@ -123,9 +123,32 @@ function formatCpf(v) {
   return d;
 }
 
+function formatCnpj(v) {
+  const d = onlyDigits(v).slice(0, 14);
+  if (d.length > 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+  if (d.length > 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  if (d.length > 5) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length > 2) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  return d;
+}
+
+function formatDocumento(v) {
+  const d = onlyDigits(v);
+  if (d.length <= 11) return formatCpf(d);
+  return formatCnpj(d);
+}
+
 function formatCep(v) {
   const d = onlyDigits(v).slice(0, 8);
   return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+}
+
+function formatCelular(v) {
+  const d = onlyDigits(v).slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return `(${d.slice(0,2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0,2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0,2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
 function cpfValido(valor) {
@@ -138,6 +161,31 @@ function cpfValido(valor) {
     return d >= 10 ? 0 : d;
   };
   return calc(9) === Number(cpf[9]) && calc(10) === Number(cpf[10]);
+}
+
+function cnpjValido(valor) {
+  const cnpj = onlyDigits(valor);
+  if (cnpj.length !== 14 || /^(\d)\1+$/.test(cnpj)) return false;
+
+  const calc = (pesos) => {
+    let soma = 0;
+    for (let i = 0; i < pesos.length; i++) soma += Number(cnpj[i]) * pesos[i];
+    const resto = soma % 11;
+    const digito = resto < 2 ? 0 : 11 - resto;
+    return digito;
+  };
+
+  const digito1 = calc([5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  if (digito1 !== Number(cnpj[12])) return false;
+  const digito2 = calc([6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  return digito2 === Number(cnpj[13]);
+}
+
+function documentoValido(valor) {
+  const d = onlyDigits(valor);
+  if (d.length === 11) return cpfValido(d);
+  if (d.length === 14) return cnpjValido(d);
+  return false;
 }
 
 /**
@@ -468,4 +516,4 @@ function StatBox({ value, label, Icon }) {
   );
 }
 
-export { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox };
+export { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCnpj, formatDocumento, formatCep, formatCelular, cpfValido, cnpjValido, documentoValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox };

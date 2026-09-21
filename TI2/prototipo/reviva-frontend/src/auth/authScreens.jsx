@@ -3,7 +3,7 @@ import { api, getToken, setToken, ApiError, wsUrl } from "../api.js";
 import { Client as StompClient } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Eye, EyeOff, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, Archive, RotateCcw, X } from "lucide-react";
-import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox } from "../shared/shared.jsx";
+import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatDocumento, formatCep, formatCelular, documentoValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox } from "../shared/shared.jsx";
 function Splash({ onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 1200); return () => clearTimeout(t); }, []);
   return (
@@ -29,8 +29,13 @@ function Auth({ go, onLogin, onRegister }) {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [cpf, setCpf] = useState("");
+  const [documento, setDocumento] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [cep, setCep] = useState("");
+  const [logradouro, setLogradouro] = useState("");
+  const [bairro, setBairro] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [uf, setUf] = useState("");
   const [numero, setNumero] = useState("");
   const [complemento, setComplemento] = useState("");
   const [endereco, setEndereco] = useState(null);
@@ -55,6 +60,12 @@ function Auth({ go, onLogin, onRegister }) {
       .then(res => {
         if (cancelado) return;
         setEndereco(res);
+        if (res) {
+          setLogradouro(res.logradouro || "");
+          setBairro(res.bairro || "");
+          setCidade(res.cidade || "");
+          setUf((res.uf || "").toUpperCase());
+        }
       })
       .catch(e => {
         if (cancelado) return;
@@ -67,24 +78,32 @@ function Auth({ go, onLogin, onRegister }) {
 
   const submit = async () => {
     setErro("");
-    if (!email || !senha || (mode === "registro" && (!nome || !cpf || !cep || !numero))) {
-      setErro("Preencha todos os campos.");
+    if (!email || !senha || (mode === "registro" && (!nome || !documento || !telefone || !numero))) {
+      setErro("Preencha todos os campos obrigatórios.");
       return;
     }
     if (mode === "registro" && senha.length < 8) {
       setErro("A senha precisa ter pelo menos 8 caracteres.");
       return;
     }
-    if (mode === "registro" && !cpfValido(cpf)) {
-      setErro("Informe um CPF valido.");
+    if (mode === "registro" && !documentoValido(documento)) {
+      setErro("Informe um CPF ou CNPJ válido.");
       return;
     }
-    if (mode === "registro" && cepDigits.length !== 8) {
-      setErro("Informe um CEP valido com 8 digitos.");
+    if (mode === "registro" && onlyDigits(telefone).length < 10) {
+      setErro("Informe um celular válido com DDD e número.");
+      return;
+    }
+    if (mode === "registro" && cepDigits.length !== 8 && (!logradouro.trim() || !bairro.trim() || !cidade.trim() || !uf.trim())) {
+      setErro("Informe o CEP ou preencha rua, bairro, cidade e UF manualmente.");
+      return;
+    }
+    if (mode === "registro" && cepDigits.length !== 0 && cepDigits.length !== 8) {
+      setErro("Informe um CEP válido com 8 dígitos.");
       return;
     }
     if (mode === "registro" && !/^\d+$/.test(numero.trim())) {
-      setErro("O numero do endereco deve conter apenas digitos.");
+      setErro("O número do endereço deve conter apenas dígitos.");
       return;
     }
     setLoading(true);
@@ -93,15 +112,23 @@ function Auth({ go, onLogin, onRegister }) {
       else await onRegister({
         nome: nome.trim(),
         email: email.trim(),
-        cpf: onlyDigits(cpf),
+        cpf: onlyDigits(documento),
+        celular: onlyDigits(telefone),
+        telefone: onlyDigits(telefone),
+        tipoPessoa: onlyDigits(documento).length === 11 ? "PF" : "PJ",
         cep: onlyDigits(cep),
+        rua: logradouro.trim(),
+        logradouro: logradouro.trim(),
+        bairro: bairro.trim(),
+        cidade: cidade.trim(),
+        uf: uf.trim(),
         numero: numero.trim(),
         complemento: complemento.trim(),
         senha,
       });
     } catch (e) {
       setErro(e.status === 409
-        ? "Este e-mail ou CPF já está cadastrado. Troque para Entrar e use sua senha."
+        ? "Este e-mail ou documento já está cadastrado. Troque para Entrar e use sua senha."
         : e.message || "Não foi possível continuar.");
       if (e.status === 409) setMode("login");
     } finally {
@@ -135,28 +162,68 @@ function Auth({ go, onLogin, onRegister }) {
           <>
             <label style={fieldLabel}>Nome</label>
             <div style={fieldBox}><User size={16} color={INK_SOFT} /><input name="nome" autoComplete="name" value={nome} onChange={e => setNome(e.target.value)} placeholder="Seu nome" style={fieldInput} /></div>
-            <label style={fieldLabel}>CPF</label>
-            <div style={fieldBox}><User size={16} color={INK_SOFT} /><input name="cpf" autoComplete="off" value={formatCpf(cpf)} onChange={e => setCpf(e.target.value)} placeholder="000.000.000-00" inputMode="numeric" maxLength={14} style={fieldInput} /></div>
+            <label style={fieldLabel}>CPF / CNPJ</label>
+            <div style={fieldBox}><User size={16} color={INK_SOFT} /><input name="documento" autoComplete="off" value={formatDocumento(documento)} onChange={e => setDocumento(e.target.value)} placeholder="CPF ou CNPJ" inputMode="numeric" maxLength={18} style={fieldInput} /></div>
+            <label style={fieldLabel}>Celular</label>
+            <div style={fieldBox}><User size={16} color={INK_SOFT} /><input name="telefone" autoComplete="tel" value={formatCelular(telefone)} onChange={e => setTelefone(e.target.value)} placeholder="(31) 99999-9999" inputMode="tel" maxLength={15} style={fieldInput} /></div>
             <label style={fieldLabel}>CEP</label>
             <div style={fieldBox}>
               <MapPin size={16} color={INK_SOFT} />
               <input name="cep" autoComplete="postal-code" value={formatCep(cep)} onChange={e => setCep(e.target.value)} placeholder="00000-000" inputMode="numeric" maxLength={9} style={fieldInput} />
               {cepBuscando && <Loader2 size={15} color={INK_SOFT} style={{ animation: "spin .8s linear infinite" }} />}
             </div>
-            <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 4 }}>Digite o CEP para preencher rua, bairro e cidade automaticamente.</div>
+            <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 4 }}>Digite o CEP para preencher automaticamente.</div>
             {cepErro && <div style={{ fontSize: 11.5, color: "#9C4327", marginTop: 4 }}>{cepErro}</div>}
-            {endereco && (
-              <div style={{ marginTop: 8, background: "var(--role-soft)", borderRadius: 12, padding: "9px 12px", fontSize: 12, color: "var(--role-primary-dark)" }}>
-                <div>{endereco.logradouro || "Rua não informada"} {endereco.uf ? `· ${endereco.uf}` : ""}</div>
-                <div style={{ marginTop: 3 }}>{endereco.bairro || "Bairro não informado"} · {endereco.cidade || "Cidade não informada"}</div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+              <div>
+                <label style={fieldLabel}>UF</label>
+                <div style={fieldBox}>
+                  <input
+                    name="uf"
+                    autoComplete="address-level1"
+                    value={uf}
+                    onChange={e => setUf(e.target.value.toUpperCase())}
+                    placeholder={endereco?.uf || "MG"}
+                    maxLength={2}
+                    disabled={cepBuscando || (!!cepDigits && !cepErro && !!endereco)}
+                    style={{ ...fieldInput, opacity: (cepBuscando || (!!cepDigits && !cepErro && !!endereco)) ? 0.7 : 1 }}
+                  />
+                </div>
               </div>
-            )}
-            <div style={{ display: "flex", gap: 8 }}>
-              <div style={{ flex: 1 }}>
-                <label style={fieldLabel}>Numero</label>
+              <div>
+                <label style={fieldLabel}>Cidade</label>
+                <div style={fieldBox}>
+                  <input
+                    name="cidade"
+                    autoComplete="address-level2"
+                    value={cidade}
+                    onChange={e => setCidade(e.target.value)}
+                    placeholder={endereco?.cidade || "Cidade"}
+                    disabled={cepBuscando || (!!cepDigits && !cepErro && !!endereco)}
+                    style={{ ...fieldInput, opacity: (cepBuscando || (!!cepDigits && !cepErro && !!endereco)) ? 0.7 : 1 }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+              <div>
+                <label style={fieldLabel}>Bairro</label>
+                <div style={fieldBox}><input name="bairro" autoComplete="address-level2" value={bairro} onChange={e => setBairro(e.target.value)} placeholder={endereco?.bairro || "Bairro"} style={fieldInput} /></div>
+              </div>
+              <div>
+                <label style={fieldLabel}>Rua</label>
+                <div style={fieldBox}><input name="logradouro" autoComplete="street-address" value={logradouro} onChange={e => setLogradouro(e.target.value)} placeholder={endereco?.logradouro || "Rua / Avenida"} style={fieldInput} /></div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+              <div>
+                <label style={fieldLabel}>Número</label>
                 <div style={fieldBox}><input name="numero" autoComplete="address-line2" value={numero} onChange={e => setNumero(onlyDigits(e.target.value))} placeholder="Ex: 120" inputMode="numeric" pattern="[0-9]*" style={fieldInput} /></div>
               </div>
-              <div style={{ flex: 1 }}>
+              <div>
                 <label style={fieldLabel}>Complemento</label>
                 <div style={fieldBox}><input name="complemento" autoComplete="address-line3" value={complemento} onChange={e => setComplemento(e.target.value)} placeholder="Opcional" style={fieldInput} /></div>
               </div>
@@ -184,7 +251,7 @@ function Auth({ go, onLogin, onRegister }) {
       </form>
 
       <div style={{ flex: 1 }} />
-      <div style={{ textAlign: "center", fontSize: 13, color: INK_SOFT }}>
+      <div style={{ textAlign: "center", fontSize: 13, color: INK_SOFT, marginTop: 20, marginBottom: 6 }}>
         {mode === "login" ? (
           <>Novo por aqui? <span style={{ color: "var(--role-primary-dark)", fontWeight: 700, cursor: "pointer" }} onClick={() => setMode("registro")}>Criar conta</span></>
         ) : (
