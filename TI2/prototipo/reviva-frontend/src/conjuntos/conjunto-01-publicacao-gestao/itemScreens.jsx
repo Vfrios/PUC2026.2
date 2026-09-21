@@ -21,6 +21,13 @@ function CadastroItem({ go, notify, params, usuario }) {
   const [fotoEnviando, setFotoEnviando] = useState(false);
   const fileInputRef = useRef(null);
 
+  const abrirGaleria = () => {
+    const input = fileInputRef.current;
+    if (!input) return;
+    input.removeAttribute("capture");
+    input.click();
+  };
+
   const adicionarFoto = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // permite escolher o mesmo arquivo de novo depois
@@ -136,7 +143,7 @@ function CadastroItem({ go, notify, params, usuario }) {
             const proximaVazia = fotos.length === i;
             return (
               <div key={i}
-                onClick={() => proximaVazia && !fotoEnviando && fileInputRef.current?.click()}
+                onClick={() => proximaVazia && !fotoEnviando && abrirGaleria()}
                 style={{
                   width: 78, height: 78, borderRadius: 16, background: "var(--role-soft)",
                   border: "1.5px dashed var(--role-primary)", flexShrink: 0, display: "flex",
@@ -149,9 +156,10 @@ function CadastroItem({ go, notify, params, usuario }) {
               </div>
             );
           })}
-          <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={adicionarFoto} style={{ display: "none" }} />
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={adicionarFoto} style={{ display: "none" }} />
         </div>
-        <div style={{ fontSize: 11, color: INK_SOFT, marginBottom: 14 }}>Toque para tirar uma foto ou escolher da galeria — até 3 fotos por item.</div>
+
+        <div style={{ fontSize: 11, color: INK_SOFT, marginBottom: 14 }}>Toque para escolher uma foto da galeria — até 3 fotos por item.</div>
 
         <label style={fieldLabel}>Título</label>
         <div style={fieldBox}><input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex: Jaqueta jeans P/M" style={fieldInput} /></div>

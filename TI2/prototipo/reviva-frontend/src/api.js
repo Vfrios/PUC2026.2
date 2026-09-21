@@ -4,7 +4,7 @@
    ============================================================ */
 
 const BASE_URL = import.meta.env.VITE_API_URL
-  || (import.meta.env.DEV ? "http://localhost:8080" : "");
+  || (import.meta.env.DEV ? "http://192.168.0.191:8080" : "");
 
 const TOKEN_KEY = "reviva_token";
 

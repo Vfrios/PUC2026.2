@@ -1,0 +1,3114 @@
+# Reviva - Requisitos do Sistema
+
+## 1. Identificação
+
+| Campo | Definição |
+| --- | --- |
+| Produto | Reviva |
+| Propósito | Conectar pessoas para doar ou trocar objetos de forma local, segura e rastreável |
+| Público principal | Pessoas que possuem objetos em bom estado e pessoas que procuram itens reutilizáveis |
+| Plataforma | Aplicação web responsiva com experiência prioritariamente mobile |
+| Idioma | Português do Brasil |
+| Perfis de uso | Conta única com capacidade de doar, receber, trocar, conversar e avaliar |
+| Persistência | MongoDB Atlas, com documentos e referências entre coleções |
+| Versão de referência | Protótipo funcional integrado, com backend Spring Boot e frontend React |
+
+## 2. Visão do produto
+
+O Reviva reduz o descarte de objetos ao aproximar doadores e interessados por região. O usuário publica um item, recebe ou inicia uma conversa, combina a retirada, confirma a conclusão e registra uma avaliação. Cada conclusão atualiza pontos, reputação, selo e impacto ambiental estimado.
+
+A aplicação não usa papéis persistidos separados. A escolha visual entre doador e receptor orienta a navegação local, mas a mesma conta pode executar os dois papéis conforme o contexto do item.
+
+## 3. Requisitos funcionais
+
+### RF-01 - Cadastro e autenticação
+
+1. O sistema deve permitir cadastro com nome, e-mail, CPF, telefone, senha e endereço.
+2. O CPF deve ser normalizado para somente dígitos e validado pelo algoritmo dos dois dígitos verificadores.
+3. O CEP deve conter oito dígitos após normalização.
+4. E-mail e CPF devem ser únicos.
+5. O cadastro deve retornar um JWT para iniciar a sessão sem exigir novo login.
+6. O login deve validar e-mail e senha e retornar JWT.
+7. O frontend deve persistir o token no navegador usando a chave `reviva_token`.
+8. O logout deve remover o token e pedir confirmação antes de sair.
+9. Credenciais inválidas devem retornar erro de autenticação sem revelar se o e-mail existe.
+
+### RF-02 - Perfil e localização
+
+1. O usuário autenticado deve consultar seus próprios dados, reputação, pontos, selo, itens doados e quilos de resíduo evitado.
+2. O usuário deve atualizar coordenadas e raio de busca.
+3. O sistema deve permitir consultar reputação e itens públicos de outro usuário.
+4. O sistema deve preservar a separação entre dados públicos do anunciante e dados privados da conta.
+5. O endereço informado por CEP deve poder preencher bairro, cidade, estado e coordenadas.
+
+### RF-03 - Publicação de item
+
+1. O usuário autenticado deve cadastrar título, descrição, categoria, conservação, tipo de publicação, endereço, peso estimado e fotos.
+2. Os tipos de publicação devem ser `DOAR` e `TROCAR`.
+3. As categorias devem ser Roupas, Livros, Móveis, Infantil, Eletrônicos, Cozinha e Outros.
+4. Os estados de conservação devem ser Novo, Seminovo e Usado.
+5. O sistema deve aceitar até três fotos por item, comprimidas no navegador e armazenadas como data URL.
+6. O CEP deve consultar a API de endereço e permitir preenchimento manual quando a consulta falhar.
+7. O impacto ambiental deve usar o peso informado ou uma estimativa por categoria.
+8. Um item recém-publicado deve iniciar com status `ATIVO` e validade padrão de 60 dias.
+9. A publicação deve registrar doador, data de publicação, endereço e coordenadas quando disponíveis.
+
+### RF-04 - Busca e descoberta
+
+1. Visitantes devem consultar comunidades e detalhes públicos de itens.
+2. Usuários devem listar itens ativos por categoria, tipo de publicação, termo, cidade e UF.
+3. Itens expirados não devem aparecer na busca pública.
+4. A tela inicial deve exibir categorias, itens recentes e atalhos contextuais.
+5. O usuário deve poder localizar a região por estado e cidade usando dados do IBGE.
+6. O usuário deve poder usar GPS do navegador para converter coordenadas em cidade e UF.
+7. O usuário deve poder salvar favoritos localmente no navegador.
+8. A grade deve oferecer visualização rápida por toque longo ou contexto, quando suportado.
+
+### RF-05 - Gerenciamento de anúncios
+
+1. O usuário deve listar seus próprios itens, inclusive itens que não estão ativos.
+2. Somente o dono do item deve poder editar, remover, restaurar ou marcar como doado.
+3. A edição deve renovar a validade por mais 60 dias.
+4. A remoção deve alterar o status para `REMOVIDO`, sem apagar o registro fisicamente.
+5. A restauração deve reativar item removido ou expirado e renovar sua validade.
+6. A marcação como doado deve alterar o status para `DOADO`, atualizar impacto e pontos do doador uma única vez.
+7. O sistema deve impedir que um usuário gerencie item pertencente a outra conta.
+
+### RF-06 - Conversas e mensagens
+
+1. Ao selecionar Enviar mensagem em um anúncio, o sistema deve criar imediatamente uma conversa vinculada ao item.
+2. A solicitação deve identificar item, doador, receptor, mensagem inicial, status e data de criação.
+3. O usuário deve visualizar Inbox com conversas enviadas e recebidas.
+4. O usuário deve listar e enviar mensagens de texto em uma conversa.
+5. Mensagens devem permanecer persistidas no banco.
+6. O chat deve receber novas mensagens em tempo real via WebSocket/STOMP.
+7. O cliente deve evitar duplicar mensagens recebidas por REST e WebSocket.
+8. O Inbox mantém todas as conversas disponíveis enquanto elas existirem no backend.
+9. O chat deve orientar a manter negociações dentro da plataforma.
+10. O usuário deve compartilhar localização atual, foto, câmera e referência de local conforme os recursos disponíveis no navegador.
+
+### RF-07 - Agendamento e retirada
+
+1. Participantes da conversa devem poder informar data, horário e local de encontro.
+2. Deve existir no máximo um agendamento ativo por solicitação.
+3. O receptor deve confirmar o agendamento.
+4. Após a confirmação do receptor, o doador deve poder gerar código de retirada.
+5. O ciclo deve permitir confirmação manual do doador e do receptor.
+6. O ciclo deve permitir confirmação por token associado ao item e QR Code na interface.
+7. A retirada deve ser concluída somente quando as duas confirmações forem registradas ou quando o fluxo de QR Code as representar.
+8. Ao concluir, o item deve passar a `DOADO`, o agendamento a `CONCLUIDO` e os indicadores de impacto devem ser atualizados.
+9. Qualquer participante deve poder cancelar enquanto a troca não estiver concluída.
+10. Qualquer participante deve poder reportar problema, alterando o agendamento para `PROBLEMA_REPORTADO`.
+
+### RF-08 - Avaliações, impacto e reputação
+
+1. Após a retirada, cada participante deve poder avaliar o outro com nota de 1 a 5 e comentário opcional.
+2. O sistema deve recalcular a reputação média do usuário.
+3. O sistema deve contabilizar itens doados, quilos de resíduo evitado e pontos.
+4. A pontuação deve considerar doação concluída, recebimento concluído e avaliação recebida.
+5. Os selos devem ser Bronze, Prata, Ouro e Esmeralda.
+6. A home e o dashboard devem exibir impacto de forma compreensível, sem transformar a métrica em obrigação para publicar.
+
+### RF-09 - Notificações
+
+1. O sistema deve criar notificações para novos contatos e eventos relevantes do chat.
+2. O usuário deve listar notificações ordenadas da mais recente para a mais antiga.
+3. O usuário deve marcar uma notificação como lida.
+4. O badge da home deve mostrar a quantidade de não lidas.
+5. O usuário deve limpar todas as notificações.
+6. O usuário deve excluir apenas notificações expiradas.
+7. A expiração padrão deve ser de 30 dias e ser configurável por `NOTIFICACOES_EXPIRACAO_DIAS`.
+
+### RF-10 - Comunidades e denúncias
+
+1. O usuário deve listar comunidades disponíveis sem autenticação.
+2. O usuário autenticado deve participar de uma comunidade.
+3. O usuário deve denunciar item ou comportamento com motivo e detalhes.
+4. Motivos suportados: item divergente, comportamento inadequado, não comparecimento, suspeita de golpe e outro.
+5. Denúncias devem permanecer disponíveis para moderação e não devem expor dados sensíveis ao denunciante.
+
+## 4. Requisitos não funcionais
+
+| ID | Requisito | Critério de aceitação |
+| --- | --- | --- |
+| RNF-01 | Segurança | Endpoints privados exigem JWT válido e operações de item/agendamento validam o participante ou proprietário |
+| RNF-02 | Privacidade | Respostas públicas usam DTOs resumidos; e-mail, CPF, senha e localização exata não devem ser serializados como dados do anunciante |
+| RNF-03 | Desempenho | A home deve carregar estado de carregamento e não bloquear a navegação enquanto busca dados remotos |
+| RNF-04 | Tempo real | Mensagens recebidas devem aparecer no chat sem polling contínuo, usando STOMP sobre SockJS |
+| RNF-05 | Disponibilidade | Falha de API deve apresentar mensagem acionável, estado de erro e possibilidade de tentar novamente |
+| RNF-06 | Compatibilidade | A interface deve funcionar em navegadores modernos desktop e mobile, com toque e teclado |
+| RNF-07 | Responsividade | Conteúdo deve se adaptar a telas estreitas, sem rolagem horizontal acidental ou perda de controles |
+| RNF-08 | Acessibilidade | Campos devem ter rótulos, botões devem ter nome acessível, foco deve ser visível e cor não deve ser o único indicador |
+| RNF-09 | Manutenibilidade | Backend deve separar controller, service, repository, model e DTO; frontend deve centralizar chamadas em `api.js` |
+| RNF-10 | Observabilidade | Erros de domínio devem retornar mensagens legíveis; logs devem diferenciar aplicação, web e SQL |
+| RNF-11 | Portabilidade | Configurações de porta, JWT, caminho do banco e expiração de notificações devem ser externas por variáveis de ambiente |
+| RNF-12 | Integridade | Conclusão, pontuação e atualização de impacto devem ocorrer em transação no backend |
+
+## 5. Regras de negócio centrais
+
+- Um perfil pode atuar como doador e receptor; não há alternância persistida de papel.
+- Um item público só pode ser encontrado enquanto está ativo e não expirou.
+- A validade inicial e a renovação de anúncio são de 60 dias.
+- A conclusão via `marcar como doado` não deve duplicar os pontos se o item já estiver `DOADO`.
+- O agendamento só pode ser acessado por doador ou receptor da solicitação.
+- O item fica `DOADO` quando a retirada é concluída ou quando o doador usa a confirmação rápida.
+- A denúncia de uma ocorrência não remove automaticamente item nem usuário.
+- Favoritos são dados locais do navegador no protótipo.
+
+## 6. Critérios gerais de aceite
+
+- Cadastro válido cria conta e entrega sessão autenticada.
+- Login inválido falha sem expor qual credencial está errada.
+- Item publicado aparece na busca quando ativo, dentro da validade e compatível com os filtros.
+- Usuário não consegue editar ou excluir item de outro usuário.
+- Mensagem enviada é persistida, notificada e distribuída em tempo real.
+- Somente os participantes conseguem consultar ou alterar agendamento.
+- Conclusão atualiza item, agendamento, pontuação e impacto de maneira consistente.
+- Interface fornece retorno para carregamento, sucesso, erro, vazio e ação irreversível.
+
+## 7. Atores e permissões
+
+| Ator | Pode fazer | Não pode fazer |
+| --- | --- | --- |
+| Visitante | Consultar comunidades, buscar itens públicos, ver detalhes públicos e iniciar cadastro | Publicar, conversar, agendar, avaliar ou denunciar |
+| Usuário autenticado | Manter perfil, publicar, editar e gerenciar seus itens, conversar, agendar, avaliar, denunciar e participar de comunidades | Acessar dados privados ou alterar recursos de outro usuário |
+| Doador contextual | Gerenciar itens próprios, responder interessados, gerar código e confirmar entrega | Confirmar ações como se fosse o receptor |
+| Receptor contextual | Buscar, iniciar conversa, confirmar agendamento, confirmar recebimento e avaliar | Editar item de outro usuário ou gerar código exclusivo do doador |
+| Moderador operacional | Analisar denúncias e aplicar política interna | Expor ao usuário dados de investigação ou credenciais |
+
+## 8. Validações de entrada
+
+| Campo | Regra |
+| --- | --- |
+| Nome | Obrigatório, deve aceitar nome completo e ser normalizado sem espaços desnecessários |
+| E-mail | Obrigatório, formato válido, comparação sem diferenciação de maiúsculas e unicidade |
+| CPF | Obrigatório, 11 dígitos após máscara, rejeitar sequência repetida e validar dígitos verificadores |
+| Senha | Obrigatória, nunca devolver ou registrar em resposta; a política mínima deve ser exibida no formulário |
+| CEP | Oito dígitos após remoção de máscara; consulta externa não pode bloquear preenchimento manual |
+| Título do item | Obrigatório, curto o suficiente para cards e sem conteúdo HTML executável |
+| Descrição | Opcional, texto simples, preservando quebras de linha e com limite de tamanho definido no DTO |
+| Categoria, conservação e tipo | Obrigatórios e limitados aos enums do backend |
+| Peso | Numérico positivo; unidade exibida explicitamente como kg |
+| Foto | Imagem válida, no máximo três por item, com limite de dimensão e tamanho do payload |
+| Data de retirada | Data e hora futuras no fuso local informado pela aplicação |
+| Nota | Inteiro de 1 a 5; comentário opcional e sem HTML executável |
+
+## 9. Estados de negócio
+
+### Item
+
+```text
+ATIVO -> DOADO
+ATIVO -> REMOVIDO -> ATIVO
+ATIVO -> EXPIRADO -> ATIVO
+```
+
+Um item expirado é identificado pela data `expiraEm`; a restauração renova a validade. Item `DOADO` não retorna ao catálogo por edição comum.
+
+### Solicitação
+
+```text
+AGUARDANDO -> ACEITA
+AGUARDANDO -> RECUSADA
+ACEITA -> CANCELADA
+```
+
+No fluxo atual, a criação de conversa já grava a solicitação como `ACEITA`, pois não existe etapa separada de aceite ou recusa antes do chat.
+
+### Agendamento
+
+```text
+CONFIRMADO -> CONCLUIDO
+CONFIRMADO -> CANCELADO
+CONFIRMADO -> PROBLEMA_REPORTADO
+```
+
+O estado `CONCLUIDO` exige as confirmações da retirada. Uma troca concluída é definitiva para fins de pontuação e não pode ser cancelada.
+
+## 10. Priorização
+
+| Prioridade | Requisitos | Motivo |
+| --- | --- | --- |
+| P0 | RF-01, RF-03, RF-04, RF-06, RF-07 | Fluxo mínimo de autenticar, publicar, encontrar, conversar e concluir |
+| P1 | RF-02, RF-05, RF-08, RF-09 | Retenção, confiança, impacto e operação diária |
+| P2 | RF-10, localização avançada, favoritos sincronizados e moderação ampliada | Evolução de comunidade e escala |
+
+## 11. Matriz de rastreabilidade
+
+| Resultado esperado | Requisitos relacionados | Evidência |
+| --- | --- | --- |
+| Usuário consegue realizar uma doação completa | RF-01, RF-03, RF-04, RF-06, RF-07, RF-08 | Cenário E2E com duas contas |
+| Anúncio não é alterado por terceiro | RF-05, RNF-01, RNF-02 | Teste de autorização do proprietário |
+| Conversa chega em tempo real | RF-06, RNF-04 | Teste REST + assinatura STOMP |
+| Dados pessoais não vazam no catálogo | RF-02, RNF-02 | Teste de contrato dos DTOs públicos |
+| Aplicação continua compreensível em falha | RNF-03, RNF-05, RNF-08 | Teste de estados de erro e acessibilidade |
+
+## 12. Fora do escopo atual
+
+- Pagamento, entrega ou intermediação financeira.
+- Verificação documental automática de identidade.
+- Match automático entre oferta e procura.
+- Feed social persistido de posts e comentários; o conteúdo ilustrativo não representa API implementada.
+- Push nativo por FCM/APNs; as notificações atuais são persistidas e exibidas pela aplicação.
+# Reviva - Segurança e Estratégia de Testes
+
+## 1. Objetivo
+
+Este documento define os controles de segurança e a estratégia de verificação do Reviva. O foco é proteger identidade, dados pessoais, localização, conversas e transações de retirada, além de preservar a confiança entre doador e receptor.
+
+## 2. Modelo de ameaça
+
+| Ativo | Ameaça principal | Controle esperado |
+| --- | --- | --- |
+| Conta e sessão | Roubo ou reutilização de token | JWT assinado, expiração configurável e remoção local no logout |
+| Senha | Vazamento por armazenamento inadequado | Persistir somente hash com `PasswordEncoder`; nunca registrar senha em log |
+| CPF e endereço | Exposição indevida | Validação no cadastro, DTOs mínimos e acesso restrito ao proprietário |
+| Localização | Rastreamento ou uso fora do contexto | Consentimento do navegador, envio sob ação explícita e exibição de região quando possível |
+| Item | Alteração por usuário não autorizado | Verificação de proprietário em service e uso de usuário autenticado |
+| Conversa | Leitura por terceiro | Conferência de participação antes de listar e enviar mensagens |
+| Retirada | Falsa conclusão | Confirmações por participante, token associado ao item e estados transacionais |
+| Denúncia | Abuso ou exposição de vítima | Autenticação, motivo controlado e tratamento reservado pela moderação |
+| API | Entrada malformada ou abuso de recursos | Bean Validation, limites de payload, erros uniformes e logs sem dados sensíveis |
+
+## 3. Controles implementados
+
+### Autenticação e autorização
+
+- Login e cadastro são endpoints públicos; os demais endpoints de conta exigem `Authorization: Bearer <JWT>`.
+- O JWT contém identidade mínima para localizar o usuário autenticado.
+- Senhas são comparadas com hash por `PasswordEncoder`.
+- Cadastro rejeita e-mail ou CPF duplicado.
+- Operações sobre itens usam o dono autenticado para impedir edição horizontal.
+- Operações de agendamento validam que o usuário é doador ou receptor da solicitação.
+- Notificação só pode ser marcada como lida pelo usuário a quem pertence.
+- DTOs evitam serializar diretamente entidades JPA com dados privados e relacionamentos circulares.
+
+### Proteção de dados
+
+- CPF é armazenado normalizado, nunca usado como serviço de endereço.
+- Consulta de CEP usa somente o CEP e não envia CPF a serviço externo.
+- Coordenadas são solicitadas pelo navegador no momento da ação e devem ter finalidade clara.
+- A localização compartilhada no chat é enviada como mensagem estruturada e abre mapa externo apenas mediante clique.
+- O frontend não deve incluir token, senha, CPF completo ou endereço completo em mensagens de erro.
+- MongoDB Atlas de produção deve usar TLS, credenciais protegidas e lista de IPs restrita.
+
+### Segurança de comunicação e configuração
+
+- Produção deve usar HTTPS para proteger JWT, mensagens e coordenadas em trânsito.
+- `JWT_SECRET` deve ser uma chave fixa, aleatória e com pelo menos 32 caracteres; o valor de desenvolvimento não pode ser usado em produção.
+- `SPRING_PROFILES_ACTIVE`, `MONGODB_URI`, `MONGODB_DATABASE`, `PORT` e `NOTIFICACOES_EXPIRACAO_DIAS` são configurações externas.
+- WebSocket deve validar o token recebido no handshake e restringir a inscrição ao tópico da solicitação permitida.
+- CORS, origem do frontend e cabeçalhos de segurança devem ser restritos ao domínio publicado.
+- Logs devem omitir senha, token, CPF, conteúdo de mensagem e coordenadas exatas.
+
+## 4. Riscos e reforços recomendados
+
+| Prioridade | Risco | Ação recomendada |
+| --- | --- | --- |
+| Alta | JWT armazenado em `localStorage` é acessível a scripts em caso de XSS | Preferir cookie `HttpOnly`, `Secure` e `SameSite` quando a topologia permitir |
+| Alta | Data URLs de fotos podem produzir payloads e registros grandes | Validar tamanho no backend e migrar fotos para armazenamento de objetos com URL assinada |
+| Alta | Endpoint de WebSocket precisa aplicar autorização por tópico | Validar sessão e participação antes de assinar ou publicar mensagens |
+| Média | Referências entre documentos podem exigir múltiplas leituras | Criar índices nas coleções, medir consultas e avaliar embedding ou agregações quando necessário |
+| Média | Não há menção a limitação de tentativas de login | Adicionar rate limit, atraso progressivo e alerta de tentativas repetidas |
+| Média | Link de Google Maps recebe coordenadas por URL | Pedir confirmação antes de abrir serviço externo e documentar compartilhamento com terceiro |
+| Média | Texto de mensagem pode conter abuso ou dados pessoais | Criar moderação, bloqueio, denúncia e política de retenção |
+| Baixa | Favoritos são apenas locais | Sincronizar com backend se a experiência exigir continuidade entre dispositivos |
+
+## 5. Pirâmide de testes
+
+### Camada unitária
+
+Cobrir regras puras e serviços isolados:
+
+- Validação de CPF, CEP, e-mail, senha e campos obrigatórios.
+- Expiração e renovação de item em 60 dias.
+- Filtros de categoria, tipo, termo, cidade e UF.
+- Transições de status de item, solicitação e agendamento.
+- Impedimento de acesso por usuário que não participa da solicitação.
+- Geração, validação e rejeição de token de retirada.
+- Pontuação, reputação, selo e impacto ambiental.
+- Expiração de notificações em 30 dias ou valor configurado.
+- Tratamento uniforme de erro de API no cliente.
+
+### Camada de integração
+
+Usar contexto Spring e banco isolado para verificar:
+
+- Persistência e unicidade de usuário.
+- Relacionamentos JPA entre item, usuário, solicitação, mensagem e agendamento.
+- Transações de conclusão, atualização do item e pontuação.
+- Serialização de DTOs sem senha, CPF ou relacionamentos cíclicos.
+- Autorização dos controllers com usuário autenticado.
+- Consulta de busca sem itens expirados.
+- Notificação criada ao abrir conversa e ao agendar.
+
+### Camada de contrato HTTP
+
+Validar método, rota, status e payload para cada endpoint descrito em `03-ARQUITETURA.md`:
+
+- `201 Created` para cadastro e publicação bem-sucedidos.
+- `401 Unauthorized` para ausência ou invalidade de JWT.
+- `403 Forbidden` para recurso de outro usuário.
+- `404 Not Found` para item, solicitação ou agendamento inexistente.
+- `409 Conflict` para e-mail ou CPF duplicado.
+- `400 Bad Request` para campos inválidos ou transição de estado impossível.
+- `204 No Content` para exclusões e ações sem corpo quando aplicável.
+
+### Camada frontend
+
+- Renderização de carregamento, erro, vazio e sucesso em cada tela remota.
+- Formatação e validação de CPF, CEP e peso.
+- Bloqueio do botão durante submissão para evitar duplicidade.
+- Persistência e remoção de token no login e logout.
+- Filtros acionados por Enter e botão Buscar.
+- Permissionamento do navegador para GPS, câmera e galeria.
+- Atualização de mensagem via REST e WebSocket sem duplicata.
+- Navegação por teclado, foco, rótulos, aria-label e leitura por tecnologia assistiva.
+- Responsividade em 320 px, 390 px, 768 px e 1440 px de largura.
+
+### End-to-end
+
+Cenário principal com duas contas:
+
+1. Registrar doador e receptor.
+2. Entrar em navegadores ou contextos separados.
+3. Doador publicar item com foto, peso e endereço.
+4. Receptor encontrar item por busca e abrir detalhes.
+5. Receptor iniciar conversa com mensagem.
+6. Doador receber notificação e responder em tempo real.
+7. Criar agendamento, confirmar pelo receptor e gerar código pelo doador.
+8. Confirmar retirada por QR Code ou por ambas as confirmações manuais.
+9. Verificar item doado, pontos, impacto, selo e avaliação.
+10. Reportar um problema em fluxo alternativo e verificar o estado correspondente.
+
+## 6. Testes de segurança
+
+- Tentar acessar perfil, item privado, mensagens e agendamento sem token.
+- Repetir requisição autenticada com token expirado, malformado e de outra conta.
+- Tentar editar, remover, restaurar e marcar como doado item de outra pessoa.
+- Tentar ler mensagens e agendamento de solicitação sem participar.
+- Tentar marcar notificação de outra conta como lida.
+- Enviar strings muito longas, JSON incompleto, caracteres de controle e HTML em campos de texto.
+- Enviar foto acima do limite e data URL inválida.
+- Repetir confirmação de retirada e confirmar com token incorreto.
+- Verificar que erros não exibem stack trace, SQL, JWT, senha ou CPF.
+- Rodar análise de dependências Maven e npm e tratar vulnerabilidades críticas antes da publicação.
+
+## 7. Dados de teste
+
+Usar contas sintéticas, sem CPF, endereço ou telefone reais. O banco de teste deve ser descartável e isolado. Os usuários demonstrativos documentados são `doador@reviva.com` e `receptor@reviva.com`, ambos com senha `reviva123`; essas credenciais devem existir somente em ambiente de demonstração.
+
+## 8. Evidências mínimas para uma release
+
+- Relatório de testes unitários e integração sem falhas.
+- Resultado dos cenários E2E principais e alternativos.
+- Registro de contratos HTTP exercitados.
+- Resultado de auditoria de dependências.
+- Verificação manual de acessibilidade e responsividade.
+- Confirmação de que segredos de produção não estão versionados.
+
+## 9. Casos de teste funcionais detalhados
+
+| ID | Cenário | Dado de entrada | Resultado esperado |
+| --- | --- | --- | --- |
+| TS-01 | Cadastro válido | E-mail e CPF inéditos, CPF válido e CEP com 8 dígitos | `201`, token emitido, senha armazenada somente como hash |
+| TS-02 | Cadastro duplicado | E-mail já utilizado | `409`, nenhuma segunda conta criada |
+| TS-03 | Login inválido | E-mail existente e senha incorreta | `401`, mensagem genérica, sem indicar qual campo falhou |
+| TS-04 | Publicação mínima | Item com título, categoria, tipo e endereço válidos | `201`, status `ATIVO`, validade de 60 dias |
+| TS-05 | Item expirado | `expiraEm` anterior ao instante atual | Item não aparece em `GET /api/itens` |
+| TS-06 | Alteração horizontal | Usuário B envia `PUT` para item do usuário A | `403` ou erro de domínio equivalente, item inalterado |
+| TS-07 | Conversa | Usuário B solicita item de A com mensagem | Solicitação, mensagem inicial e notificação criadas |
+| TS-08 | Mensagem em tempo real | Participante envia texto e outro participante está conectado | Mensagem persistida e recebida uma vez no tópico |
+| TS-09 | Consulta indevida | Usuário C consulta mensagens de solicitação de A e B | Acesso negado, sem conteúdo retornado |
+| TS-10 | Agendamento duplicado | Segunda tentativa para a mesma solicitação | Reutiliza ou rejeita o agendamento existente, sem duplicidade |
+| TS-11 | QR inválido | Token diferente do token do item | Operação rejeitada, status não concluído |
+| TS-12 | Conclusão | Confirmação do doador e receptor | Item `DOADO`, agendamento `CONCLUIDO`, impacto e pontos atualizados |
+| TS-13 | Repetição de conclusão | Confirmação repetida após conclusão | Não duplica pontos nem contagem de itens |
+| TS-14 | Notificação de terceiro | Usuário A marca notificação de B como lida | `403`, notificação de B permanece inalterada |
+| TS-15 | Denúncia | Motivo válido e detalhes | Denúncia registrada sem revelar tratamento interno |
+
+## 10. Testes de contrato e payloads
+
+Cada endpoint deve ser verificado com payload válido, campo obrigatório ausente, tipo incorreto, valor fora do enum, token ausente e token de outro usuário. A suíte deve confirmar:
+
+- nomes de propriedades em camelCase, compatíveis com os records Java e `api.js`;
+- datas em ISO-8601, com conversão correta para `Date` no frontend;
+- listas vazias como `[]`, nunca como `null` quando a tela espera iteração;
+- resposta `204` sem tentativa de fazer parse de JSON;
+- erro com campo `erro` ou `message`, convertido por `ApiError` para mensagem de tela;
+- DTO público sem `senhaHash`, CPF completo, token de retirada ou localização privada;
+- compatibilidade entre enum Java e filtros enviados pelo frontend, como `ROUPAS`, `DOAR` e `SEMINOVO`.
+
+## 11. Testes de concorrência e recuperação
+
+- Dois usuários tentam agendar o mesmo item simultaneamente; apenas um agendamento ativo deve prevalecer.
+- Doador clica duas vezes em Marcar como doado; a contagem e os pontos devem ser incrementados uma vez.
+- REST e WebSocket entregam a mesma mensagem; o cliente deve deduplicar pelo ID.
+- Banco fica indisponível durante uma transação; nenhuma atualização parcial de impacto deve ser confirmada.
+- WebSocket cai durante conversa; o cliente deve tentar reconectar e continuar permitindo envio pelo endpoint REST.
+- Reinício da aplicação com volume persistente; usuários, itens e mensagens devem permanecer disponíveis.
+
+## 12. Testes de acessibilidade e UX
+
+Para cada tela principal, executar com teclado, leitor de tela e viewport estreito:
+
+1. Login: alcançar e enviar todos os campos sem mouse.
+2. Cadastro: ouvir rótulos, erros e retorno da consulta de CEP.
+3. Busca: perceber filtros, resultado vazio e limpeza de filtros.
+4. Item: identificar título, estado, anunciante e ação principal.
+5. Chat: distinguir mensagem própria, recebida e evento de sistema.
+6. Agendamento: entender etapa atual, responsável e próxima ação.
+7. Modal destrutivo: mover foco, confirmar, cancelar e devolver foco ao gatilho.
+
+Registrar screenshot ou vídeo somente com dados sintéticos e anotar problemas por severidade: bloqueador, alto, médio ou baixo.
+
+## 13. Critérios de saída
+
+Uma versão pode ser considerada pronta quando todos os testes P0 passam, nenhum achado crítico ou alto de segurança está aberto, os contratos documentados estão compatíveis com o cliente, e os fluxos de cadastro, publicação, conversa e conclusão foram executados em ambiente limpo.
+# Reviva - Arquitetura, Dados e API
+
+## 1. Visão arquitetural
+
+O Reviva é organizado como dois aplicativos coordenados:
+
+```text
+Navegador
+  |
+  | REST/JSON com Bearer JWT
+  v
+Frontend React + Vite
+  |
+  | HTTP para comandos e consultas
+  | WebSocket/STOMP para mensagens e eventos do chat
+  v
+Backend Spring Boot
+  |
+  +-- Controllers REST
+  +-- Services e regras transacionais
+  +-- Repositories Spring Data JPA
+  +-- MongoDB Atlas
+  +-- APIs externas: ViaCEP, IBGE, Nominatim/OpenStreetMap
+```
+
+O frontend fica em `reviva-frontend` e o backend em `reviva-api`. Em desenvolvimento, o backend escuta na porta 8080 e o Vite na porta 5173. Em publicação same-origin, o frontend usa URLs relativas e a API pode servir a aplicação pelo mesmo domínio.
+
+## 2. Stack tecnológica
+
+| Camada | Tecnologia | Responsabilidade |
+| --- | --- | --- |
+| Linguagem backend | Java 21 | Implementação da API e regras de negócio |
+| Framework backend | Spring Boot 3.3.2 | Inicialização, MVC, configuração e ciclo da aplicação |
+| Web | Spring Web | Controllers REST e serialização JSON |
+| Persistência | Spring Data MongoDB | Mapeamento de documentos e referências |
+| Banco | MongoDB Atlas | Persistência gerenciada, índices e escala horizontal |
+| Segurança | Spring Security, JWT e JJWT 0.12.5 | Autenticação stateless e proteção de endpoints |
+| Validação | Jakarta Bean Validation | Validação de requisições |
+| Tempo real | Spring WebSocket, STOMP e SockJS | Eventos de chat e agendamento |
+| Documentação | Springdoc OpenAPI 2.6.0 | Swagger UI em `/swagger-ui.html` |
+| Frontend | React 18 e Vite | Interface e composição de telas |
+| Estilo | Tailwind CSS e estilos inline/tokens | Layout, estados e design responsivo |
+| Ícones | Lucide React | Ícones consistentes e acessíveis |
+| Mapas | Leaflet, react-leaflet e OpenStreetMap | Visualização de localização compartilhada |
+| Integração frontend | Fetch, STOMP.js e SockJS | REST, autenticação e chat |
+
+## 3. Organização do backend
+
+- `controller`: expõe rotas HTTP e delega a casos de uso.
+- `dto`: records de entrada e saída; evita expor entidades JPA diretamente.
+- `model`: entidades e enums persistidos.
+- `repository`: consultas e acesso às coleções MongoDB.
+- `service`: regras de domínio, transações, notificações e pontuação.
+- `security`: filtro JWT, serviço de token e configuração de segurança.
+- `config`: CORS, WebSocket, OpenAPI e configurações da aplicação.
+- `exception`: tratamento de erros de domínio e resposta HTTP.
+
+O frontend centraliza as chamadas em `src/api.js`, mantendo base URL, token, parâmetros, conversão de erro e URL de WebSocket em um único ponto. As telas ficam agrupadas por contexto: autenticação, descoberta, itens, conta e trocas.
+
+## 4. Modelagem de dados
+
+### Usuario
+
+| Campo | Tipo lógico | Descrição |
+| --- | --- | --- |
+| id | UUID/String | Identificador da conta |
+| nome | texto | Nome exibido |
+| email | texto único | Login e comunicação |
+| cpf | texto único | Documento normalizado e validado |
+| telefone | texto | Contato cadastrado |
+| senhaHash | texto | Hash da senha |
+| cep, numero, complemento | texto | Endereço cadastrado |
+| latitude, longitude | decimal | Localização escolhida pelo usuário |
+| raioBuscaKm | decimal | Alcance de busca |
+| pontos | inteiro | Pontuação de engajamento |
+| reputacaoScore | decimal | Média das avaliações |
+| itensDoados | inteiro | Total de doações concluídas |
+| kgResiduoEvitado | decimal | Impacto acumulado |
+| seloAtual | enum | Bronze, Prata, Ouro ou Esmeralda |
+
+### Item
+
+Campos de identificação e conteúdo: `id`, `titulo`, `descricao`, `categoria`, `estadoConservacao`, `tipoPublicacao`, `fotosUrls`.
+
+Campos de localização: `cep`, `numero`, `complemento`, `bairro`, `cidade`, `uf`, `latitude`, `longitude`.
+
+Campos de impacto e ciclo: `impactoCo2Kg`, `pesoKg`, `status`, `publicadoEm`, `expiraEm`, `qrCodeToken`.
+
+Enums principais:
+
+- `Categoria`: `ROUPAS`, `LIVROS`, `MOVEIS`, `INFANTIL`, `ELETRONICOS`, `COZINHA`, `OUTROS`.
+- `EstadoConservacao`: `NOVO`, `SEMINOVO`, `USADO`.
+- `TipoPublicacao`: `DOAR`, `TROCAR`.
+- `StatusItem`: ativo, doado, removido e estados de expiração derivados pela data.
+
+### Solicitacao
+
+Relaciona um `Item` a um `Usuario` receptor e representa a conversa inicial. Contém `mensagem`, `status` e `criadaEm`. O status pode ser `AGUARDANDO`, `ACEITA`, `RECUSADA` ou `CANCELADA`; no fluxo atual a criação já habilita a conversa com status `ACEITA`.
+
+### Mensagem
+
+Relaciona uma solicitação ao remetente, texto e instante de envio. Mensagens comuns são texto; eventos de localização, agendamento e retirada são serializados como JSON controlado para renderização específica no chat.
+
+### Agendamento
+
+Relaciona-se a uma solicitação e guarda `dataHora`, `localEncontro`, `status`, confirmação do receptor, confirmação do doador, confirmação do receptor na retirada e timestamps correspondentes. Status principais: `CONFIRMADO`, `CONCLUIDO`, `CANCELADO` e `PROBLEMA_REPORTADO`.
+
+### Avaliacao
+
+Relaciona o agendamento, avaliador e avaliado. Guarda nota de 1 a 5 e comentário opcional. A avaliação recalcula a reputação do usuário avaliado.
+
+### Notificacao
+
+Pertence a um usuário e pode referenciar uma solicitação. Guarda título, tipo, lida e data. A API permite marcação individual, limpeza total e remoção por expiração.
+
+### Comunidade e Denuncia
+
+`Comunidade` representa agrupamentos disponíveis e participantes. `Denuncia` registra autor, contexto, motivo, detalhes e estado de tratamento para moderação. O feed ilustrativo de posts exibido em algumas telas não é uma entidade persistida no backend atual.
+
+## 5. Relações
+
+```text
+Usuario 1 ---- N Item
+Usuario 1 ---- N Solicitacao como receptor
+Item 1 ------- N Solicitacao
+Solicitacao 1 N Mensagem
+Solicitacao 1 1 Agendamento
+Agendamento 1 N Avaliacao
+Usuario 1 ---- N Avaliacao como avaliador/avaliado
+Usuario 1 ---- N Notificacao
+Usuario N ---- N Comunidade
+Usuario 1 ---- N Denuncia
+```
+
+## 6. API REST
+
+### Autenticação e usuário
+
+| Método | Endpoint | Auth | Resultado |
+| --- | --- | --- | --- |
+| POST | `/api/auth/registrar` | Não | Cria conta e retorna JWT |
+| POST | `/api/auth/login` | Não | Valida credenciais e retorna JWT |
+| GET | `/api/usuarios/me` | Sim | Perfil da conta autenticada |
+| PATCH | `/api/usuarios/me/perfil-ativo` | Sim | Atualiza contexto de perfil ativo |
+| PATCH | `/api/usuarios/me/localizacao` | Sim | Salva latitude, longitude e raio de busca |
+| GET | `/api/usuarios/{id}/reputacao` | Conforme controller | Consulta reputação pública |
+| GET | `/api/usuarios/{id}/itens` | Não | Consulta itens públicos do usuário |
+
+### Geografia
+
+| Método | Endpoint | Auth | Resultado |
+| --- | --- | --- | --- |
+| GET | `/api/geo/cep/{cep}` | Não | Endereço e coordenadas aproximadas do CEP |
+| GET | `/api/geo/reverse?lat=&lon=` | Não | Converte coordenadas em região |
+| GET | `/api/geo/estados` | Não | Estados brasileiros |
+| GET | `/api/geo/estados/{uf}/cidades` | Não | Cidades da UF |
+
+### Itens
+
+| Método | Endpoint | Auth | Resultado |
+| --- | --- | --- | --- |
+| GET | `/api/itens` | Sim ou público conforme configuração | Busca por categoria, tipo, termo, cidade e UF |
+| GET | `/api/itens/{id}` | Não | Detalhes públicos do item |
+| GET | `/api/itens/meus` | Sim | Itens do usuário autenticado |
+| POST | `/api/itens` | Sim | Publica item e retorna 201 |
+| PUT | `/api/itens/{id}` | Sim, dono | Edita e renova por 60 dias |
+| DELETE | `/api/itens/{id}` | Sim, dono | Marca item como removido |
+| POST | `/api/itens/{id}/restaurar` | Sim, dono | Reativa item expirado ou removido |
+| POST | `/api/itens/{id}/doado` | Sim, dono | Marca como doado e atualiza impacto |
+
+### Solicitações e mensagens
+
+| Método | Endpoint | Auth | Resultado |
+| --- | --- | --- | --- |
+| POST | `/api/solicitacoes` | Sim | Cria conversa e mensagem inicial |
+| GET | `/api/solicitacoes/conversas` | Sim | Inbox com enviadas e recebidas |
+| GET | `/api/solicitacoes/recebidas` | Sim | Conversas sobre itens do usuário |
+| GET | `/api/solicitacoes/enviadas` | Sim | Conversas iniciadas pelo usuário |
+| GET | `/api/solicitacoes/{id}/mensagens` | Sim, participante | Histórico da conversa |
+| POST | `/api/solicitacoes/{id}/mensagens` | Sim, participante | Envia mensagem |
+
+### Agendamento, avaliação e moderação
+
+| Método | Endpoint | Auth | Resultado |
+| --- | --- | --- | --- |
+| GET | `/api/agendamentos/solicitacao/{id}` | Sim, participante | Consulta agendamento |
+| POST | `/api/agendamentos` | Sim, participante | Cria agendamento |
+| POST | `/api/agendamentos/solicitacao/{id}/cancelar` | Sim, participante | Cancela troca |
+| POST | `/api/agendamentos/{id}/confirmar-agendamento` | Sim, receptor | Confirma data e local |
+| POST | `/api/agendamentos/{id}/gerar-codigo` | Sim, doador | Gera token/QR de retirada |
+| POST | `/api/agendamentos/{id}/confirmar-doador` | Sim, participante | Confirma retirada pelo doador |
+| POST | `/api/agendamentos/{id}/confirmar-receptor` | Sim, participante | Confirma retirada pelo receptor |
+| POST | `/api/agendamentos/{id}/confirmar-qrcode?token=` | Sim, participante | Confirma usando token |
+| POST | `/api/agendamentos/{id}/reportar-problema` | Sim, participante | Registra problema |
+| POST | `/api/avaliacoes` | Sim | Registra avaliação pós-retirada |
+| POST | `/api/denuncias` | Sim | Registra denúncia |
+
+### Notificações e comunidades
+
+| Método | Endpoint | Auth | Resultado |
+| --- | --- | --- | --- |
+| GET | `/api/notificacoes` | Sim | Lista notificações e limite de expiração |
+| POST | `/api/notificacoes/{id}/lida` | Sim, proprietário | Marca como lida |
+| DELETE | `/api/notificacoes` | Sim | Limpa notificações da conta |
+| DELETE | `/api/notificacoes/expiradas` | Sim | Remove notificações antigas |
+| GET | `/api/comunidades` | Não | Lista comunidades |
+| POST | `/api/comunidades/{id}/participar` | Sim | Participa da comunidade |
+
+## 7. WebSocket e eventos
+
+- Endpoint de transporte: `/ws` via SockJS.
+- O cliente envia o JWT na conexão usando o parâmetro `token`.
+- O cliente assina `/topic/solicitacoes/{solicitacaoId}`.
+- Mensagens comuns carregam texto; eventos usam `tipo`.
+- Eventos conhecidos: `AGENDAMENTO_CRIADO`, `AGENDAMENTO_CONFIRMADO` e `RETIRADA_CONFIRMADA`.
+- Ao receber evento, o frontend atualiza mensagens e reconsulta o agendamento quando necessário.
+
+## 8. Configuração e execução
+
+- Perfil padrão: `dev`.
+- Porta: `8080`, sobrescrita por `PORT`.
+- Banco: MongoDB Atlas, configurado por `MONGODB_URI` e `MONGODB_DATABASE`.
+- JWT: segredo por `JWT_SECRET` e validade padrão de 1440 minutos.
+- Notificações: expiração padrão de 30 dias.
+- Swagger: `http://localhost:8080/swagger-ui.html`.
+- Frontend: `npm install` e `npm run dev` dentro de `reviva-frontend`.
+
+## 9. Contratos de requisição principais
+
+### Registro
+
+```json
+{
+  "nome": "Maria da Silva",
+  "email": "maria@example.com",
+  "cpf": "529.982.247-25",
+  "telefone": "31999999999",
+  "senha": "senha-de-exemplo",
+  "cep": "30110-000",
+  "numero": "100",
+  "complemento": "Apto 2"
+}
+```
+
+O backend remove máscara de CPF e CEP, valida unicidade e nunca devolve a senha. A resposta de autenticação contém o token necessário para as chamadas seguintes.
+
+### Item
+
+```json
+{
+  "titulo": "Jaqueta jeans P/M",
+  "descricao": "Pouco usada, sem avarias.",
+  "categoria": "ROUPAS",
+  "estadoConservacao": "SEMINOVO",
+  "tipoPublicacao": "DOAR",
+  "cep": "30110000",
+  "numero": "100",
+  "complemento": "",
+  "bairro": "Centro",
+  "cidade": "Belo Horizonte",
+  "uf": "MG",
+  "latitude": -19.92,
+  "longitude": -43.94,
+  "impactoCo2Kg": 2.5,
+  "pesoKg": 1.2,
+  "fotosUrls": []
+}
+```
+
+O retorno é `ItemResponse`, contendo resumo do doador e não a entidade `Usuario` inteira. O prazo `expiraEm` é calculado no backend.
+
+### Mensagem
+
+```json
+{
+  "texto": "Olá, o item ainda está disponível?"
+}
+```
+
+Mensagens de localização e eventos são JSON serializado no campo `texto`, com tipos controlados como `LOCALIZACAO`, `AGENDAMENTO_CRIADO`, `AGENDAMENTO_CONFIRMADO` e `RETIRADA_CONFIRMADA`.
+
+### Agendamento
+
+```json
+{
+  "solicitacaoId": "uuid-da-solicitacao",
+  "dataHora": "2026-09-15T14:00:00Z",
+  "localEncontro": "Entrada do Parque Municipal"
+}
+```
+
+O backend valida participante, solicitação cancelada e existência de outro agendamento ativo para o item.
+
+## 10. Modelo de erros
+
+| Situação | Status esperado | Tratamento do frontend |
+| --- | --- | --- |
+| JSON ou campo inválido | 400 | Mostrar correção próxima ao campo ou mensagem da API |
+| Token ausente/expirado | 401 | Limpar sessão e voltar para login |
+| Usuário não é proprietário/participante | 403 | Informar que o recurso não pertence ao usuário |
+| Recurso inexistente | 404 | Atualizar lista e mostrar que o item não está disponível |
+| E-mail ou CPF duplicado | 409 | Manter formulário e solicitar outro valor |
+| Erro inesperado | 500 | Mensagem genérica, log correlacionável no backend |
+
+O cliente lê preferencialmente `erro` ou `message` e encapsula o resultado em `ApiError`, mantendo o status HTTP para decisões como tratar `404` de agendamento inexistente como estado vazio.
+
+## 11. Camadas e fluxo de uma requisição
+
+```text
+Request HTTP
+  -> filtro JWT e contexto de segurança
+  -> controller e Bean Validation
+  -> service com autorização e regra de domínio
+  -> repository MongoDB
+  -> banco
+  -> entidade convertida em DTO
+  -> resposta JSON
+```
+
+Controllers não devem construir respostas com entidades JPA completas. Services são responsáveis por autorização contextual, transações, mudanças de estado, notificações, publicação de eventos e pontuação.
+
+## 12. Persistência e implantação
+
+### MongoDB Atlas
+
+- `MONGODB_URI` contém a connection string do cluster; nunca versionar esse segredo.
+- `MONGODB_DATABASE` define o banco lógico, normalmente `reviva`.
+- O backend usa `@Document` e `@DBRef`; os IDs legados continuam como strings para preservar URLs e relações.
+- MongoDB Atlas fornece persistência, backup, controle de acesso, índices e escalabilidade.
+- O cluster deve usar TLS, usuário com privilégio mínimo e lista de IPs restrita.
+- Criar índices para e-mail, CPF, status/expiração de item, item da solicitação e usuário de notificação.
+- Fotos base64 permanecem compatíveis, mas devem migrar futuramente para armazenamento de objetos.
+
+### Operação do banco
+
+- O seed usa upsert idempotente por ID nas coleções do MongoDB.
+- Fotos são armazenadas no campo `fotosUrls` e membros como referências em `membros`.
+- Fazer backup e validar as coleções do MongoDB antes de alterações estruturais.
+
+## 13. Integrações externas
+
+| Serviço | Uso | Falha esperada | Degradação |
+| --- | --- | --- | --- |
+| ViaCEP | Preencher endereço a partir do CEP | CEP inválido ou indisponibilidade | Permitir bairro/cidade manualmente |
+| IBGE | Listar estados e cidades | Timeout ou resposta inválida | Manter campos de região e permitir nova tentativa |
+| Nominatim/OpenStreetMap | Geocodificação reversa e mapa | Limite de uso ou indisponibilidade | Exibir coordenada/região já disponível sem bloquear o chat |
+| Google Maps | Abrir localização compartilhada | Serviço externo indisponível | Manter mapa Leaflet e texto de localização |
+
+## 14. Requisitos operacionais
+
+- Health check deve verificar processo, conexão com banco e configuração mínima de JWT.
+- Logs devem conter timestamp, nível, classe e contexto da operação sem dados pessoais.
+- Monitorar taxa de 4xx, 5xx, tempo de resposta, falhas de WebSocket e crescimento das coleções MongoDB.
+- Alertar quando o volume estiver próximo do limite ou quando backups falharem.
+- Desligamento deve permitir concluir transações em andamento antes de encerrar.
+# Reviva - Fluxos Principais do Usuário
+
+## 1. Convenções e regra principal de conta
+
+- **Conta Reviva**: existe uma única conta por pessoa. Não há cadastro separado de doador e receptor.
+- **Doador**: papel assumido pela conta que publicou um item em uma transação.
+- **Receptor**: papel assumido pela conta que demonstrou interesse em um item de outra pessoa.
+- A mesma conta pode publicar itens, receber mensagens sobre seus anúncios, procurar itens de outras pessoas, solicitar uma retirada, doar e receber em momentos diferentes ou até em paralelo.
+- O papel é definido pelo contexto do item e da conversa, não por um campo fixo do usuário, seleção obrigatória no cadastro ou segunda conta.
+- **Home principal**: tela autenticada única, com atalhos para publicar, descobrir, mensagens, comunidades, impacto e perfil.
+- **Contexto da transação**: em uma conversa, a interface identifica se a conta é doadora ou receptora daquele item e mostra as ações correspondentes.
+- **Participante**: doador ou receptor vinculado à solicitação.
+- **Item ativo**: item publicado, não removido, doado ou expirado.
+- **Feedback**: mensagem de sucesso, erro, carregamento ou estado vazio apresentada pela interface.
+
+## 2. Navegação principal: cinco telas
+
+Depois do login, a conta usa uma única navegação inferior. Doador e receptor não são perfis separados: a mesma pessoa pode buscar um item, iniciar uma troca, publicar outro item e acompanhar tudo pela mesma conta.
+
+| Nº | Tela principal | Função no produto | Ações mais importantes |
+| --- | --- | --- | --- |
+| 1 | **Início** | Resumo personalizado e ponto de entrada para todas as tarefas | Ver novidades, abrir notificações, continuar conversas, buscar e acessar atalhos |
+| 2 | **Buscar** | Descobrir itens publicados por outras pessoas | Filtrar, abrir detalhes, favoritar e iniciar conversa |
+| 3 | **Doar** | Publicar um item para doação ou troca | Adicionar fotos, informar dados, endereço e publicar |
+| 4 | **Minhas trocas** | Acompanhar conversas, agendamentos, retiradas e histórico | Abrir chat, confirmar etapas, cancelar, denunciar e avaliar |
+| 5 | **Perfil** | Administrar a conta e consultar reputação e impacto | Editar dados, ver itens próprios, pontos, comunidades e sair |
+
+As telas secundárias são abertas a partir dessas cinco: Login e Cadastro vêm antes da navegação; detalhes e filtros partem de Buscar; formulário de edição parte de Doar ou Perfil; Chat e Agendamento partem de Minhas trocas; Avaliação e Notificações podem ser abertas por Início, Minhas trocas ou Perfil.
+
+### Fluxo geral entre as cinco telas
+
+```text
+[Login/Cadastro]
+     |
+     v
+  [Início] <-------------------------------+
+    |  \                                   |
+    |   \                                  |
+    v    v                                 |
+ [Buscar] [Doar]                             |
+  |       |                                |
+  v       v                                |
+[Detalhe] [Item publicado]                   |
+  |       |                                |
+  +---+---+                                |
+    v                                    |
+ [Minhas trocas] <--> [Chat/Agendamento] ----+
+    |
+    v
+[Retirada] -> [Avaliação e impacto]
+    ^             |
+    +-------- [Perfil]
+```
+
+Uma troca só começa quando o usuário interessado envia uma mensagem sobre um item. Publicar um item não cria automaticamente uma troca nem exige escolher “doador” ou “receptor”.
+
+### 2.1 Tela 1: Início
+
+**Objetivo:** ser o ponto de entrada diário da conta e mostrar o que merece atenção agora.
+
+**Entrada:** após login, cadastro e onboarding; também pelo botão Início da navegação inferior.
+
+**Fluxo principal:**
+
+1. O sistema valida o token e consulta os dados básicos da conta.
+2. Exibe saudação, notificações não lidas e resumo de impacto quando houver atividade concluída.
+3. Mostra atalhos para **Buscar**, **Doar**, **Minhas trocas** e **Perfil**.
+4. Exibe itens recentes ou categorias para iniciar uma busca sem sair da tela.
+5. Exibe conversas ou agendamentos pendentes para o usuário continuar de onde parou.
+6. Ao selecionar um item, segue para **Buscar > Detalhes**.
+7. Ao selecionar uma conversa, segue para **Minhas trocas > Chat**.
+8. Ao selecionar uma pendência, abre diretamente a etapa necessária de **Minhas trocas**, como confirmar agendamento ou retirada.
+
+**Conexões:** é a origem de todos os fluxos. Depois de publicar em **Doar**, o usuário retorna ao Início; depois de concluir uma troca, o resumo de impacto é atualizado aqui; dados da conta são consultados em **Perfil**.
+
+**Estados:** carregando resumo; sem atividade, com convite para buscar ou publicar; notificações pendentes; erro de rede com tentativa novamente; sessão expirada com retorno ao Login.
+
+### 2.2 Tela 2: Buscar
+
+**Objetivo:** permitir que qualquer usuário autenticado encontre algo que deseja receber ou trocar.
+
+**Entrada:** botão Buscar no Início, navegação inferior, categoria ou item recente.
+
+**Fluxo principal:**
+
+1. O usuário informa termo, categoria, tipo de publicação, estado, cidade ou localização.
+2. Pode usar GPS para sugerir a região, sem obrigação de conceder permissão.
+3. O sistema aplica os filtros e apresenta a lista de itens ativos.
+4. O usuário pode limpar filtros, repetir a busca, favoritar ou abrir um item.
+5. Em **Detalhes**, consulta fotos, descrição, conservação, localização aproximada e reputação de quem publicou.
+6. Ao tocar em **Enviar mensagem**, a conta assume o papel de receptora naquela transação e uma conversa é criada.
+7. A conversa aparece em **Minhas trocas**; o usuário pode continuar navegando ou abrir o Chat imediatamente.
+
+**Conexões:** Buscar não altera o perfil da conta. A ação **Enviar mensagem** cria a ligação com **Minhas trocas**. Se o usuário decidir publicar outro item, vai para **Doar** sem perder favoritos ou a conversa atual.
+
+**Estados:** busca inicial; carregando; nenhum resultado com ação para remover filtros; item indisponível, expirado ou já doado; falha de localização com busca manual; erro da API com tentativa novamente.
+
+### 2.3 Tela 3: Doar
+
+**Objetivo:** transformar um objeto em anúncio de doação ou troca.
+
+**Entrada:** botão Doar na navegação inferior, atalho no Início ou ação de publicar em Perfil.
+
+**Fluxo principal:**
+
+1. O usuário escolhe se quer **Doar** ou **Trocar** o item; isso define o anúncio, não o tipo de conta.
+2. Adiciona fotos, título, descrição, categoria, estado de conservação e peso aproximado.
+3. Informa CEP, número e complemento; o sistema tenta completar bairro, cidade e UF.
+4. Confere a prévia do anúncio e corrige os campos necessários.
+5. Confirma a publicação; o backend associa o anúncio à conta autenticada e marca o item como ativo.
+6. O anúncio passa a aparecer em **Buscar** para outras contas.
+7. O usuário retorna ao Início com confirmação e pode acompanhar mensagens em **Minhas trocas**.
+
+**Edição:** pelo próprio anúncio em **Perfil > Meus itens** ou por uma ação de gerenciamento, o usuário altera os dados e renova a validade conforme a regra do produto.
+
+**Conexões:** Doar alimenta a lista de **Buscar** e gera o lado do anunciante nas conversas de **Minhas trocas**. A mesma conta pode entrar em Buscar logo depois de publicar.
+
+**Estados:** formulário vazio; preenchimento; foto processando; endereço incompleto; envio bloqueado durante publicação; sucesso com opção de ver anúncio; erro preservando os dados digitados.
+
+### 2.4 Tela 4: Minhas trocas
+
+**Objetivo:** concentrar tudo o que acontece depois que existe interesse em um item.
+
+**Entrada:** navegação inferior, atalho do Início, notificação ou mensagem recebida.
+
+**Organização:** a lista reúne conversas iniciadas pelo usuário e conversas recebidas sobre anúncios dele. O rótulo deve explicar o contexto, por exemplo **Você demonstrou interesse** ou **Interesse no seu item**, sem criar dois perfis.
+
+**Fluxo principal:**
+
+1. O usuário abre uma conversa vinculada a um item.
+2. O Chat mostra a pessoa, o anúncio, o status do item e o histórico.
+3. Os participantes enviam mensagens, localização e combinam a retirada.
+4. Um participante cria o agendamento com data, horário e local.
+5. O outro confirma, solicita alteração ou cancela antes da retirada.
+6. Após confirmação, a tela mostra a próxima ação: gerar código, apresentar QR Code ou confirmar manualmente.
+7. As duas confirmações concluem a retirada, atualizam o item e liberam a avaliação.
+8. Cada participante avalia a experiência; a troca permanece no histórico.
+
+**Conexões:** recebe solicitações criadas em **Buscar**; recebe notificações originadas em **Início**; abre dados da conta em **Perfil** quando o usuário consulta reputação; após conclusão, envia pontos e impacto para **Perfil** e **Início**.
+
+**Estados:** nenhuma troca; conversa nova; mensagem não lida; agendamento aguardando confirmação; retirada pronta; concluída; cancelada; problema reportado; conexão WebSocket indisponível com envio REST e reconexão.
+
+### 2.5 Tela 5: Perfil
+
+**Objetivo:** reunir identidade, reputação, impacto, anúncios próprios e configurações da conta.
+
+**Entrada:** navegação inferior, avatar ou ação de conta no Início.
+
+**Fluxo principal:**
+
+1. Exibe nome, foto, reputação, selo, pontos, itens doados e quilos de material reutilizado.
+2. Permite editar foto e dados pessoais sem criar outro perfil.
+3. Abre **Meus itens** para consultar anúncios ativos, expirados, removidos ou concluídos.
+4. Permite editar, restaurar, remover ou marcar um anúncio como doado quando permitido.
+5. Abre favoritos salvos localmente, comunidades e histórico.
+6. Mostra indicadores de atividade como doador e como receptor, sem separar a conta em duas áreas de autenticação.
+7. Permite consultar reputação, notificações e sair da sessão.
+
+**Conexões:** Perfil leva para **Doar** quando o usuário quer publicar; leva para **Minhas trocas** quando acessa histórico; leva para **Buscar** ao abrir favoritos; retorna ao Início após alterações salvas.
+
+**Estados:** perfil carregando; dados incompletos; sem anúncios próprios; sem histórico; atualização salva; falha ao salvar mantendo os valores preenchidos; logout confirmado retornando ao Login.
+
+### Regra de leitura do fluxo
+
+Quando o texto disser “doador” ou “receptor”, trata-se apenas do papel da conta naquela operação. Por exemplo, na tela 5 a mesma pessoa pode tocar em **Publicar item** e se tornar doadora daquele anúncio; depois pode tocar em **Buscar** e se tornar receptora de outro item. A conta, o login, o perfil, a reputação e o histórico continuam sendo os mesmos.
+
+## 3. Fluxo de primeiro acesso e entrada nas cinco telas
+
+```text
+Abrir aplicação
+  -> Tela de Login ou Cadastro
+  -> Onboarding, quando for o primeiro acesso
+  -> Tela principal: Início
+  -> Navegação: Buscar, Doar, Minhas trocas ou Perfil
+```
+
+### Caminho alternativo
+
+Se existir token válido em `localStorage`, o frontend consulta o usuário atual e abre a home sem solicitar credenciais. Se a consulta falhar por token expirado, remove a sessão e retorna à autenticação.
+
+## 4. Fluxo da tela 3: cadastro de conta única
+
+### Pré-condições
+
+O visitante não precisa estar autenticado. O navegador deve permitir entrada de texto e, opcionalmente, geolocalização para completar endereço.
+
+### Passo a passo
+
+1. Usuário seleciona Criar conta.
+2. Preenche nome, e-mail, telefone, CPF, senha, CEP, número e complemento.
+3. O frontend aplica máscara de CPF e CEP e valida campos obrigatórios.
+4. O CEP é consultado para preencher bairro, cidade, UF e coordenadas quando possível.
+5. Usuário corrige manualmente bairro ou cidade se a consulta externa não responder.
+6. Frontend envia `POST /api/auth/registrar`.
+7. Backend normaliza CPF e CEP, valida formato e verifica duplicidade.
+8. Backend grava apenas o hash da senha e retorna JWT.
+9. Frontend salva o token, carrega `/api/usuarios/me` e abre o onboarding.
+10. Ao concluir ou pular o onboarding, a conta chega à home única e pode publicar e receber itens sem escolher um perfil permanente.
+
+### Falhas esperadas
+
+- E-mail existente: informar conflito e permitir voltar ao login.
+- CPF inválido: destacar o campo sem apagar os demais dados.
+- CEP inválido: permitir preenchimento manual do endereço.
+- API indisponível: informar que o backend não respondeu e manter o formulário.
+
+## 5. Fluxo da tela 2: login e logout
+
+### Login
+
+1. Usuário informa e-mail e senha.
+2. Frontend envia `POST /api/auth/login` sem Authorization.
+3. Backend busca conta por e-mail e compara senha com hash.
+4. Em sucesso, retorna token e frontend grava `reviva_token`.
+5. Frontend consulta o perfil e abre a home única.
+6. O usuário escolhe a próxima ação: publicar um item, buscar itens ou abrir uma conversa. Essa escolha define o contexto da operação, não altera o perfil da conta.
+
+### Logout
+
+1. Usuário escolhe Sair no perfil.
+2. Interface solicita confirmação.
+3. Ao confirmar, frontend remove token e dados de sessão local.
+4. Aplicação retorna à tela de login.
+5. Dados locais de favoritos podem ser preservados no dispositivo, pois não representam autenticação.
+
+## 6. Fluxo da tela 5 para as telas 6 e 7: descobrir e demonstrar interesse
+
+```text
+Home única, no contexto de descoberta
+  -> Categorias ou Buscar
+  -> Texto, UF, cidade ou localização atual
+  -> Lista de itens
+  -> Detalhes do item
+  -> Favoritar ou Enviar mensagem
+```
+
+1. A home única carrega atalhos de publicação, itens recentes, categorias e conversas.
+2. O usuário abre Busca ou escolhe uma categoria.
+3. Pode digitar termo e pressionar Enter ou Buscar.
+4. Pode selecionar UF e cidade com dados do IBGE.
+5. Pode autorizar GPS; o navegador retorna coordenadas e a API converte em região.
+6. Frontend chama `GET /api/itens` com os filtros preenchidos.
+7. A API retorna somente itens disponíveis e não expirados.
+8. O usuário abre detalhe com fotos, descrição, conservação, localização aproximada, reputação e selo do anunciante.
+9. Favorito é salvo localmente e pode ser removido sem chamada de API.
+
+### Estados da tela
+
+- Carregando: skeleton ou indicador de busca.
+- Sem resultado: mensagem clara e ação para remover filtros.
+- Falha: erro legível e botão de tentar novamente.
+- Resultado: grade responsiva com distância quando coordenadas estiverem disponíveis.
+
+## 7. Fluxo das telas 5 e 8: publicar item como doador daquela transação
+
+1. Usuário autenticado escolhe Cadastrar item na home única ou em Meus itens.
+2. Seleciona Doar ou Trocar.
+3. Seleciona categoria e conservação.
+4. Informa título e descrição.
+5. Informa peso aproximado; se deixar vazio, sistema usa estimativa da categoria.
+6. Adiciona até três fotos pela câmera ou galeria.
+7. Frontend comprime cada imagem para aproximadamente 900 px e JPEG antes do envio.
+8. Informa CEP, número e complemento.
+9. CEP preenche endereço e coordenadas; usuário pode corrigir bairro e cidade.
+10. Frontend valida título, número, bairro e cidade.
+11. Envia `POST /api/itens`.
+12. Backend associa usuário autenticado, marca item como `ATIVO` e define validade de 60 dias.
+13. Frontend informa sucesso e retorna para a home única ou para Meus itens.
+14. A conta passa a ser doadora somente em relação a esse anúncio; continua podendo buscar e solicitar outros itens normalmente.
+
+### Falhas esperadas
+
+- Foto inválida: descartar somente a foto com erro e manter as demais.
+- Endereço incompleto: impedir envio e indicar campos faltantes.
+- Erro de servidor: manter dados preenchidos para nova tentativa.
+
+## 8. Fluxo da tela 9: gerenciamento dos próprios itens
+
+### Listar
+
+1. Usuário abre Gerenciar itens.
+2. Frontend chama `GET /api/itens/meus`.
+3. Exibe itens ativos, expirados, removidos e doados com estados visuais distintos.
+
+### Editar
+
+1. Usuário abre menu Editar em item próprio.
+2. Formulário carrega dados existentes.
+3. Usuário altera campos e confirma.
+4. Frontend envia `PUT /api/itens/{id}`.
+5. Backend verifica propriedade, atualiza campos e renova validade por 60 dias.
+6. Interface confirma atualização.
+
+### Remover
+
+1. Usuário escolhe Remover.
+2. Interface confirma ação.
+3. Frontend envia `DELETE /api/itens/{id}`.
+4. Backend altera status para `REMOVIDO`.
+5. Item deixa de aparecer na busca pública.
+
+### Restaurar
+
+1. Usuário escolhe Restaurar item removido ou expirado.
+2. Frontend envia `POST /api/itens/{id}/restaurar`.
+3. Backend valida estado e propriedade, marca `ATIVO` e renova por 60 dias.
+
+### Marcar como doado
+
+1. Usuário escolhe Doação concluída.
+2. Interface confirma a ação.
+3. Frontend envia `POST /api/itens/{id}/doado`.
+4. Backend marca `DOADO`, incrementa itens doados, impacto e pontuação uma única vez.
+
+## 9. Fluxo das telas 7, 10 e 11: conversa entre dois papéis da mesma conta
+
+```text
+Detalhes do item
+  -> Enviar mensagem
+  -> Solicitação criada
+  -> Inbox único dos dois contextos
+  -> Chat
+  -> Texto, foto, localização ou agendamento
+```
+
+1. Receptor seleciona Enviar mensagem.
+2. Frontend envia `POST /api/solicitacoes` com `itemId` e mensagem.
+3. Backend cria solicitação, mensagem inicial e notificação para o doador.
+4. O dono do anúncio vê a conversa recebida na Inbox; o usuário interessado vê a mesma conversa como iniciada.
+5. Ambos carregam histórico por `GET /api/solicitacoes/{id}/mensagens`.
+6. Mensagem nova é enviada por `POST /api/solicitacoes/{id}/mensagens`.
+7. Backend persiste e publica no tópico STOMP da solicitação.
+8. O outro navegador recebe mensagem em tempo real.
+9. Conversas permanecem disponíveis no Inbox até serem removidas pelo fluxo de dados do backend.
+
+## 10. Fluxo da tela 11: compartilhamento de localização
+
+1. Usuário abre o menu de anexos no chat.
+2. Escolhe compartilhar localização.
+3. Navegador solicita permissão de geolocalização.
+4. Frontend cria mensagem JSON com tipo `LOCALIZACAO`, latitude, longitude e horário.
+5. Destinatário vê cartão com mapa Leaflet e OpenStreetMap.
+6. O cartão usa zoom fixo 15 e não permite navegação interativa.
+7. Usuário escolhe Abrir no Google Maps para abrir coordenada em nova aba.
+
+## 11. Fluxo das telas 12 e 13: agendamento, retirada e conclusão
+
+### Criar e confirmar data
+
+1. Um participante escolhe Agendar no chat.
+2. Informa data, horário e local de encontro.
+3. Frontend envia `POST /api/agendamentos`.
+4. Backend valida participação, ausência de troca ativa concorrente e status não cancelado.
+5. Evento `AGENDAMENTO_CRIADO` é persistido como mensagem e publicado no WebSocket.
+6. Receptor confirma com `POST /api/agendamentos/{id}/confirmar-agendamento`.
+7. Evento `AGENDAMENTO_CONFIRMADO` atualiza o chat.
+
+### Confirmar retirada por código
+
+1. Doador solicita geração do código.
+2. Backend confirma que o receptor já confirmou o agendamento.
+3. Backend gera token numérico associado ao item.
+4. Doador exibe QR Code ou informa código no encontro.
+5. Participante escaneia ou envia `POST /api/agendamentos/{id}/confirmar-qrcode?token=...`.
+6. Backend valida token e registra as duas confirmações.
+7. Agendamento passa a `CONCLUIDO`, item passa a `DOADO` e indicadores são atualizados.
+8. Evento `RETIRADA_CONFIRMADA` aparece no chat.
+
+### Confirmar manualmente
+
+Cada lado pode usar seu botão de confirmação. Quando os timestamps do doador e do receptor estiverem presentes, o backend executa a mesma conclusão transacional.
+
+### Cancelar ou reportar
+
+- Cancelar usa `POST /api/agendamentos/solicitacao/{id}/cancelar`; troca concluída não pode ser cancelada.
+- Reportar problema usa `POST /api/agendamentos/{id}/reportar-problema` e preserva o histórico para tratamento.
+
+## 12. Fluxo da tela 14: avaliação, reputação e impacto
+
+1. Após conclusão, cada participante acessa Avaliar.
+2. Escolhe nota de 1 a 5 e pode escrever comentário.
+3. Frontend envia `POST /api/avaliacoes`.
+4. Backend registra avaliação e recalcula média do avaliado.
+5. Pontos recebidos atualizam o selo entre Bronze, Prata, Ouro e Esmeralda.
+6. Dashboard apresenta itens doados, quilos evitados, pontos e nota média.
+
+## 13. Fluxo da tela 17: notificações
+
+1. Home consulta `GET /api/notificacoes`.
+2. Badge mostra notificações não lidas.
+3. Usuário abre lista e seleciona uma notificação.
+4. Frontend marca com `POST /api/notificacoes/{id}/lida`.
+5. Se a notificação for de chat, navega para a solicitação relacionada.
+6. Usuário pode limpar tudo ou excluir apenas expiradas.
+
+## 14. Fluxo da tela 18: denúncia
+
+1. Usuário abre menu de segurança em item, conversa ou agendamento.
+2. Escolhe motivo controlado: item divergente, comportamento inadequado, não comparecimento, suspeita de golpe ou outro.
+3. Adiciona detalhes objetivos.
+4. Frontend envia `POST /api/denuncias`.
+5. Interface confirma recebimento sem expor ação de moderação.
+6. A equipe responsável analisa a denúncia e decide medida apropriada.
+
+## 15. Fluxos de erro e recuperação
+
+- Token inválido: remover sessão e solicitar login novamente.
+- API indisponível: apresentar mensagem e botão de repetição.
+- Conflito de item: atualizar tela e informar que o item já foi agendado ou concluído.
+- Permissão de GPS negada: permitir busca manual por UF e cidade.
+- WebSocket desconectado: exibir estado discreto e manter envio REST com reconexão automática.
+- Formulário inválido: destacar campo e preservar todo conteúdo já digitado.
+
+## 16. Matriz de telas e ações
+
+| Tela | Entrada principal | Dados consumidos | Ações primárias | Estado vazio |
+| --- | --- | --- | --- | --- |
+| Login | E-mail e senha | Resposta JWT | Entrar, ir para cadastro | Não se aplica |
+| Cadastro | Dados pessoais e endereço | ViaCEP opcional | Criar conta, voltar ao login | Não se aplica |
+| Home única | Usuário, itens, solicitações e notificações | `/usuarios/me`, `/itens`, `/solicitacoes/conversas`, `/notificacoes` | Publicar, buscar, abrir Inbox, consultar impacto e perfil | Nenhum item ou conversa |
+| Busca | Termo, UF, cidade, GPS | IBGE, reverse geocode e `/itens` | Buscar, limpar filtros, abrir item | Nenhum resultado |
+| Detalhe | ID do item | `/itens/{id}`, reputação | Favoritar, enviar mensagem, denunciar | Item indisponível |
+| Gerenciar itens | Conta autenticada | `/itens/meus` | Editar, remover, restaurar, marcar doado | Nenhum item próprio |
+| Inbox | Conta autenticada | `/solicitacoes/conversas` | Abrir chat, arquivar | Nenhuma conversa |
+| Chat | Solicitação | Mensagens, agendamento e WebSocket | Enviar, anexar, agendar, denunciar |
+| Impacto | Conta autenticada | Perfil, avaliações e pontos | Consultar evolução | Sem atividade concluída |
+| Comunidades | Nenhuma ou sessão | `/comunidades` | Ver e participar | Nenhuma comunidade |
+| Notificações | Conta autenticada | `/notificacoes` | Marcar lida, limpar, abrir contexto | Nenhuma notificação |
+
+## 17. Pré-condições, pós-condições e invariantes
+
+| Operação | Pré-condição | Pós-condição |
+| --- | --- | --- |
+| Publicar item | Sessão válida e campos obrigatórios preenchidos | Item próprio `ATIVO`, validade definida e disponível na busca |
+| Editar item | Item pertence ao usuário | Dados atualizados e validade renovada |
+| Iniciar conversa | Item existe e receptor está autenticado | Solicitação, mensagem inicial e notificação persistidas |
+| Enviar mensagem | Usuário participa da solicitação | Mensagem persistida e evento publicado |
+| Agendar retirada | Participante, troca não cancelada e item sem troca ativa | Um agendamento associado à solicitação |
+| Gerar código | Doador autenticado e receptor confirmou agendamento | Token associado ao item disponível para retirada |
+| Concluir retirada | Confirmações válidas ou QR Code válido | Item doado, agendamento concluído, pontos e impacto atualizados |
+| Avaliar | Agendamento concluído e participante elegível | Avaliação persistida e reputação recalculada |
+
+Invariantes: uma conta não pode ler conversa de que não participa; um item não pode ter duas trocas ativas; conclusão não pode duplicar contadores; dados privados não aparecem em resumo público.
+
+## 18. Fluxo detalhado de estados da troca
+
+```text
+[Item ATIVO]
+  |
+  | receptor envia mensagem
+  v
+[Solicitacao ACEITA]
+  |
+  | participante agenda
+  v
+[Agendamento CONFIRMADO]
+  |
+  | receptor confirma data/local
+  v
+[Código disponível]
+  |
+  | confirmação manual dupla ou QR válido
+  v
+[Retirada CONCLUIDA]
+  |
+  +--> [Item DOADO] + pontos + impacto + avaliação
+```
+
+Rotas alternativas: cancelamento leva a `CANCELADO`; incidente leva a `PROBLEMA_REPORTADO`; token inválido não muda nenhum estado.
+
+## 19. Regras de comunicação da interface
+
+- Antes de uma ação irreversível, explicar o objeto e a consequência: “Marcar jaqueta como doada?”.
+- Depois de uma operação, informar o resultado e a próxima ação: “Item publicado. Ver anúncio”.
+- Em erro de validação, apontar campo e solução, sem resetar o formulário.
+- Em erro de autorização, não sugerir que o usuário tente manipular outro ID.
+- Em item removido ou doado, explicar por que o botão de mensagem não está disponível.
+- Em fluxo de localização, pedir permissão somente no momento em que o usuário escolhe usar GPS.
+
+## 20. Cenário alternativo completo: troca cancelada
+
+1. Usuário A e usuário B conversam sobre um item.
+2. Um participante cria agendamento.
+3. Antes da retirada, um participante escolhe Cancelar.
+4. Interface pede confirmação e informa que a troca não será concluída.
+5. Backend marca agendamento e solicitação como cancelados.
+6. O item pode voltar a receber interesse conforme a regra de disponibilidade.
+7. O histórico da conversa permanece para auditoria e segurança.
+
+Nenhum ponto, avaliação ou quilo evitado é contabilizado nesse cenário.
+# Reviva - Requisitos Funcionais e Não Funcionais
+
+## 1. Requisitos funcionais
+
+### RF-01 - Cadastro e autenticação
+
+1. O sistema deve permitir cadastro com nome, e-mail, CPF, telefone, senha e endereço.
+2. O CPF deve ser normalizado para somente dígitos e validado pelo algoritmo dos dois dígitos verificadores.
+3. O CEP deve conter oito dígitos após a normalização.
+4. E-mail e CPF devem ser únicos.
+5. O cadastro deve retornar um JWT para iniciar a sessão sem exigir novo login.
+6. O login deve validar e-mail e senha e retornar um JWT.
+7. O frontend deve persistir o token no navegador usando a chave `reviva_token`.
+8. O logout deve remover o token após confirmação do usuário.
+9. Credenciais inválidas devem retornar erro de autenticação sem revelar se o e-mail existe.
+
+### RF-02 - Perfil e localização
+
+1. O usuário autenticado deve consultar seus dados, reputação, pontos, selo, itens doados e quilos de resíduo evitado.
+2. O usuário deve atualizar suas coordenadas e seu raio de busca.
+3. O sistema deve permitir consultar a reputação e os itens públicos de outro usuário.
+4. O sistema deve separar dados públicos do anunciante e dados privados da conta.
+5. O endereço informado por CEP deve poder preencher bairro, cidade, estado e coordenadas.
+
+### RF-03 - Publicação de item
+
+1. O usuário autenticado deve cadastrar título, descrição, categoria, conservação, tipo de publicação, endereço, peso estimado e fotos.
+2. Os tipos de publicação devem ser `DOAR` e `TROCAR`.
+3. As categorias devem ser Roupas, Livros, Móveis, Infantil, Eletrônicos, Cozinha e Outros.
+4. Os estados de conservação devem ser Novo, Seminovo e Usado.
+5. O sistema deve aceitar até três fotos por item.
+6. O CEP deve consultar uma API de endereço e permitir preenchimento manual quando a consulta falhar.
+7. O impacto ambiental deve usar o peso informado ou uma estimativa por categoria.
+8. Um item recém-publicado deve iniciar com status `ATIVO` e validade padrão de 60 dias.
+9. A publicação deve registrar o doador, a data de publicação, o endereço e as coordenadas disponíveis.
+
+### RF-04 - Busca e descoberta
+
+1.rf -5 Visitantes devem consultar comunidades e detalhes públicos de itens.
+2. Usuários devem listar itens ativos por categoria, tipo de publicação, termo, cidade e UF.
+3. Itens expirados não devem aparecer na busca pública.
+4. A tela inicial deve exibir categorias, itens recentes e atalhos contextuais.
+5. O usuário deve poder localizar uma região por estado e cidade usando dados do IBGE.
+6. O usuário deve poder usar o GPS do navegador para obter cidade e UF a partir de coordenadas.
+7. O usuário deve poder salvar favoritos localmente no navegador.
+8. A grade deve oferecer visualização rápida do item quando o dispositivo permitir.
+
+### RF-05 - Gerenciamento de anúncios
+
+1. O usuário deve listar seus próprios itens, inclusive os que não estão ativos.
+2. Somente o dono do item deve poder editá-lo, removê-lo, restaurá-lo ou marcá-lo como doado.
+3. A edição deve renovar a validade do item por mais 60 dias.
+4. A remoção deve alterar o status para `REMOVIDO`, sem apagar o registro fisicamente.
+5. A restauração deve reativar item removido ou expirado e renovar sua validade.
+6. A marcação como doado deve alterar o status, atualizar o impacto e contabilizar os pontos do doador uma única vez.
+7. O sistema deve impedir que um usuário gerencie item pertencente a outra conta.
+
+### RF-06 - Conversas e mensagens
+
+1. Ao selecionar Enviar mensagem em um anúncio, o sistema deve criar uma conversa vinculada ao item.
+2. A solicitação deve identificar item, doador, receptor, mensagem inicial, status e data de criação.
+3. O usuário deve visualizar uma caixa de entrada com conversas enviadas e recebidas.
+4. O usuário deve listar e enviar mensagens de texto em uma conversa.
+5. As mensagens devem permanecer persistidas no banco de dados.
+6. O chat deve receber novas mensagens em tempo real via WebSocket/STOMP.
+7. O cliente deve evitar duplicar mensagens recebidas por REST e WebSocket.
+8. A caixa de entrada deve manter as conversas disponíveis enquanto elas existirem no backend.
+9. O chat deve orientar os usuários a manter as negociações dentro da plataforma.
+10. O usuário deve compartilhar localização atual, foto, câmera e referência de local conforme os recursos disponíveis no navegador.
+
+### RF-07 - Agendamento e retirada
+
+1. Os participantes da conversa devem poder informar data, horário e local de encontro.
+2. Deve existir no máximo um agendamento ativo por solicitação.
+3. O receptor deve confirmar o agendamento.
+4. Após a confirmação do receptor, o doador deve poder gerar um código de retirada.
+5. O ciclo deve permitir confirmação manual do doador e do receptor.
+6. O ciclo deve permitir confirmação por token associado ao item e QR Code na interface.
+7. A retirada deve ser concluída somente quando as duas confirmações forem registradas ou quando o fluxo de QR Code as representar.
+8. Ao concluir, o item deve passar a `DOADO`, o agendamento a `CONCLUIDO` e os indicadores de impacto devem ser atualizados.
+9. Qualquer participante deve poder cancelar enquanto a troca não estiver concluída.
+10. Qualquer participante deve poder reportar um problema.
+
+### RF-08 - Avaliações, impacto e reputação
+
+1. Após a retirada, cada participante deve poder avaliar o outro com nota de 1 a 5 e comentário opcional.
+2. O sistema deve recalcular a reputação média do usuário avaliado.
+3. O sistema deve contabilizar itens doados, quilos de resíduo evitado e pontos.
+4. A pontuação deve considerar doação concluída, recebimento concluído e avaliação recebida.
+5. Os selos devem ser Bronze, Prata, Ouro e Esmeralda.
+6. A página inicial e o dashboard devem exibir os indicadores de impacto.
+
+### RF-09 - Notificações
+
+1. O sistema deve criar notificações para novos contatos e eventos relevantes do chat.
+2. O usuário deve listar notificações ordenadas da mais recente para a mais antiga.
+3. O usuário deve marcar uma notificação como lida.
+4. O indicador da página inicial deve mostrar a quantidade de notificações não lidas.
+5. O usuário deve limpar todas as notificações.
+6. O usuário deve excluir notificações expiradas.
+7. A expiração padrão deve ser de 30 dias e configurável por `NOTIFICACOES_EXPIRACAO_DIAS`.
+
+### RF-10 - Comunidades e denúncias
+
+1. O usuário deve listar comunidades disponíveis sem autenticação.
+2. O usuário autenticado deve participar de uma comunidade.
+3. O usuário deve denunciar item ou comportamento informando motivo e detalhes.
+4. Os motivos suportados devem incluir item divergente, comportamento inadequado, não comparecimento, suspeita de golpe e outro.
+5. As denúncias devem permanecer disponíveis para moderação e não devem expor dados sensíveis ao denunciante.
+
+## 2. Requisitos não funcionais
+
+| ID | Categoria | Requisito | Critério de aceitação |
+| --- | --- | --- | --- |
+| RNF-01 | Segurança | Endpoints privados devem exigir JWT válido. | Operações de item e agendamento validam o proprietário ou participante antes de executar. |
+| RNF-02 | Privacidade | Dados privados não devem ser expostos em consultas públicas. | E-mail, CPF, senha e localização exata não são serializados como dados do anunciante. |
+| RNF-03 | Desempenho | A aplicação deve indicar carregamento sem bloquear a navegação durante buscas remotas. | A página inicial exibe estado de carregamento enquanto aguarda a API. |
+| RNF-04 | Tempo real | Mensagens devem ser atualizadas sem polling contínuo. | O chat utiliza STOMP sobre SockJS para receber mensagens. |
+| RNF-05 | Disponibilidade | Falhas de API devem produzir retorno compreensível e recuperável. | A interface exibe estado de erro e oferece uma ação para tentar novamente. |
+| RNF-06 | Compatibilidade | A interface deve funcionar em navegadores modernos desktop e mobile. | Os principais fluxos funcionam com toque e teclado. |
+| RNF-07 | Responsividade | O conteúdo deve se adaptar a telas estreitas. | Não há rolagem horizontal acidental nem perda de controles. |
+| RNF-08 | Acessibilidade | A interface deve ser utilizável por pessoas com diferentes necessidades de acesso. | Campos possuem rótulos, botões têm nome acessível, o foco é visível e a cor não é o único indicador. |
+| RNF-09 | Manutenibilidade | O código deve manter separação clara de responsabilidades. | O backend separa controller, service, repository, model e DTO; o frontend centraliza chamadas em `api.js`. |
+| RNF-10 | Observabilidade | Erros e eventos relevantes devem ser identificáveis nos registros da aplicação. | Erros de domínio retornam mensagens legíveis e os logs diferenciam aplicação, web e banco de dados. |
+| RNF-11 | Portabilidade | Configurações variáveis devem ser externas ao código-fonte. | Porta, JWT, caminho do banco e expiração de notificações podem ser definidos por variáveis de ambiente. |
+| RNF-12 | Integridade | Operações relacionadas à conclusão devem preservar consistência. | Conclusão, pontuação e atualização de impacto ocorrem de forma transacional no backend. |
+# Reviva - UX, UI e Acessibilidade
+
+## 1. Direção de experiência
+
+O Reviva deve comunicar reaproveitamento, confiança e proximidade local. A interface é mobile-first, acolhedora e objetiva: ações frequentes ficam próximas do polegar, informações de item aparecem em blocos escaneáveis e estados da troca são sempre visíveis.
+
+A experiência deve reduzir a ansiedade de uma doação entre desconhecidos. Por isso, o produto mostra reputação, selo, status online quando disponível, localização aproximada, mensagens de segurança e confirmação clara em cada etapa.
+
+## 2. Tokens visuais
+
+### Cores
+
+#### Paleta base
+
+| Token | Hexadecimal | RGB aproximado | Contraste/uso recomendado |
+| --- | --- | --- | --- |
+| `--role-primary-doador` | `#1F6E43` | 31, 110, 67 | Ação primária do doador, links, impacto e status ativo sobre branco |
+| `--role-primary-doador-dark` | `#123F27` | 18, 63, 39 | Texto de alto contraste, hover, gradiente do cartão de impacto |
+| `--role-soft-doador` | `#E4EFE7` | 228, 239, 231 | Fundo de chip selecionado, aviso positivo e área de formulário do doador |
+| `--role-primary-receptor` | `#E0673F` | 224, 103, 63 | Ação de busca, descoberta, favoritos e contexto receptor |
+| `--role-primary-receptor-dark` | `#9C4327` | 156, 67, 39 | Texto de ação sobre fundo claro, erro contextual e hover |
+| `--role-soft-receptor` | `#FBE8E0` | 251, 232, 224 | Chip selecionado, filtro de busca e destaque de receptor |
+| `--ink` | `#16281F` | 22, 40, 31 | Títulos, texto principal, mensagens próprias e ícones importantes |
+| `--ink-soft` | `#516357` | 81, 99, 87 | Descrições, datas, ajuda, distância e metadados |
+| `--surface` | `#FFFFFF` | 255, 255, 255 | Cards, modais, campos, folhas de ação e mensagens recebidas |
+| `--background` | `#F7F6F0` | 247, 246, 240 | Fundo global e áreas de leitura |
+| `--border` | `#EDEBE1` | 237, 235, 225 | Divisórias, bordas de cards e campos neutros |
+| `--border-map` | `#DFE8DF` | 223, 232, 223 | Borda do cartão de localização e componentes geográficos |
+| `--gold` | `#F2A93C` | 242, 169, 60 | Estrelas, pontos, progresso, selo Ouro e destaque de conquista |
+| `--error` | `#B43B2F` | 180, 59, 47 | Erros, exclusão, denúncia crítica e falha de validação |
+| `--warning` | `#9C6B14` | 156, 107, 20 | Permissão negada, localização indisponível e atenção não destrutiva |
+| `--success` | `#1F6E43` | 31, 110, 67 | Conclusão, confirmação e retorno positivo |
+
+#### Uso por tela
+
+| Tela/contexto | Fundo | Ação principal | Texto | Elementos secundários |
+| --- | --- | --- | --- | --- |
+| Login e cadastro | `--background` | `--role-primary-doador` | `--ink` | `--ink-soft` para ajuda, `--error` para validação |
+| Home doador | `--background` | Verde doador | `--ink` | Cartão de impacto em `--role-primary-doador` para `--role-primary-doador-dark` |
+| Home receptor | `--background` | Coral receptor | `--ink` | Categorias em `--role-soft-receptor`, favorito em coral |
+| Busca e filtros | `--background` | `--role-primary-receptor` | `--ink` | Filtro selecionado em `--role-soft-receptor`, GPS em `--warning` quando falhar |
+| Cadastro/edição de item | `--background` | Cor do contexto ativo | `--ink` | Campos em `--surface`, foco na cor primária, erro em `--error` |
+| Inbox | `--background` | `--role-primary-doador` | `--ink` | Badge não lida na cor primária, arquivar com `--ink-soft` |
+| Chat | `--background` | Cor do usuário atual | `--ink` | Mensagem própria em cor suave do papel, recebida em `--surface`, eventos em neutro |
+| Agendamento | `--background` | Verde para confirmar | `--ink` | Cancelar em `--error`, atenção em `--warning`, concluído em `--success` |
+| Impacto e perfil | `--background` | Verde doador | `--ink` | Pontos e estrelas em `--gold`, selos com cores próprias e rótulo textual |
+| Denúncia | `--background` | `--error` somente na confirmação | `--ink` | Motivos neutros, aviso de segurança em `--warning` |
+
+#### Cores dos selos
+
+| Selo | Cor | Aplicação |
+| --- | --- | --- |
+| Bronze | `#B08968` | Ícone e borda do selo Bronze; sempre acompanhado de “Bronze” |
+| Prata | `#9CA3AF` | Ícone e borda do selo Prata; não usar como único indicador de status |
+| Ouro | `#F2A93C` | Ícone, progresso e destaque de conquista Ouro |
+| Esmeralda | `#1F6E43` | Ícone e destaque do selo máximo |
+
+#### Estados de componentes
+
+| Estado | Fundo | Borda/ícone | Texto | Exemplo |
+| --- | --- | --- | --- | --- |
+| Neutro | `--surface` | `--border` | `--ink` | Campo vazio e card de item |
+| Hover/foco | `--role-soft-*` | Primária, 2 px no foco | `--ink` | Botão, chip ou campo ativo |
+| Desabilitado | `#F1EFE6` | `--border` | `--ink-soft` | Botão bloqueado durante envio |
+| Sucesso | `--role-soft-doador` | `--success` | `--role-primary-doador-dark` | Item publicado ou retirada concluída |
+| Atenção | `#FFF4D6` | `--warning` | `#6F4A0C` | GPS negado ou ação pendente |
+| Erro | `#FBE6E3` | `--error` | `#7A271F` | CPF inválido ou API indisponível |
+| Informativo | `#EAF0F4` | `#42677A` | `#294455` | Explicação sobre etapa do agendamento |
+
+O verde identifica contribuição e impacto; o coral identifica descoberta, procura e recepção. A mudança de contexto nunca deve ser comunicada apenas por cor: usar título, ícone e texto.
+
+#### Regras de aplicação de cor
+
+- Não aplicar o coral receptor em telas de conta como se representasse erro; o significado vem do contexto e do rótulo.
+- Não usar `--gold` para botões primários, pois a cor é reservada a avaliação, pontos e conquistas.
+- Não usar vermelho para item removido sem exibir o texto “Removido”; cor e ícone devem complementar o rótulo.
+- Links em fundo branco devem usar as variantes escuras para manter legibilidade.
+- A cor primária de cada contexto deve aparecer em ação principal, seleção ativa e indicador de navegação, mas não dominar todo o fundo.
+- Toda combinação deve ser conferida com contraste WCAG AA; textos auxiliares pequenos não devem usar cores claras demais.
+
+### Tipografia
+
+- Fonte de interface: `Plus Jakarta Sans`, com fallback para uma sans-serif do sistema.
+- Fonte de display e títulos: `Fraunces`, com fallback para uma serif expressiva disponível.
+- Corpo: 14 a 16 px, line-height entre 1.4 e 1.6.
+- Texto auxiliar: mínimo de 12 px em desktop e 11 px somente para metadados não essenciais.
+- Títulos de tela: 20 a 24 px, peso 600.
+- Título de card: 14 a 16 px, peso 700.
+- Nunca usar caixa alta extensa em frases longas.
+- Evitar texto muito condensado e manter espaçamento de letras neutro.
+
+### Forma e elevação
+
+- Cards e campos usam raio entre 12 e 16 px; modais podem chegar a 18 px.
+- Botões principais têm raio entre 10 e 14 px.
+- Bordas suaves usam `#EDEBE1` ou `#DFE8DF`.
+- Sombras são curtas e discretas, com opacidade baixa.
+- Não empilhar card dentro de card sem necessidade; seções de página devem respirar como áreas contínuas.
+
+### Espaçamento e dimensões
+
+| Token | Valor | Uso |
+| --- | --- | --- |
+| `space-1` | 4 px | Distância entre ícone e texto ou metadado curto |
+| `space-2` | 8 px | Gap entre chips, controles e itens de uma linha |
+| `space-3` | 12 px | Padding de card compacto, campo e mensagem |
+| `space-4` | 16 px | Separação padrão entre blocos |
+| `space-5` | 20 px | Margem lateral principal nas telas mobile |
+| `space-6` | 24 px | Separação de seções e modal |
+| `space-8` | 32 px | Respiro entre áreas principais em desktop |
+| `control-height` | 44 a 48 px | Altura mínima de botão, campo e alvo de toque |
+| `content-max` | 1200 px | Largura máxima do conteúdo em telas grandes |
+
+Alvos de toque devem ter pelo menos 44 por 44 px, mesmo quando o ícone visual tiver 16 ou 20 px. Cards de item devem reservar proporção fixa para a imagem, evitando que uma foto carregada altere a posição das ações.
+
+## 3. Componentes
+
+### Navegação
+
+- `TopBar`: título curto, voltar à esquerda e ação contextual à direita.
+- `BottomNav`: Home, Busca, Inbox, Comunidades e Perfil; item ativo tem ícone e rótulo.
+- `SectionTitle`: título de seção e ação secundária, como Ver tudo.
+- Breadcrumbs não são necessários na experiência mobile; o botão Voltar deve ser consistente.
+
+### Ações
+
+- `Button`: ação principal com texto e ícone quando houver símbolo conhecido.
+- `iconBtn`: ações de sino, voltar, fechar, favorito, editar, arquivar e compartilhar; deve ter tooltip ou `aria-label`.
+- `Chip`: seleção de categoria, conservação, tipo e filtros.
+- Ações destrutivas devem usar cor de erro e confirmação explícita.
+- Botões desabilitados devem manter contraste suficiente e explicar indisponibilidade com texto auxiliar quando relevante.
+
+### Conteúdo
+
+- `ItemCard`: foto, título, categoria, conservação, tipo, distância, favorito e resumo do anunciante.
+- `Avatar`: foto ou iniciais, com nome acessível.
+- `Stars`: nota visual acompanhada de valor textual para leitores de tela.
+- `ImpactRing`: quilos reutilizados, itens doados e progresso; sempre exibir valor numérico além do gráfico.
+- `StatusBar`: status de ativo, expirado, removido, agendado, concluído ou problema.
+- `EmptyState`: ícone, explicação curta e próxima ação útil.
+- `ErrorBox`: mensagem acionável, sem stack trace ou detalhes técnicos.
+- `Toast`: confirmação breve, não essencial para concluir a tarefa e que desaparece sozinha.
+
+### Formulários
+
+- Campos têm `label` persistente; placeholder não substitui rótulo.
+- Erro fica abaixo do campo e é associado por `aria-describedby`.
+- Inputs de CEP, CPF, telefone e peso usam teclado adequado em mobile.
+- Foto deve mostrar miniatura, estado de processamento, remoção e limite de três arquivos.
+- Datas e horários devem usar controles nativos com formato local e resumo legível antes do envio.
+
+## 4. Layout por tela
+
+### Autenticação
+
+Tela limpa, marca Reviva no primeiro viewport, formulário centralizado e uma ação principal por vez. Login e cadastro devem ter navegação evidente entre si. O conteúdo deve funcionar em 320 px sem exigir zoom.
+
+### Home do doador
+
+1. Saudação e sino de notificações.
+2. Cartão de impacto com itens doados e quilos reutilizados.
+3. Atalhos para cadastrar item, gerenciar itens, mensagens, comunidades e perfil.
+4. Solicitações recentes.
+5. Navegação inferior persistente.
+
+### Home do receptor
+
+1. Saudação contextual e sino.
+2. Campo de busca proeminente.
+3. Categorias em rolagem horizontal controlada.
+4. Itens publicados recentemente em grade de duas colunas.
+5. Favorito e preview rápido sem perder o contexto.
+
+### Busca e lista
+
+Filtros devem ficar acima dos resultados e ser fáceis de limpar. Estado, cidade e localização atual devem ter relação visual clara. Cards devem manter proporção estável para evitar saltos enquanto imagens carregam.
+
+### Detalhes do item
+
+Imagem principal, galeria, título, tipo, conservação, descrição, impacto, dados resumidos do anunciante, região aproximada e ação Enviar mensagem. A ação principal deve permanecer acessível sem cobrir o conteúdo.
+
+### Cadastro e edição
+
+Formulário vertical dividido em grupos: fotos, descrição, classificação, impacto e endereço. O botão Salvar fica após os campos e pode ser fixado somente se não encobrir erro ou teclado. Em edição, indicar que salvar renova o anúncio por 60 dias.
+
+### Inbox e chat
+
+Inbox prioriza pessoa, item, última mensagem e não lidas. O gesto de arquivar deve ter alternativa visível ou acessível. No chat, mensagens próprias e recebidas devem ter alinhamento, cor e rótulo diferentes sem depender apenas de cor. Eventos de agendamento e retirada usam cartões de sistema.
+
+### Agendamento e confirmação
+
+Mostrar uma linha do tempo simples: solicitação, agendamento, confirmação do receptor, código e retirada concluída. Cada etapa deve informar quem pode agir e qual é o próximo passo.
+
+### Perfil e impacto
+
+Exibir reputação, selo, pontos, itens doados, quilos evitados e ações de conta. Privacidade e logout devem ficar separados de métricas para reduzir cliques acidentais.
+
+## 5. Estados e feedback
+
+Cada tela que depende de API deve contemplar:
+
+- carregando, com indicador visual e rótulo;
+- sucesso, com confirmação curta e próxima ação;
+- vazio, com contexto e ação para começar;
+- erro de rede, com tentativa novamente;
+- não autorizado, com retorno ao login;
+- conflito de domínio, com explicação do estado atual;
+- submissão, com botão desabilitado e indicador para evitar duplo envio.
+
+Mensagens devem usar linguagem direta, humana e específica. Preferir “Não foi possível publicar o item. Verifique sua conexão e tente novamente.” a “Erro 500”.
+
+## 6. Acessibilidade
+
+### Teclado e foco
+
+- Toda ação deve ser alcançável por Tab e acionável por Enter ou Espaço.
+- Foco visível nunca deve ser removido.
+- Modal deve mover foco para o título ou primeira ação, prender foco enquanto aberto e devolver foco ao gatilho ao fechar.
+- Gestos de toque, toque longo e deslize precisam de equivalente por botão ou menu.
+
+### Leitores de tela
+
+- Usar HTML semântico: `header`, `nav`, `main`, `section`, `form`, `label`, `button` e `time`.
+- Ícones decorativos devem ter `aria-hidden=true`; ícones de ação devem ter nome.
+- Contadores de notificação devem informar “3 notificações não lidas”, não apenas mostrar o número.
+- Atualizações do chat e toasts devem usar uma região `aria-live` adequada.
+- Mapas devem ter alternativa textual com região, horário e ação para abrir a coordenada.
+
+### Cor, contraste e movimento
+
+- Texto normal deve atingir contraste mínimo WCAG AA de 4,5:1; texto grande, 3:1.
+- Status devem combinar cor com texto, ícone ou forma.
+- Respeitar `prefers-reduced-motion` em loaders, transições e pull-to-refresh.
+- Não usar animação para comunicar sucesso ou erro sem mensagem textual.
+- Não depender de hover para revelar função essencial em mobile.
+
+### Conteúdo e validação
+
+- Erros devem dizer como corrigir.
+- Não apagar formulário inteiro depois de falha.
+- Confirmar ações irreversíveis com texto do objeto afetado.
+- Formatar datas, números e mensagens em português do Brasil.
+- Anúncios e fotos devem ter texto alternativo útil; imagem meramente decorativa deve ter alt vazio.
+
+## 7. Responsividade
+
+| Faixa | Comportamento |
+| --- | --- |
+| 320 a 479 px | Uma coluna, bottom navigation, cards compactos e ações de largura total |
+| 480 a 767 px | Uma coluna ampla, grade de itens ainda controlada e modais quase integrais |
+| 768 a 1199 px | Conteúdo centralizado, duas colunas quando houver comparação e navegação confortável |
+| 1200 px ou mais | Largura máxima legível, espaço lateral, grade com mais itens e painel de detalhes equilibrado |
+
+A interface deve evitar textos cortados, botões que mudam de tamanho ao carregar, imagens sem proporção definida e componentes que exigem rolagem horizontal acidental.
+
+## 8. Segurança percebida
+
+- Exibir selo e reputação junto do anunciante, mas sem transformar nota em garantia absoluta.
+- Mostrar aviso para manter a negociação dentro do Reviva.
+- Antes de abrir mapa externo, indicar que uma coordenada será enviada a outro serviço.
+- Diferenciar item ativo, doado, removido e expirado com texto explícito.
+- Em denúncia, confirmar recebimento sem prometer resultado ou revelar investigação.
+
+## 9. Checklist visual antes de publicar
+
+- A primeira ação da tela está clara em até três segundos.
+- Nenhum texto essencial depende apenas de cor.
+- Campos e botões possuem nome acessível.
+- Estados de carregamento, erro, vazio e sucesso foram revisados.
+- O layout foi testado em 320 px e 1440 px.
+- Teclado e leitor de tela conseguem concluir login, cadastro, busca, publicação e envio de mensagem.
+- Fotos não deformam cards nem deslocam ações.
+- Ações destrutivas têm confirmação e alternativa de recuperação quando possível.
+
+## 10. Especificação de componentes por estado
+
+### Botão primário
+
+Usa a cor principal do contexto, texto branco ou `--surface` e altura mínima de 44 px. No hover, usa a variante escura; no foco, adiciona anel visível de 2 px; durante envio, mantém largura e mostra `Loader2` com texto “Salvando...” ou equivalente. Nunca trocar o texto por apenas um spinner.
+
+### Campo de formulário
+
+Fundo `--surface`, borda `--border`, texto `--ink` e placeholder `--ink-soft`. No foco, borda de 2 px na cor do contexto e anel externo discreto. No erro, fundo `#FBE6E3`, borda `--error`, ícone de alerta e mensagem textual abaixo. A altura deve permanecer constante entre os estados.
+
+### Chip e filtro
+
+Estado neutro usa fundo `--surface` e borda `--border`. Estado selecionado usa `--role-soft-doador` ou `--role-soft-receptor` e borda primária. O texto sempre informa a seleção; o chip não depende apenas de mudança de cor.
+
+### Card de item
+
+Fundo `--surface`, borda `--border`, título `--ink`, metadados `--ink-soft`. A foto ocupa a área superior com `object-fit: cover`, proporção estável e alt descritivo. Favorito utiliza coral receptor, mas também apresenta estado acessível “Adicionar aos favoritos” ou “Remover dos favoritos”.
+
+### Mensagem de chat
+
+Mensagem própria usa a cor suave do contexto e alinhamento à direita; mensagem recebida usa `--surface` e alinhamento à esquerda. Ambas exibem texto, horário e estado de entrega/leitura por texto ou ícone nomeado. Eventos de sistema usam fundo neutro, ícone e título, sem parecer uma mensagem de pessoa.
+
+### Status de item
+
+`ATIVO` usa verde e ícone de verificação; `EXPIRADO` usa `--warning` e relógio; `REMOVIDO` usa neutro e arquivo; `DOADO` usa verde e `CheckCircle`; `PROBLEMA_REPORTADO` usa `--error` e alerta. Todos exibem o nome do estado.
+
+## 11. Conteúdo de interface
+
+| Situação | Texto recomendado | Ação complementar |
+| --- | --- | --- |
+| Busca vazia | “Nenhum item encontrado nessa região.” | “Limpar filtros” |
+| Inbox vazio | “Nenhuma conversa por aqui.” | “Explorar itens” |
+| Publicação concluída | “Item publicado com sucesso.” | “Ver item” |
+| API indisponível | “Não foi possível conectar agora.” | “Tentar novamente” |
+| GPS negado | “Não foi possível acessar sua localização.” | “Escolher estado e cidade” |
+| Item expirado | “Este anúncio expirou.” | “Voltar para busca” |
+| Retirada concluída | “Retirada confirmada. A doação foi concluída.” | “Avaliar experiência” |
+| Denúncia enviada | “Recebemos sua denúncia.” | “Voltar para o item” |
+
+Mensagens nunca devem expor `500`, stack trace, nomes de classes ou detalhes de banco ao usuário final.
+
+## 12. Checklist de auditoria visual
+
+- [ ] Todas as cores usadas no código estão mapeadas neste documento ou justificadas como cor de integração externa.
+- [ ] A cor primária do contexto está consistente entre botão, foco, chip e navegação.
+- [ ] Verde, coral, dourado, erro e alerta têm texto ou ícone complementar.
+- [ ] Texto principal e de ação passa no contraste AA sobre seu fundo.
+- [ ] Nenhum botão muda de largura entre normal, carregando, erro e sucesso.
+- [ ] Nenhum modal cobre o campo com erro ou a navegação inferior.
+- [ ] O layout foi conferido em 320, 390, 768 e 1440 px.
+- [ ] A experiência foi revisada com teclado, leitor de tela e `prefers-reduced-motion`.
+# Organização dos conjuntos e telas
+
+## Objetivo
+
+O projeto será dividido em 6 conjuntos. Cada conjunto terá exatamente 2 telas funcionais, totalizando 12 telas.
+
+Onboarding e login ficam separados, pois são telas de entrada do sistema e não fazem parte da contagem dos conjuntos funcionais.
+
+Cada conjunto deve funcionar de forma independente durante o desenvolvimento, mas suas telas devem continuar integradas ao sistema completo na terceira sprint.
+
+---
+
+## Estrutura geral do projeto
+
+```text
+prototipo/
+├── reviva-frontend/
+│   └── src/
+│       ├── onboarding/
+│       ├── auth/
+│       ├── shared/
+│       └── conjuntos/
+│           ├── conjunto-01-publicacao-gestao/
+│           ├── conjunto-02-descoberta-detalhes/
+│           ├── conjunto-03-solicitacao-chat/
+│           ├── conjunto-04-perfil-reputacao/
+│           ├── conjunto-05-comunidades-favoritos/
+│           └── conjunto-06-endereco-seguranca/
+│
+└── reviva-api/
+    └── src/
+        └── main/
+            └── api/
+                ├── RevivaApiApplication.java
+                ├── shared/
+                ├── auth/
+                └── conjuntos/
+                    ├── conjunto-01-publicacao-gestao/
+                    ├── conjunto-02-descoberta-detalhes/
+                    ├── conjunto-03-solicitacao-chat/
+                    ├── conjunto-04-perfil-reputacao/
+                    ├── conjunto-05-comunidades-favoritos/
+                    └── conjunto-06-endereco-seguranca/
+```
+
+---
+
+## Pastas independentes do sistema
+
+### Frontend: onboarding
+
+```text
+reviva-frontend/src/onboarding/
+├── Onboarding.jsx
+└── onboarding.css
+```
+
+### Frontend: login e cadastro
+
+```text
+reviva-frontend/src/auth/
+├── Login.jsx
+├── Cadastro.jsx
+├── authService.js
+└── auth.css
+```
+
+### API: autenticação
+
+```text
+reviva-api/src/main/api/auth/
+├── controller/
+│   └── AuthController.java
+├── service/
+│   └── AuthService.java
+└── dto/
+    ├── LoginRequest.java
+    ├── RegistroRequest.java
+    └── TokenResponse.java
+```
+
+Essas pastas ficam fora dos 6 conjuntos, mas são utilizadas por todas as telas que exigem usuário autenticado.
+
+---
+
+# Conjunto 1 - Publicação e gestão
+
+## Tela 1: Cadastro de item
+
+Permite cadastrar um item, adicionar fotos, informar categoria, descrição, condição e localização.
+
+### Frontend
+
+```text
+reviva-frontend/src/conjuntos/conjunto-01-publicacao-gestao/cadastro-item/
+├── CadastroItem.jsx
+├── cadastroItemService.js
+└── cadastroItem.css
+```
+
+### API
+
+```text
+reviva-api/src/main/api/conjuntos/conjunto-01-publicacao-gestao/publicacao/
+├── controller/
+│   └── ItemPublicacaoController.java
+├── service/
+│   └── ItemPublicacaoService.java
+├── dto/
+│   └── ItemRequest.java
+└── model/
+    └── Item.java
+```
+
+## Tela 2: Gerenciar itens
+
+Permite listar, editar, remover, restaurar e acompanhar o status dos itens publicados.
+
+### Frontend
+
+```text
+reviva-frontend/src/conjuntos/conjunto-01-publicacao-gestao/gerenciar-itens/
+├── GerenciarItens.jsx
+├── gerenciarItensService.js
+└── gerenciarItens.css
+```
+
+### API
+
+```text
+reviva-api/src/main/api/conjuntos/conjunto-01-publicacao-gestao/gestao/
+├── controller/
+│   └── ItemGestaoController.java
+├── service/
+│   └── ItemGestaoService.java
+├── repository/
+│   └── ItemRepository.java
+└── dto/
+    └── ItemStatusResponse.java
+```
+
+---
+
+# Conjunto 2 - Descoberta e detalhes
+
+## Tela 3: Busca / descoberta de itens
+
+Permite pesquisar itens por termo, categoria, cidade, UF e disponibilidade.
+
+### Frontend
+
+```text
+reviva-frontend/src/conjuntos/conjunto-02-descoberta-detalhes/busca/
+├── Busca.jsx
+├── ListaItens.jsx
+├── buscaService.js
+└── busca.css
+```
+
+### API
+
+```text
+reviva-api/src/main/api/conjuntos/conjunto-02-descoberta-detalhes/descoberta/
+├── controller/
+│   └── DescobertaController.java
+├── service/
+│   └── DescobertaService.java
+└── dto/
+    └── BuscaItensRequest.java
+```
+
+## Tela 4: Detalhes do item
+
+Exibe fotos, descrição, localização, anunciante, reputação, favoritos e ação para solicitar o item.
+
+### Frontend
+
+```text
+reviva-frontend/src/conjuntos/conjunto-02-descoberta-detalhes/detalhes-item/
+├── DetalhesItem.jsx
+├── detalhesItemService.js
+└── detalhesItem.css
+```
+
+### API
+
+```text
+reviva-api/src/main/api/conjuntos/conjunto-02-descoberta-detalhes/detalhes/
+├── controller/
+│   └── DetalhesItemController.java
+├── service/
+│   └── DetalhesItemService.java
+└── dto/
+    └── ItemDetalhesResponse.java
+```
+
+---
+
+# Conjunto 3 - Solicitação e chat
+
+## Tela 5: Solicitação de item
+
+Permite enviar, cancelar e acompanhar uma solicitação nos estados enviada, aceita, recusada, agendada e concluída.
+
+### Frontend
+
+```text
+reviva-frontend/src/conjuntos/conjunto-03-solicitacao-chat/solicitacao/
+├── Solicitacao.jsx
+├── solicitacaoService.js
+└── solicitacao.css
+```
+
+### API
+
+```text
+reviva-api/src/main/api/conjuntos/conjunto-03-solicitacao-chat/solicitacao/
+├── controller/
+│   └── SolicitacaoController.java
+├── service/
+│   └── SolicitacaoService.java
+├── repository/
+│   └── SolicitacaoRepository.java
+├── model/
+│   └── Solicitacao.java
+└── dto/
+    ├── SolicitacaoRequest.java
+    └── SolicitacaoResponse.java
+```
+
+## Tela 6: Chat de negociação
+
+Permite conversar, trocar mensagens, combinar o local e acompanhar a negociação.
+
+### Frontend
+
+```text
+reviva-frontend/src/conjuntos/conjunto-03-solicitacao-chat/chat/
+├── Chat.jsx
+├── Inbox.jsx
+├── chatService.js
+└── chat.css
+```
+
+### API
+
+```text
+reviva-api/src/main/api/conjuntos/conjunto-03-solicitacao-chat/chat/
+├── controller/
+│   ├── MensagemController.java
+│   └── PresencaController.java
+├── service/
+│   └── MensagemService.java
+├── repository/
+│   └── MensagemRepository.java
+├── model/
+│   └── Mensagem.java
+└── dto/
+    ├── MensagemRequest.java
+    └── MensagemResponse.java
+```
+
+O agendamento e a confirmação da troca ficam como apoio deste conjunto, pois dependem da solicitação e da conversa.
+
+---
+
+# Conjunto 4 - Perfil e reputação
+
+## Tela 7: Perfil do usuário
+
+Permite visualizar e editar dados pessoais, foto, informações públicas e preferências básicas.
+
+### Frontend
+
+```text
+reviva-frontend/src/conjuntos/conjunto-04-perfil-reputacao/perfil/
+├── Perfil.jsx
+├── PerfilPublico.jsx
+├── perfilService.js
+└── perfil.css
+```
+
+### API
+
+```text
+reviva-api/src/main/api/conjuntos/conjunto-04-perfil-reputacao/perfil/
+├── controller/
+│   └── PerfilController.java
+├── service/
+│   └── PerfilService.java
+└── dto/
+    └── UsuarioResponse.java
+```
+
+## Tela 8: Reputação
+
+Exibe avaliações, pontuação, selos e histórico de confiabilidade do usuário.
+
+### Frontend
+
+```text
+reviva-frontend/src/conjuntos/conjunto-04-perfil-reputacao/reputacao/
+├── Reputacao.jsx
+├── Avaliar.jsx
+├── reputacaoService.js
+└── reputacao.css
+```
+
+### API
+
+```text
+reviva-api/src/main/api/conjuntos/conjunto-04-perfil-reputacao/reputacao/
+├── controller/
+│   └── ReputacaoController.java
+├── service/
+│   ├── AvaliacaoService.java
+│   └── PontuacaoService.java
+├── repository/
+│   ├── AvaliacaoRepository.java
+│   └── UsuarioRepository.java
+├── model/
+│   └── Avaliacao.java
+└── dto/
+    └── AvaliacaoRequest.java
+```
+
+---
+
+# Conjunto 5 - Comunidades e favoritos
+
+## Tela 9: Comunidades
+
+Permite visualizar comunidades, participar de grupos e acompanhar atividades por interesse ou região.
+
+### Frontend
+
+```text
+reviva-frontend/src/conjuntos/conjunto-05-comunidades-favoritos/comunidades/
+├── Comunidades.jsx
+├── comunidadesService.js
+└── comunidades.css
+```
+
+### API
+
+```text
+reviva-api/src/main/api/conjuntos/conjunto-05-comunidades-favoritos/comunidades/
+├── controller/
+│   └── ComunidadeController.java
+├── service/
+│   └── ComunidadeService.java
+├── repository/
+│   └── ComunidadeRepository.java
+├── model/
+│   └── Comunidade.java
+└── dto/
+    └── ComunidadeResponse.java
+```
+
+## Tela 10: Favoritos
+
+Permite salvar itens, consultar a lista de favoritos e identificar itens que ficaram indisponíveis.
+
+### Frontend
+
+```text
+reviva-frontend/src/conjuntos/conjunto-05-comunidades-favoritos/favoritos/
+├── Favoritos.jsx
+├── favoritosService.js
+└── favoritos.css
+```
+
+### API
+
+```text
+reviva-api/src/main/api/conjuntos/conjunto-05-comunidades-favoritos/favoritos/
+├── controller/
+│   └── FavoritosController.java
+├── service/
+│   └── FavoritosService.java
+└── dto/
+    └── FavoritoResponse.java
+```
+
+Favoritos pode continuar usando armazenamento local na primeira entrega e receber persistência na API durante a integração.
+
+---
+
+# Conjunto 6 - Endereço e segurança
+
+## Tela 11: Endereço salvo
+
+Permite cadastrar, editar, excluir e definir endereço padrão para retirada ou entrega.
+
+### Frontend
+
+```text
+reviva-frontend/src/conjuntos/conjunto-06-endereco-seguranca/endereco/
+├── EnderecoSalvo.jsx
+├── enderecoService.js
+└── endereco.css
+```
+
+### API
+
+```text
+reviva-api/src/main/api/conjuntos/conjunto-06-endereco-seguranca/endereco/
+├── controller/
+│   └── EnderecoController.java
+├── service/
+│   └── EnderecoService.java
+├── repository/
+│   └── EnderecoRepository.java
+├── model/
+│   └── Endereco.java
+└── dto/
+    └── EnderecoResponse.java
+```
+
+## Tela 12: Segurança e termos
+
+Reúne senha, autenticação, preferências de notificação, termos de uso e política de privacidade.
+
+### Frontend
+
+```text
+reviva-frontend/src/conjuntos/conjunto-06-endereco-seguranca/seguranca/
+├── SegurancaTermos.jsx
+├── Notificacoes.jsx
+├── segurancaService.js
+└── seguranca.css
+```
+
+### API
+
+```text
+reviva-api/src/main/api/conjuntos/conjunto-06-endereco-seguranca/seguranca/
+├── controller/
+│   ├── SegurancaController.java
+│   └── NotificacaoController.java
+├── service/
+│   ├── SegurancaService.java
+│   └── NotificacaoService.java
+├── repository/
+│   └── NotificacaoRepository.java
+├── model/
+│   └── Notificacao.java
+└── dto/
+    └── NotificacaoResponse.java
+```
+
+---
+
+## Código compartilhado entre todos os conjuntos
+
+### Frontend
+
+```text
+reviva-frontend/src/shared/
+├── components/
+│   ├── Button.jsx
+│   ├── ItemCard.jsx
+│   ├── Avatar.jsx
+│   ├── Loading.jsx
+│   ├── ErrorBox.jsx
+│   └── EmptyState.jsx
+├── hooks/
+│   ├── useApiData.js
+│   └── useToast.js
+├── navigation/
+│   ├── BottomNav.jsx
+│   └── screenRegistry.js
+└── constants/
+    ├── categories.js
+    └── statuses.js
+```
+
+### API
+
+```text
+reviva-api/src/main/api/shared/
+├── config/
+│   ├── MongoConfig.java
+│   ├── RestClientConfig.java
+│   ├── SecurityConfig.java
+│   └── WebSocketConfig.java
+├── exception/
+│   └── GlobalExceptionHandler.java
+├── security/
+│   ├── JwtAuthFilter.java
+│   ├── JwtService.java
+│   ├── JwtHandshakeInterceptor.java
+│   └── WsAuthChannelInterceptor.java
+└── geo/
+    ├── GeoController.java
+    ├── GeoService.java
+    ├── EstadoResponse.java
+    ├── CidadeResponse.java
+    └── EnderecoResponse.java
+```
+
+Essa camada é compartilhada. Ela não pertence a um aluno específico e não deve ser duplicada dentro dos conjuntos.
+
+---
+
+# Organização das três sprints
+
+## Sprint 1: primeira tela do conjunto
+
+| Conjunto | Tela da Sprint 1 |
+|---|---|
+| Conjunto 1 | Cadastro de item |
+| Conjunto 2 | Busca / descoberta de itens |
+| Conjunto 3 | Solicitação de item |
+| Conjunto 4 | Perfil do usuário |
+| Conjunto 5 | Comunidades |
+| Conjunto 6 | Endereço salvo |
+
+Cada aluno entrega a tela visual, estado local, validação, loading, estado vazio, tratamento de erro e serviço frontend correspondente.
+
+## Sprint 2: segunda tela do conjunto
+
+| Conjunto | Tela da Sprint 2 |
+|---|---|
+| Conjunto 1 | Gerenciar itens |
+| Conjunto 2 | Detalhes do item |
+| Conjunto 3 | Chat de negociação |
+| Conjunto 4 | Reputação |
+| Conjunto 5 | Favoritos |
+| Conjunto 6 | Segurança e termos |
+
+A segunda tela deve continuar independente e reaproveitar somente componentes compartilhados ou contratos definidos para o conjunto.
+
+## Sprint 3: integração
+
+Na terceira sprint, cada conjunto deve:
+
+- integrar suas duas telas ao sistema principal;
+- conectar os serviços frontend aos endpoints da API;
+- revisar autenticação e permissões;
+- reutilizar os componentes compartilhados;
+- validar loading, erro e estado vazio;
+- testar navegação para outros conjuntos;
+- corrigir conflitos de rotas, nomes e estilos;
+- manter as duas telas funcionando isoladamente.
+
+### Fluxo principal integrado
+
+```text
+Busca
+  -> Detalhes do item
+  -> Solicitação
+  -> Chat
+  -> Agendamento
+  -> Confirmação
+  -> Reputação
+```
+
+### Fluxo de conta integrado
+
+```text
+Perfil
+  -> Reputação
+  -> Comunidades
+  -> Favoritos
+  -> Endereço salvo
+  -> Segurança e termos
+```
+
+---
+
+## Critério de independência de cada tela
+
+Toda tela deverá ter:
+
+- componente próprio;
+- serviço próprio ou acesso claramente definido à API;
+- loading;
+- estado vazio;
+- tratamento de erro;
+- dados mínimos para renderizar sem depender de outra tela aberta;
+- entrada de dados por props, parâmetros ou usuário autenticado;
+- navegação de retorno sem quebrar o `App.jsx`.
+
+Uma tela pode utilizar entidades compartilhadas, como usuário, item ou solicitação, mas não deve depender de variáveis internas de outra tela.
+
+---
+
+## Resumo dos seis conjuntos
+
+| Conjunto | Tela 1 | Tela 2 |
+|---|---|---|
+| 1 | Cadastro de item | Gerenciar itens |
+| 2 | Busca / descoberta | Detalhes do item |
+| 3 | Solicitação | Chat |
+| 4 | Perfil | Reputação |
+| 5 | Comunidades | Favoritos |
+| 6 | Endereço salvo | Segurança e termos |
+
+Total: **6 conjuntos, 12 telas funcionais, 3 sprints e duas áreas separadas para onboarding e autenticação**.
+# Resumo dos conjuntos de telas
+
+Este documento resume os 6 conjuntos funcionais do projeto. Onboarding e login ficam fora da contagem, pois sao telas de entrada do sistema.
+
+Cada conjunto possui 2 telas e deve funcionar de forma independente nas Sprints 1 e 2, continuando integrado ao sistema completo na Sprint 3.
+
+---
+
+## Conjunto 1 - Publicacao e gestao
+
+### Telas
+
+- Cadastro de item
+- Gerenciar itens
+
+### O que faz
+
+Permite cadastrar itens para doacao ou troca e administrar os itens publicados pelo usuario.
+
+### Tela de Cadastro de item
+
+#### O que precisa atualizar
+
+- melhorar a validacao dos campos obrigatorios;
+- organizar categoria, descricao, condicao e localizacao;
+- padronizar mensagens de sucesso e erro;
+- melhorar o preview e a ordem das fotos;
+- permitir editar o item depois de salva-lo.
+
+#### O que falta implementar
+
+- salvar rascunho de item;
+- escolher fotos por arquivo ou galeria;
+- editar e remover fotos depois do cadastro;
+- validar duplicidade de itens;
+- informar regras de retirada ou entrega.
+
+### Tela de Gerenciar itens
+
+#### O que precisa atualizar
+
+- organizar filtros por status;
+- deixar editar, remover, restaurar e marcar como doado mais claros;
+- mostrar solicitacoes recebidas por item;
+- atualizar a lista depois de cada acao;
+- padronizar estados ativo, em negociacao, doado e removido.
+
+#### O que falta implementar
+
+- permitir duplicar item semelhante;
+- mostrar quantidade de interessados;
+- responder solicitacoes diretamente na tela;
+- criar acoes em lote;
+- concluir o fluxo de gerenciamento de todos os status.
+
+---
+
+## Conjunto 2 - Descoberta e detalhes
+
+### Telas
+
+- Busca / descoberta de itens
+- Detalhes do item
+
+### O que faz
+
+Permite encontrar itens por termo, categoria e localizacao e consultar os detalhes antes de fazer uma solicitacao.
+
+### Tela de Busca / descoberta de itens
+
+#### O que precisa atualizar
+
+- melhorar os filtros por cidade, UF e categoria;
+- adicionar filtro de distancia usando a localizacao do usuario;
+- criar ordenacao por relevancia, proximidade e data;
+- melhorar os cards e a apresentacao dos resultados;
+- tratar estados vazios, carregamento e erro da API;
+- indicar claramente quando um item esta indisponivel.
+
+#### O que falta implementar
+
+- filtro por disponibilidade real do item;
+- busca por varios criterios combinados;
+- limpar todos os filtros com uma unica acao;
+- paginacao ou carregamento progressivo dos resultados;
+- sugestao de itens quando a busca nao encontrar resultados.
+
+### Tela de Detalhes do item
+
+#### O que precisa atualizar
+
+- melhorar a apresentacao das fotos, descricao e localizacao;
+- exibir a reputacao do anunciante de forma mais clara;
+- mostrar regras de retirada ou entrega;
+- atualizar o estado quando o item for removido, doado ou entrar em negociacao;
+- deixar os botoes de favoritar e solicitar mais visiveis;
+- tratar item inexistente ou erro ao carregar os dados.
+
+#### O que falta implementar
+
+- compartilhamento do item;
+- exibicao do impacto ambiental estimado;
+- tratamento especifico para item removido ou inexistente;
+- carregamento completo ao abrir diretamente por `itemId`;
+- indicador de item disponivel, reservado ou ja doado;
+- exibicao do historico de atualizacoes ou interesse no item.
+
+---
+
+## Conjunto 3 - Solicitacao e chat
+
+### Telas
+
+- Solicitacao de item
+- Chat de negociacao
+
+### O que faz
+
+Permite solicitar um item, conversar com o anunciante e combinar local, data e horario da troca.
+
+### Tela de Solicitacao de item
+
+#### O que precisa atualizar
+
+- exibir status em etapas: enviada, aceita, recusada, agendada e concluida;
+- melhorar confirmacoes de envio, aceite e cancelamento;
+- mostrar a resposta do anunciante;
+- tratar item indisponivel ou solicitacao duplicada;
+- permitir abrir a solicitacao diretamente por identificador.
+
+#### O que falta implementar
+
+- cancelamento seguro de solicitacao;
+- validacao de permissoes por usuario;
+- notificacao de mudanca de status;
+- historico das solicitacoes do usuario;
+- fluxo completo de confirmacao da doacao e recebimento.
+
+### Tela de Chat de negociacao
+
+#### O que precisa atualizar
+
+- tratar conversa vazia e falha de conexao;
+- melhorar mensagens de evento e presenca online;
+- deixar agendamento e confirmacao mais claros;
+- exibir horarios e status de leitura;
+- melhorar a exibicao de localizacao compartilhada.
+
+#### O que falta implementar
+
+- notificacao de novas mensagens;
+- confirmacao de leitura;
+- envio de imagens ou anexos;
+- reconexao automatica do WebSocket;
+- respostas a mensagens e cancelamento de conversa.
+
+---
+
+## Conjunto 4 - Perfil e reputacao
+
+### Telas
+
+- Perfil do usuario
+- Reputacao
+
+### O que faz
+
+Apresenta os dados do usuario e mostra sua confiabilidade, pontuacao, selos e avaliacoes recebidas.
+
+### Tela de Perfil do usuario
+
+#### O que precisa atualizar
+
+- melhorar edicao dos dados pessoais e da foto;
+- separar informacoes pessoais, endereco e seguranca;
+- mostrar historico de trocas e contribuicoes;
+- tratar perfil incompleto e usuario sem avaliacao;
+- organizar melhor favoritos, notificacoes e preferencias.
+
+#### O que falta implementar
+
+- perfil publico completo do anunciante;
+- resumo de impacto ambiental do usuario;
+- historico detalhado de acoes;
+- edicao de todos os dados permitidos;
+- atalhos para endereco, seguranca e termos.
+
+### Tela de Reputacao
+
+#### O que precisa atualizar
+
+- organizar melhor pontos, selos e avaliacoes;
+- explicar como a pontuacao e calculada;
+- mostrar confiabilidade de forma mais visual;
+- tratar usuario sem avaliacao;
+- atualizar os dados depois de uma nova avaliacao.
+
+#### O que falta implementar
+
+- avaliacao por categorias, como pontualidade e comunicacao;
+- historico detalhado de avaliacoes;
+- atualizacao automatica de pontos e selos;
+- controle contra avaliacao duplicada;
+- destaque de conquistas e contribuicoes positivas.
+
+---
+
+## Conjunto 5 - Comunidades e favoritos
+
+### Telas
+
+- Comunidades
+- Favoritos
+
+### O que faz
+
+Permite participar de comunidades por interesse ou regiao e salvar itens para consultar depois.
+
+### Tela de Comunidades
+
+#### O que precisa atualizar
+
+- melhorar entrada e saida de comunidades;
+- organizar comunidades por categoria e localizacao;
+- tratar lista vazia e comunidade indisponivel;
+- melhorar a exibicao de interesses e atividades;
+- padronizar feedback ao participar ou sair.
+
+#### O que falta implementar
+
+- publicacoes ou atividades dentro das comunidades;
+- filtros por interesse;
+- busca de comunidades por regiao;
+- sistema de seguir ou deixar de seguir comunidade;
+- compartilhamento de atividades comunitarias.
+
+### Tela de Favoritos
+
+#### O que precisa atualizar
+
+- melhorar ordenacao dos favoritos;
+- indicar itens favoritados que ficaram indisponiveis;
+- sincronizar favoritos com busca e detalhes;
+- tratar lista vazia;
+- mostrar data em que o item foi salvo.
+
+#### O que falta implementar
+
+- persistencia de favoritos na API;
+- endpoints para adicionar, listar e remover favoritos;
+- remocao de varios favoritos de uma vez;
+- separacao por categoria;
+- atualizacao automatica quando o item for doado ou removido.
+
+---
+
+## Conjunto 6 - Endereco e seguranca
+
+### Telas
+
+- Endereco salvo
+- Seguranca e termos
+
+### O que faz
+
+Permite guardar locais de retirada ou entrega e administrar seguranca, notificacoes, termos e preferencias da conta.
+
+### Tela de Endereco salvo
+
+#### O que precisa atualizar
+
+- criar a tela de endereco salvo;
+- validar CEP, cidade, bairro e numero;
+- mostrar endereco principal de forma clara;
+- tratar lista vazia e erro de consulta;
+- integrar o endereco ao agendamento.
+
+#### O que falta implementar
+
+- cadastro, edicao e exclusao de enderecos;
+- possibilidade de ter varios enderecos;
+- definicao de endereco padrao;
+- nome para cada endereco, como casa ou trabalho;
+- preenchimento automatico por CEP.
+
+### Tela de Seguranca e termos
+
+#### O que precisa atualizar
+
+- separar seguranca, notificacoes, termos e privacidade;
+- melhorar mensagens de alteracao de senha;
+- tratar notificacoes lidas, nao lidas e vazias;
+- organizar preferencias da conta;
+- mostrar confirmacao para operacoes sensiveis.
+
+#### O que falta implementar
+
+- endpoint de alteracao de senha;
+- preferencias de notificacao;
+- telas separadas para termos de uso e politica de privacidade;
+- autenticacao em duas etapas;
+- gerenciamento de sessoes e dispositivos conectados.
+
+---
+
+## Resumo geral
+
+| Conjunto | Telas | Principal pendencia |
+|---|---|---|
+| 1 | Cadastro de item + Gerenciar itens | Completar gerenciamento e status dos itens |
+| 2 | Busca + Detalhes do item | Melhorar filtros, detalhes e disponibilidade |
+| 3 | Solicitacao + Chat | Completar negociacao, notificacoes e confirmacoes |
+| 4 | Perfil + Reputacao | Consolidar dados, avaliacoes e pontuacao |
+| 5 | Comunidades + Favoritos | Implementar persistencia e ampliar interacao |
+| 6 | Endereco + Seguranca e termos | Criar endereco salvo e configuracoes da conta |
+
+Total: **6 conjuntos e 12 telas funcionais**.
+# Descrição do Wireframe - Reviva
+
+## 1. Objetivo do wireframe
+
+O wireframe do Reviva deve representar a experiência de uma aplicação mobile-first para conectar pessoas que querem doar ou trocar itens usados, de forma simples, segura e local. A interface deve transmitir confiança, praticidade e rapidez na hora de publicar um item, encontrar objetos úteis e negociar a retirada.
+
+A proposta principal é mostrar como o usuário navega no app de forma intuitiva:
+- descobrir itens disponíveis perto dele;
+- publicar um objeto para doar ou trocar;
+- conversar diretamente com o interessado;
+- confirmar a retirada;
+- acompanhar impacto e reputação.
+
+---
+
+## 2. Contexto geral do sistema
+
+O sistema funciona como uma plataforma de reutilização de objetos. O usuário pode:
+- se cadastrar e fazer login;
+- publicar itens com fotos, descrição e localização;
+- buscar itens por categoria, tipo de publicação e região;
+- salvar itens como favoritos;
+- iniciar conversa com o anunciante;
+- combinar data, horário e local de entrega/retirada;
+- confirmar a conclusão da doação;
+- avaliar o outro usuário;
+- acompanhar seu impacto ambiental e reputação.
+
+A interface deve priorizar uso em smartphones, mas ser compatível com desktop em uma visualização mais ampla.
+
+---
+
+## 3. Estrutura das telas do fluxo principal
+
+### Tela 1 - Onboarding / Boas-vindas
+**Objetivo:** apresentar o app e explicar a proposta de reutilização.
+
+**Elementos esperados:**
+- logo do Reviva;
+- ilustrativo/ícone de itens doados e comunidade;
+- textos curtos explicando a ideia da plataforma;
+- botão principal: "Começar";
+- botão secundário: "Fazer login";
+
+**Visual esperado:**
+- tela limpa, com muito espaço em branco;
+- uso de cores suaves e contrastantes;
+- destaque para o CTA principal.
+
+---
+
+### Tela 2 - Cadastro / Login
+**Objetivo:** permitir acesso ao sistema e criação de conta.
+
+**Campos do cadastro:**
+- nome completo;
+- e-mail;
+- CPF;
+- telefone;
+- senha;
+- endereço com CEP;
+- cidade, bairro e estado;
+
+**Campos do login:**
+- e-mail;
+- senha;
+- botão "Entrar";
+- link para recuperar senha ou criar conta.
+
+**Visual esperado:**
+- formulário centralizado;
+- campos com labels visíveis;
+- botão principal com destaque;
+- mensagens de validação em áreas discretas.
+
+---
+
+### Tela 3 - Home / Feed inicial
+**Objetivo:** ser o ponto de entrada do app após login.
+
+**Top section:**
+- saudação com nome do usuário;
+- indicador de impacto ambiental;
+- ícone de notificações com badge;
+
+**Seções principais:**
+- busca por item ou categoria;
+- filtros rápidos (roupas, livros, móveis, eletrônicos, etc.);
+- lista de itens recentes;
+- atalhos para: publicar item, mensagens, perfil e comunidades;
+- botão de acesso ao mapa ou busca por região.
+
+**Cards de itens:**
+- imagem principal;
+- título;
+- categoria;
+- localização;
+- tipo (doação ou troca);
+- botão de favoritar;
+- botão de visualizar anúncio.
+
+**Visual esperado:**
+- layout em lista vertical;
+- cards com altura uniforme;
+- espaço para imagens, texto e ações rápidas;
+- menu inferior com navegação principal.
+
+---
+
+### Tela 4 - Busca / Explorar itens
+**Objetivo:** permitir filtro e descoberta de itens disponíveis.
+
+**Elementos:**
+- barra de busca por texto;
+- filtros por categoria;
+- filtro por tipo de publicação;
+- filtro por cidade/estado;
+- botão limpar filtros;
+- lista de resultados.
+
+**Comportamento esperado:**
+- ao digitar, o usuário pode buscar por termo;
+- filtros aparecem em uma aba ou modal;
+- resultados atualizam em tempo real;
+- itens expirados ou inativos não aparecem.
+
+**Visual esperado:**
+- organização em grade ou lista;
+- resultados com destaque visual para disponibilidade.
+
+---
+
+### Tela 5 - Detalhes do item
+**Objetivo:** fornecer informações completas do item antes da conversa.
+
+**Conteúdo esperado:**
+- galeria de fotos;
+- título do item;
+- categoria e condição;
+- descrição;
+- tipo de publicação (doação ou troca);
+- nome do anunciante;
+- reputação/avaliação do anunciante;
+- localização aproximada;
+- status do item;
+- botão "Enviar mensagem";
+- botão "Salvar favorito";
+
+**Seções extras:**
+- informações do doador;
+- impacto estimado do item;
+- botão de denunciar (se houver problema).
+
+**Visual esperado:**
+- layout com imagem grande no topo;
+- conteúdo em blocos organizados;
+- CTA principal em destaque na parte inferior.
+
+---
+
+### Tela 6 - Publicar item
+**Objetivo:** permitir que o usuário cadastre um item para doar ou trocar.
+
+**Formulário de cadastro:**
+- título;
+- categoria;
+- condição (novo, seminovo, usado);
+- tipo de publicação;
+- descrição;
+- peso estimado;
+- fotos;
+- endereço / CEP;
+- cidade e estado;
+- observações relevantes.
+
+**Ações:**
+- botão "Adicionar fotos";
+- botão "Salvar anúncio";
+- botão "Cancelar";
+
+**Visual esperado:**
+- formulário longo em etapas ou em uma única tela scroll;
+- campos agrupados por categoria;
+- preview de fotos;
+- indicação de quantidade máxima de imagens.
+
+---
+
+### Tela 7 - Meus anúncios / Gerenciamento
+**Objetivo:** mostrar os itens do usuário e permitir ações de gestão.
+
+**Conteúdo esperado:**
+- lista dos itens publicados;
+- status do item (ativo, doado, removido, expirado);
+- ações: editar, arquivar, restaurar, marcar como doado;
+- botão de adicionar novo item.
+
+**Card do item:**
+- imagem;
+- título;
+- status;
+- validade;
+- botão de gerenciamento.
+
+**Visual esperado:**
+- organização em lista vertical;
+- diferenciação visual dos estados do item.
+
+---
+
+### Tela 8 - Inbox / Mensagens
+**Objetivo:** centralizar as conversas do usuário.
+
+**Estrutura:**
+- lista de conversas recentes;
+- avatar ou foto do anunciante;
+- nome da pessoa;
+- prévia da última mensagem;
+- indicador de mensagens não lidas;
+- data da última interação;
+
+**Ações:**
+- abrir conversa;
+- filtrar por conversas ativas;
+- navegar para notificação.
+
+**Visual esperado:**
+- interface tipo chat com lista lateral e conversa principal;
+- destaque para conversas pendentes.
+
+---
+
+### Tela 9 - Chat da conversa
+**Objetivo:** facilitar a negociação do item.
+
+**Elementos:**
+- cabeçalho com nome do anunciante e status do item;
+- mensagens em balões;
+- indicadores de enviada, entregue e lida;
+- campo de texto para nova mensagem;
+- botão de anexar arquivo ou localização;
+- botão para agendar retirada;
+
+**Fluxo esperado:**
+- ao clicar em "Enviar mensagem", abre a conversa diretamente;
+- a primeira mensagem pode perguntar se o item ainda está disponível;
+- a negociação acontece dentro do mesmo chat.
+
+**Visual esperado:**
+- layout clássico de chat mobile;
+- mensagens em lados opostos;
+- área de digitação fixa na parte inferior.
+
+---
+
+### Tela 10 - Agendamento / Retirada
+**Objetivo:** definir data, horário e local para a coleta do item.
+
+**Campos do agendamento:**
+- data;
+- horário;
+- local de encontro;
+- observações adicionais;
+- botão confirmar agendamento;
+
+**Estados visuais:**
+- agendamento pendente;
+- confirmado;
+- concluído;
+- problema reportado;
+
+**Visual esperado:**
+- formulário simples com seleção de data e horário;
+- resumo da reunião antes da confirmação;
+- botão principal de confirmação em destaque.
+
+---
+
+### Tela 11 - Perfil do usuário
+**Objetivo:** mostrar dados públicos do usuário e seu impacto.
+
+**Conteúdo esperado:**
+- foto/avatar;
+- nome;
+- reputação;
+- selo ou nível;
+- pontos;
+- número de itens doados;
+- quantidade de resíduos evitados;
+- histórico ou lista de itens publicados;
+
+**Ações:**
+- editar dados;
+- ver avaliações;
+- visualizar itens públicos;
+- acessar configurações.
+
+**Visual esperado:**
+- banner superior com identidade do perfil;
+- métricas em blocos;
+- abas para itens, avaliações e histórico.
+
+---
+
+### Tela 12 - Notificações
+**Objetivo:** avisar o usuário sobre interações relevantes.
+
+**Tipos de notificação:**
+- nova mensagem;
+- conversa iniciada;
+- confirmação de agendamento;
+- item doado;
+- novo comentário ou avaliação;
+
+**Elementos:**
+- lista de notificações;
+- indicador de lidas e não lidas;
+- botão para marcar como lida;
+- botão para limpar notificações.
+
+**Visual esperado:**
+- cards de notificação com prioridade visual;
+- uso de cor para distinguir itens não lidos.
+
+---
+
+### Tela 13 - Comunidades / Denúncias
+**Objetivo:** mostrar grupos e mecanismos de moderação.
+
+**Comunidades:**
+- lista de comunidades por interesse ou região;
+- botão para participar;
+- cards com nome, descrição e quantidade de membros.
+
+**Denúncias:**
+- botão de reportar item ou comportamento;
+- seleção de motivo;
+- campo para descrever o problema;
+- confirmação da denúncia.
+
+**Visual esperado:**
+- organização em lista compacta;
+- formulário simples e direto.
+
+---
+
+## 4. Navegação e estrutura geral
+
+A navegação principal pode seguir este fluxo:
+
+1. Onboarding
+2. Login / Cadastro
+3. Home
+4. Explorar itens
+5. Detalhes do item
+6. Mensagens / Inbox
+7. Chat
+8. Agendamento
+9. Perfil
+10. Configurações / Comunidades / Notificações
+
+A navegação inferior pode conter:
+- Início
+- Explorar
+- Publicar
+- Mensagens
+- Perfil
+
+Essa composição facilita uso em mobile e mantém o usuário sempre em contexto de doação e troca.
+
+---
+
+## 5. Elementos visuais e padrões de interface
+
+### Padrões de layout
+- mobile-first;
+- botão principal com destaque visual;
+- campos bem espaçados;
+- cards com bordas suaves;
+- ações primárias sempre visíveis;
+- grande foco em imagens e títulos dos itens.
+
+### Tipos de componentes
+- input text;
+- select/dropdown;
+- cards de item;
+- modal de filtros;
+- modal de notificação;
+- toast de sucesso ou erro;
+- botão de ação flutuante para publicar item.
+
+### Padrões de feedback
+- carregamento em telas de busca e listagem;
+- feedback visual de ação concluída;
+- mensagens de erro em contexto;
+- ícones claros para notificação, perfil e favoritos.
+
+---
+
+## 6. Direção visual sugerida
+
+Para manter consistência com a proposta do produto, o wireframe deve transmitir:
+- acolhimento e confiança;
+- simplicidade e praticidade;
+- sensação de comunidade e reaproveitamento;
+- abordagem amigável e informal.
+
+Cores sugeridas:
+- verde/verdoso: ligado a sustentabilidade e impacto ambiental;
+- branco e cinza claros: visual limpo e funcional;
+- azul ou teal: para confiança e ação; 
+- laranja suave: para destaques e badges.
+
+---
+
+## 7. Resumo do fluxo principal do usuário
+
+O usuário entra no app, cadastra-se ou faz login, acessa a home, descobre itens próximos, visualiza o anúncio, conversa com o anunciante, combina a retirada e conclui a ação. Ao final, o sistema atualiza reputação, pontos e impacto ambiental.
+
+Esse é o fluxo central que o wireframe deve priorizar.
+
+---
+
+## 8. Observações para o preenchimento no wireframe
+
+Ao montar o protótipo no Figma ou no Miro, é importante destacar:
+- telas principais em sequência;
+- caminhos de navegação claros;
+- CTA principal em cada tela;
+- estados de vazio, erro e carregamento;
+- diferenciação entre usuário logado e visitante;
+- foco em mobile e em ação direta.
+
+O principal objetivo do wireframe não é detalhar toda a lógica de negócio, e sim mostrar a jornada do usuário de forma clara, rápida e convincente.
