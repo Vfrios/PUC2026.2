@@ -1,6 +1,9 @@
 {
   "name": "reviva-monorepo",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "setup": "cd reviva-frontend && npm install",
     "start:frontend": "npm run dev --prefix reviva-frontend",
@@ -17,7 +20,6 @@
     "mongodb": "^6.18.0"
   },
   "devDependencies": {
-    "concurrently": "^10.0.5"
+    "concurrently": "^9.2.0"
   }
-  
 }

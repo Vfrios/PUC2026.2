@@ -223,12 +223,15 @@ function comprimirImagem(file, maxDim = 900, qualidade = 0.72) {
 function useApiData(fetcher, deps, { skip = false } = {}) {
   const [state, setState] = useState({ loading: !skip, error: null, data: null });
   const reloadRef = useRef(0);
-  const reload = () => { reloadRef.current += 1; setState(s => ({ ...s, loading: true, error: null })); };
+  const reload = ({ silent = false } = {}) => {
+    reloadRef.current += 1;
+    setState(s => ({ ...s, loading: silent ? false : true, error: null }));
+  };
 
   useEffect(() => {
     if (skip) { setState({ loading: false, error: null, data: null }); return; }
     let alive = true;
-    setState(s => ({ ...s, loading: true, error: null }));
+    setState(s => ({ ...s, loading: !s.data ? true : s.loading, error: null }));
     fetcher()
       .then(data => { if (alive) setState({ loading: false, error: null, data }); })
       .catch(err => { if (alive) setState({ loading: false, error: err.message || "Erro ao carregar", data: null }); });
@@ -239,7 +242,7 @@ function useApiData(fetcher, deps, { skip = false } = {}) {
   useEffect(() => {
     if (skip) return undefined;
     const atualizarAoVoltar = () => {
-      if (document.visibilityState === "visible") reload();
+      if (document.visibilityState === "visible") reload({ silent: true });
     };
     window.addEventListener("focus", atualizarAoVoltar);
     document.addEventListener("visibilitychange", atualizarAoVoltar);

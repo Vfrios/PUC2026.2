@@ -84,7 +84,7 @@ function HomeReceptor({ go, favorites, toggleFav, usuario, onlineIds, compact, n
   const quickTimer = useRef(null);
 
   useEffect(() => {
-    const intervalo = setInterval(reload, 15000);
+    const intervalo = setInterval(() => reload({ silent: true }), 15000);
     return () => clearInterval(intervalo);
   }, []);
   return (
@@ -160,6 +160,10 @@ function Busca({ go, favorites, toggleFav, usuario, onlineIds }) {
       setLocalizacaoErro("Seu navegador não oferece localização automática.");
       return;
     }
+    if (!window.isSecureContext && !(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+      setLocalizacaoErro("No iPhone/Chrome a localização só funciona em HTTPS ou localhost. Rode o frontend em HTTPS/localtunnel seguro para ativar a confirmação de localização.");
+      return;
+    }
     setLocalizando(true);
     setLocalizacaoErro("");
     navigator.geolocation.getCurrentPosition(
@@ -178,7 +182,14 @@ function Busca({ go, favorites, toggleFav, usuario, onlineIds }) {
           setLocalizando(false);
         }
       },
-      () => { setLocalizando(false); setLocalizacaoErro("Permita o acesso à localização para buscar perto de você."); },
+      (err) => {
+        setLocalizando(false);
+        if (err?.code === 1) {
+          setLocalizacaoErro("Permissão de localização negada. Ative em Ajustes > Privacidade > Localização e tente novamente.");
+          return;
+        }
+        setLocalizacaoErro("Permita o acesso à localização para buscar perto de você.");
+      },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 10 * 60 * 1000 }
     );
   };

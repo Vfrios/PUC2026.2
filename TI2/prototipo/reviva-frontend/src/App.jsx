@@ -232,18 +232,23 @@ export default function RevivaApp() {
     <div className="reviva-shell" style={{
       "--role-primary": colors.primary, "--role-primary-dark": colors.primaryDark, "--role-soft": colors.soft,
       "--font-display": "'Fraunces', ui-serif, Georgia, serif", "--font-ui": "'Inter', ui-sans-serif, system-ui, sans-serif",
-      minHeight: "100vh", background: "radial-gradient(circle at 20% 10%, #F3F1E6, #E9ECE3 60%)",
+      width: "100vw", minHeight: "100dvh", background: "radial-gradient(circle at 20% 10%, #F3F1E6, #E9ECE3 60%)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      padding: "40px 20px", fontFamily: "var(--font-ui)",
+      padding: "40px 20px", fontFamily: "var(--font-ui)", overflow: "hidden",
     }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes favorite-pulse { 0% { transform: scale(1); } 45% { transform: scale(1.3); } 100% { transform: scale(1); } }
         * { box-sizing: border-box; }
+        html, body, #root { width: 100%; height: 100%; }
+        body { overflow: hidden; overscroll-behavior: none; }
         input::placeholder, textarea::placeholder { color: #B7BBAF; }
 
         .reviva-phone-outer {
-          width: 390px; height: 812px; border-radius: 46px; background: #0E120F; padding: 12px;
+          width: min(390px, calc(100vw - 20px));
+          height: min(812px, calc(100dvh - 24px));
+          max-width: 100%;
+          border-radius: 46px; background: #0E120F; padding: 12px;
           box-shadow: 0 30px 60px -12px rgba(20,30,20,.35), 0 0 0 1px rgba(0,0,0,.05);
           position: relative;
         }
@@ -256,12 +261,13 @@ export default function RevivaApp() {
            ocupando 100% da viewport, sem padding/borda e sem precisar rolar
            pra enxergar o app inteiro. */
         @media (max-width: 480px) {
-          html, body, #root { height: 100%; }
           .reviva-shell { min-height: 100dvh; padding: 0 !important; }
           .reviva-phone-outer {
             width: 100vw; height: 100dvh; border-radius: 0; padding: 0; box-shadow: none;
+            max-width: 100vw; max-height: 100dvh;
           }
           .reviva-phone-inner { border-radius: 0 !important; }
+          .mobile-status-bar-wrapper { display: none; }
           .reviva-notch { display: none; }
         }
       `}</style>
@@ -270,7 +276,9 @@ export default function RevivaApp() {
         <div className="reviva-phone-inner" style={{ width: "100%", height: "100%", borderRadius: 34, background: "var(--role-primary)", overflow: "hidden", position: "relative", transition: "background .3s" }}>
           <div style={{ width: "100%", height: "100%", background: "#FBFAF4", display: "flex", flexDirection: "column", position: "relative" }}>
             <div className="reviva-notch" />
-            <StatusBar />
+            <div className="mobile-status-bar-wrapper">
+              <StatusBar />
+            </div>
             <div ref={scrollContainerRef} style={{ flex: 1, overflowY: "auto" }} onScroll={e => setConteudoRolado(e.currentTarget.scrollTop > 300)}>
               {ScreenView}
             </div>

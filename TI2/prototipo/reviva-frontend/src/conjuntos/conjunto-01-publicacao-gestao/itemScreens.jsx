@@ -402,7 +402,7 @@ function ListaItens({ go, favorites, toggleFav, usuario, onlineIds, params, embe
   );
 
   useEffect(() => {
-    const intervalo = setInterval(reload, 15000);
+    const intervalo = setInterval(() => reload({ silent: true }), 15000);
     return () => clearInterval(intervalo);
   }, []);
 
