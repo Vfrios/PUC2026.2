@@ -473,7 +473,7 @@ function BottomNav({ active, go }) {
   return (
     <div style={{
       display: "flex", borderTop: "1px solid #EDEBE1", background: "#fff", padding: "8px 6px 14px",
-      position: "sticky", bottom: 0,
+      flexShrink: 0, paddingBottom: "max(14px, env(safe-area-inset-bottom))",
     }}>
       {tabs.map(t => {
         const isActive = active === t.key;

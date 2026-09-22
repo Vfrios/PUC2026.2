@@ -54,6 +54,44 @@ export default function RevivaApp() {
     return () => document.head.removeChild(link);
   }, []);
 
+  // Mobile (iOS/Safari/Chrome): ao abrir o teclado o viewport encolhe e, ao
+  // fechar, o layout às vezes fica "preso" com gap embaixo. Sincronizamos a
+  // altura real via Visual Viewport e forçamos o scroll do documento a 0.
+  useEffect(() => {
+    const root = document.documentElement;
+    let blurTimer = 0;
+
+    const syncViewport = () => {
+      const vv = window.visualViewport;
+      const height = Math.round(vv?.height || window.innerHeight);
+      root.style.setProperty("--app-height", `${height}px`);
+      if (window.scrollY !== 0 || window.scrollX !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    const onFocusOut = () => {
+      window.clearTimeout(blurTimer);
+      blurTimer = window.setTimeout(syncViewport, 80);
+    };
+
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+    window.addEventListener("orientationchange", syncViewport);
+    window.addEventListener("focusout", onFocusOut);
+    window.visualViewport?.addEventListener("resize", syncViewport);
+    window.visualViewport?.addEventListener("scroll", syncViewport);
+
+    return () => {
+      window.clearTimeout(blurTimer);
+      window.removeEventListener("resize", syncViewport);
+      window.removeEventListener("orientationchange", syncViewport);
+      window.removeEventListener("focusout", onFocusOut);
+      window.visualViewport?.removeEventListener("resize", syncViewport);
+      window.visualViewport?.removeEventListener("scroll", syncViewport);
+    };
+  }, []);
+
   useEffect(() => {
     localStorage.setItem("reviva_favoritos", JSON.stringify(favorites));
   }, [favorites]);
@@ -232,7 +270,7 @@ export default function RevivaApp() {
     <div className="reviva-shell" style={{
       "--role-primary": colors.primary, "--role-primary-dark": colors.primaryDark, "--role-soft": colors.soft,
       "--font-display": "'Fraunces', ui-serif, Georgia, serif", "--font-ui": "'Inter', ui-sans-serif, system-ui, sans-serif",
-      width: "100vw", minHeight: "100dvh", background: "radial-gradient(circle at 20% 10%, #F3F1E6, #E9ECE3 60%)",
+      width: "100vw", minHeight: "var(--app-height, 100dvh)", background: "radial-gradient(circle at 20% 10%, #F3F1E6, #E9ECE3 60%)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       padding: "40px 20px", fontFamily: "var(--font-ui)", overflow: "hidden",
     }}>
@@ -240,13 +278,11 @@ export default function RevivaApp() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes favorite-pulse { 0% { transform: scale(1); } 45% { transform: scale(1.3); } 100% { transform: scale(1); } }
         * { box-sizing: border-box; }
-        html, body, #root { width: 100%; height: 100%; }
-        body { overflow: hidden; overscroll-behavior: none; }
         input::placeholder, textarea::placeholder { color: #B7BBAF; }
 
         .reviva-phone-outer {
           width: min(390px, calc(100vw - 20px));
-          height: min(812px, calc(100dvh - 24px));
+          height: min(812px, calc(var(--app-height, 100dvh) - 24px));
           max-width: 100%;
           border-radius: 46px; background: #0E120F; padding: 12px;
           box-shadow: 0 30px 60px -12px rgba(20,30,20,.35), 0 0 0 1px rgba(0,0,0,.05);
@@ -261,10 +297,19 @@ export default function RevivaApp() {
            ocupando 100% da viewport, sem padding/borda e sem precisar rolar
            pra enxergar o app inteiro. */
         @media (max-width: 480px) {
-          .reviva-shell { min-height: 100dvh; padding: 0 !important; }
+          .reviva-shell {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: var(--app-height, 100dvh);
+            min-height: var(--app-height, 100dvh);
+            padding: 0 !important;
+            justify-content: stretch;
+            align-items: stretch;
+          }
           .reviva-phone-outer {
-            width: 100vw; height: 100dvh; border-radius: 0; padding: 0; box-shadow: none;
-            max-width: 100vw; max-height: 100dvh;
+            width: 100%; height: 100%; border-radius: 0; padding: 0; box-shadow: none;
+            max-width: none; max-height: none;
           }
           .reviva-phone-inner { border-radius: 0 !important; }
           .mobile-status-bar-wrapper { display: none; }

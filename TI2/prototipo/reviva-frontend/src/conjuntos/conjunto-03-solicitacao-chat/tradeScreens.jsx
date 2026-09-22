@@ -326,14 +326,14 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <TopBar title={<div><div>{otherName || "Conversa"}</div><div style={{ fontSize: 10.5, fontWeight: 500, color: otherId && onlineIds.has(otherId) ? "#2D8A57" : INK_SOFT }}>{otherId && onlineIds.has(otherId) ? "online" : "offline"}</div></div>} onBack={() => go(-1)} right={<button type="button" onClick={() => go("inbox")} style={{ ...iconBtn, width: 30, height: 30 }} aria-label="Abrir inbox" title="Abrir inbox"><MessageCircle size={15} color="var(--role-primary-dark)" /></button>} />
-      <div onClick={() => itemId && go("detalhesItem", { itemId })} style={{ margin: "0 16px 8px", padding: 8, display: "flex", alignItems: "center", gap: 8, border: "1px solid #EDEBE1", borderRadius: 12, background: "#fff", cursor: itemId ? "pointer" : "default" }}>
+      <div onClick={() => itemId && go("detalhesItem", { itemId })} style={{ margin: "0 16px 8px", padding: 8, display: "flex", alignItems: "center", gap: 8, border: "1px solid #EDEBE1", borderRadius: 12, background: "#fff", cursor: itemId ? "pointer" : "default", flexShrink: 0 }}>
         {itemFoto ? <img src={itemFoto} alt="" style={{ width: 38, height: 38, objectFit: "cover", borderRadius: 8 }} /> : <Avatar label={otherName} size={38} />}
         <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 12.5, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item?.titulo || itemTitulo || "Item da conversa"}</div><div style={{ fontSize: 10.5, color: itemStatus === "Doado" ? "#9C4327" : "var(--role-primary)" }}>{itemStatus}</div></div>
         {itemId && <ChevronRight size={15} color={INK_SOFT} />}
       </div>
-      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "6px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "6px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
         {loading && <Loading label="Carregando conversa..." />}
         {erro && <ErrorBox message={erro} onRetry={carregar} />}
         {!loading && messages.length === 0 && <EmptyState Icon={MessageCircle} text="Ainda não há mensagens. Diga oi 👋" />}
@@ -358,20 +358,33 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
           );
         })}
       </div>
-      {menuAberto && <div style={{ padding: "8px 12px", display: "flex", gap: 8, borderTop: "1px solid #EDEBE1", background: "#FAFAF4" }}>
+      {menuAberto && <div style={{ padding: "8px 12px", display: "flex", gap: 8, borderTop: "1px solid #EDEBE1", background: "#FAFAF4", flexShrink: 0 }}>
         <input ref={fotoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const file = e.target.files?.[0]; if (file) enviarFoto(file); e.target.value = ""; }} />
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={e => { const file = e.target.files?.[0]; if (file) enviarFoto(file); e.target.value = ""; }} />
         <button type="button" onClick={() => fotoRef.current?.click()} style={{ ...iconBtn, background: "var(--role-soft)" }} aria-label="Enviar foto" title="Enviar foto"><ImagePlus size={17} color="var(--role-primary-dark)" /></button>
         <button type="button" onClick={() => cameraRef.current?.click()} style={{ ...iconBtn, background: "var(--role-soft)" }} aria-label="Abrir câmera" title="Abrir câmera"><Camera size={17} color="var(--role-primary-dark)" /></button>
         <button type="button" onClick={compartilharLocalizacao} style={{ ...iconBtn, background: "var(--role-soft)" }} aria-label="Compartilhar localização" title="Compartilhar localização"><MapPin size={17} color="var(--role-primary-dark)" /></button>
       </div>}
-      <div style={{ padding: 12, display: "flex", gap: 8, alignItems: "center", borderTop: "1px solid #EDEBE1" }}>
+      <div style={{ padding: 12, display: "flex", gap: 8, alignItems: "center", borderTop: "1px solid #EDEBE1", flexShrink: 0 }}>
         <button onClick={() => setMenuAberto(aberto => !aberto)} style={{ ...iconBtn, background: menuAberto ? "var(--role-primary)" : "var(--role-soft)" }} aria-label="Mais opções" title="Mais opções"><Plus size={18} color={menuAberto ? "#fff" : "var(--role-primary-dark)"} /></button>
         <button onClick={() => go(papelAtual === "doador" ? "agendamentoDoador" : "agendamentoReceptor", params)} style={{ ...iconBtn, background: "var(--role-soft)" }}><Calendar size={17} color="var(--role-primary-dark)" /></button>
-        <input value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder="Escreva uma mensagem..." style={{ ...fieldInput, flex: 1, border: "1px solid #E9E7DC", borderRadius: 20, padding: "10px 14px" }} />
+        <input
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && send()}
+          onBlur={() => {
+            window.setTimeout(() => {
+              window.scrollTo(0, 0);
+              const height = Math.round(window.visualViewport?.height || window.innerHeight);
+              document.documentElement.style.setProperty("--app-height", `${height}px`);
+            }, 80);
+          }}
+          placeholder="Escreva uma mensagem..."
+          style={{ ...fieldInput, flex: 1, border: "1px solid #E9E7DC", borderRadius: 20, padding: "10px 14px" }}
+        />
         <button onClick={send} disabled={sending} style={{ ...iconBtn, background: "var(--role-primary)" }}><Send size={16} color="#fff" /></button>
       </div>
-      <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
         <Button full variant="soft" icon={agendamento?.status !== "CONFIRMADO" ? Calendar : (papelAtual === "receptor" && !agendamento.confirmacaoAgendamentoReceptorEm ? CheckCircle2 : QrCode)} disabled={agendamento?.status === "CANCELADO" || agendamento?.status === "CONCLUIDO" || (papelAtual === "doador" && !agendamento?.confirmacaoAgendamentoReceptorEm)} onClick={papelAtual === "receptor" && agendamento?.status === "CONFIRMADO" && !agendamento.confirmacaoAgendamentoReceptorEm ? confirmarAgendamento : abrirConfirmacao}>
           {agendamento?.status === "CONFIRMADO" ? (papelAtual === "receptor" && !agendamento.confirmacaoAgendamentoReceptorEm ? "Confirmar agendamento" : papelAtual === "doador" ? "Gerar código" : "Digitar código") : agendamento?.status === "CANCELADO" ? "Troca cancelada" : agendamento?.status === "CONCLUIDO" ? "Troca concluída" : "Combinar retirada"}
         </Button>
