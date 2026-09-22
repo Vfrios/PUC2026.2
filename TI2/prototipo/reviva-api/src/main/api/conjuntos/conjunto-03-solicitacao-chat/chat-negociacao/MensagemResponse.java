@@ -10,7 +10,9 @@ public record MensagemResponse(
         String id,
         UsuarioResumo remetente,
         String texto,
-        Instant criadaEm
+        Instant criadaEm,
+        boolean entregue,
+        boolean lida
 ) {
     public static MensagemResponse from(Mensagem mensagem) {
         return new MensagemResponse(
@@ -20,7 +22,9 @@ public record MensagemResponse(
                         mensagem.getRemetente().getNome(),
                         mensagem.getRemetente().getFotoUrl()),
                 mensagem.getTexto(),
-                mensagem.getCriadaEm());
+                mensagem.getCriadaEm(),
+                Boolean.TRUE.equals(mensagem.getEntregue()),
+                Boolean.TRUE.equals(mensagem.getLida()));
     }
 
     public static List<MensagemResponse> from(List<Mensagem> mensagens) {

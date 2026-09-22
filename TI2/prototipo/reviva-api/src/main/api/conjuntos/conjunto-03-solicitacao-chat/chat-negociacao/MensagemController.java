@@ -15,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -36,8 +37,24 @@ public class MensagemController {
     @GetMapping
     public List<MensagemResponse> listar(@PathVariable String solicitacaoId, @AuthenticationPrincipal Usuario usuario) {
         Solicitacao solicitacao = buscarEValidarAcesso(solicitacaoId, usuario);
-        return MensagemResponse.from(mensagemRepository.findBySolicitacaoOrderByCriadaEmAsc(solicitacao)
-                .stream().filter(mensagem -> mensagem.getRemetente() != null).toList());
+        List<Mensagem> mensagens = mensagemRepository.findBySolicitacaoOrderByCriadaEmAsc(solicitacao)
+                .stream().filter(mensagem -> mensagem.getRemetente() != null).toList();
+        // Abrir o chat = mensagem entregue + lida (checks azuis no WhatsApp).
+        marcarRecebidas(solicitacaoId, mensagens, usuario, true);
+        return MensagemResponse.from(mensagens);
+    }
+
+    /**
+     * Confirma entrega/leitura das mensagens recebidas — chamado quando o
+     * destinatário tem o chat aberto e recebe algo via WebSocket.
+     */
+    @PostMapping("/lidas")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void marcarLidas(@PathVariable String solicitacaoId, @AuthenticationPrincipal Usuario usuario) {
+        Solicitacao solicitacao = buscarEValidarAcesso(solicitacaoId, usuario);
+        List<Mensagem> mensagens = mensagemRepository.findBySolicitacaoOrderByCriadaEmAsc(solicitacao)
+                .stream().filter(mensagem -> mensagem.getRemetente() != null).toList();
+        marcarRecebidas(solicitacaoId, mensagens, usuario, true);
     }
 
     @PostMapping
@@ -49,6 +66,8 @@ public class MensagemController {
                 .solicitacao(solicitacao)
                 .remetente(usuario)
                 .texto(req.texto())
+                .entregue(false)
+                .lida(false)
                 .build();
         Mensagem salva = mensagemRepository.save(mensagem);
         MensagemResponse resposta = MensagemResponse.from(salva);
@@ -69,5 +88,27 @@ public class MensagemController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não participa desta conversa");
         }
         return solicitacao;
+    }
+
+    private void marcarRecebidas(String solicitacaoId, List<Mensagem> mensagens, Usuario usuario, boolean comoLida) {
+        List<Mensagem> atualizadas = new ArrayList<>();
+        for (Mensagem mensagem : mensagens) {
+            if (mensagem.getRemetente().getId().equals(usuario.getId())) continue;
+            boolean mudou = false;
+            if (!Boolean.TRUE.equals(mensagem.getEntregue())) {
+                mensagem.setEntregue(true);
+                mudou = true;
+            }
+            if (comoLida && !Boolean.TRUE.equals(mensagem.getLida())) {
+                mensagem.setLida(true);
+                mudou = true;
+            }
+            if (mudou) atualizadas.add(mensagem);
+        }
+        if (atualizadas.isEmpty()) return;
+        mensagemRepository.saveAll(atualizadas);
+        for (Mensagem mensagem : atualizadas) {
+            messagingTemplate.convertAndSend("/topic/solicitacoes/" + solicitacaoId, MensagemResponse.from(mensagem));
+        }
     }
 }

@@ -147,6 +147,9 @@ export const api = {
   enviarMensagem: (solicitacaoId, texto) =>
     request(`/api/solicitacoes/${solicitacaoId}/mensagens`, { method: "POST", body: { texto } }),
 
+  marcarMensagensLidas: (solicitacaoId) =>
+    request(`/api/solicitacoes/${solicitacaoId}/mensagens/lidas`, { method: "POST" }),
+
   /* ---------------- Agendamento ---------------- */
   agendar: (solicitacaoId, dataHora, localEncontro) =>
     request("/api/agendamentos", { method: "POST", body: { solicitacaoId, dataHora, localEncontro } }),

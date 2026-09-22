@@ -114,6 +114,45 @@ function TradeEventMessage({ event }) {
   return <div style={{ background: "#F1EFE6", color: INK, padding: "11px 13px", borderRadius: 14, fontSize: 12.5, display: "flex", gap: 9, alignItems: "center" }}><Icon size={18} color="var(--role-primary-dark)" /><div><strong>{title}</strong><div style={{ marginTop: 2, color: INK_SOFT }}>{detail}</div></div></div>;
 }
 
+/** Checks de status no estilo WhatsApp: 1 = enviado, 2 cinza = entregue, 2 azul = lido. */
+function WhatsAppTicks({ entregue, lida, onDark }) {
+  const color = lida ? "#53BDEB" : (onDark ? "rgba(255,255,255,.75)" : "#8696A0");
+  const label = lida ? "Lida" : entregue ? "Entregue" : "Enviada";
+  return (
+    <span aria-label={label} title={label} style={{ display: "inline-flex", alignItems: "center", marginLeft: 3, lineHeight: 0 }}>
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="none" aria-hidden="true">
+        <path d="M11.1 1.1 5.05 8.05 2.2 5.2" stroke={color} strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
+        {(entregue || lida) && (
+          <path d="M14.35 1.1 8.3 8.05 7.1 6.85" stroke={color} strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
+        )}
+      </svg>
+    </span>
+  );
+}
+
+function MessageMeta({ mensagem, mine, onDark }) {
+  const horario = mensagem.criadaEm
+    ? new Date(mensagem.criadaEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    : "";
+  return (
+    <div style={{
+      marginTop: 3, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 2,
+      fontSize: 10, lineHeight: 1, color: onDark ? "rgba(255,255,255,.72)" : INK_SOFT,
+    }}>
+      {horario && <span>{horario}</span>}
+      {mine && <WhatsAppTicks entregue={!!mensagem.entregue} lida={!!mensagem.lida} onDark={onDark} />}
+    </div>
+  );
+}
+
+function upsertMensagem(lista, nova) {
+  const idx = lista.findIndex((m) => m.id === nova.id);
+  if (idx < 0) return [...lista, nova];
+  const next = [...lista];
+  next[idx] = { ...next[idx], ...nova };
+  return next;
+}
+
 function Inbox({ go, usuario }) {
   const { loading, error, data: conversas, reload } = useApiData(() => api.conversas(), [usuario?.id]);
   const visiveis = conversas || [];
@@ -186,10 +225,11 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
       onConnect: () => {
         client.subscribe(`/topic/solicitacoes/${solicitacaoId}`, (frame) => {
           const nova = JSON.parse(frame.body);
-          setMessages((atual) => {
-            if (atual.some((m) => m.id === nova.id)) return atual; // evita duplicar
-            return [...atual, nova];
-          });
+          setMessages((atual) => upsertMensagem(atual, nova));
+          // Se a mensagem veio do outro lado, confirmamos leitura (checks azuis).
+          if (usuario?.id && nova.remetente?.id && nova.remetente.id !== usuario.id) {
+            api.marcarMensagensLidas(solicitacaoId).catch(() => {});
+          }
           try {
             const evento = JSON.parse(nova.texto);
             if (["AGENDAMENTO_CRIADO", "AGENDAMENTO_CONFIRMADO", "RETIRADA_CONFIRMADA"].includes(evento?.tipo)) {
@@ -204,7 +244,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
     client.activate();
 
     return () => client.deactivate();
-  }, [solicitacaoId]);
+  }, [solicitacaoId, usuario?.id]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -217,7 +257,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
     setDraft("");
     try {
         const enviada = await api.enviarMensagem(solicitacaoId, texto);
-        setMessages(atual => atual.some((m) => m.id === enviada.id) ? atual : [...atual, enviada]);
+        setMessages(atual => upsertMensagem(atual, enviada));
     } catch (e) {
       notify(e.message || "Não foi possível enviar a mensagem.");
       setDraft(texto);
@@ -242,7 +282,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
         url,
         nome: file.name,
       }));
-      setMessages(atual => atual.some(m => m.id === enviada.id) ? atual : [...atual, enviada]);
+      setMessages(atual => upsertMensagem(atual, enviada));
       notify("Foto enviada.");
     } catch (e) {
       notify(e.message || "Não foi possível enviar a foto.");
@@ -299,7 +339,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
         });
         try {
           const enviada = await api.enviarMensagem(solicitacaoId, texto);
-          setMessages(atual => atual.some(m => m.id === enviada.id) ? atual : [...atual, enviada]);
+          setMessages(atual => upsertMensagem(atual, enviada));
           await carregar();
           notify("Localização compartilhada.");
         } catch (e) {
@@ -351,9 +391,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
               fontSize: 13.5, maxWidth: evento || localizacao || imagem ? "88%" : "78%",
             }}>
               {evento ? <TradeEventMessage event={evento} /> : localizacao ? <LocationMessage {...localizacao} /> : imagem ? <ImageMessage image={imagem} /> : <div>{m.texto}</div>}
-              {mine && !evento && <div style={{ fontSize: 10, marginTop: 3, textAlign: "right", color: m.lida ? "#9BE7FF" : "rgba(255,255,255,.72)" }} aria-label={m.lida ? "Lido" : m.entregue ? "Entregue" : "Enviado"}>
-                {m.lida ? "✅✅" : m.entregue ? "✅✅" : "✅"}
-              </div>}
+              {!evento && <MessageMeta mensagem={m} mine={mine} onDark={mine && !localizacao} />}
             </div>
           );
         })}
