@@ -4,6 +4,23 @@ import { Client as StompClient } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, Archive, RotateCcw, X } from "lucide-react";
 import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox } from "../../shared/shared.jsx";
+
+async function copiarLinkItem(notify) {
+  const link = window.location.href;
+  try {
+    await navigator.clipboard.writeText(link);
+  } catch {
+    const area = document.createElement("textarea");
+    area.value = link;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    document.execCommand("copy");
+    area.remove();
+  }
+  notify("Link copiado.");
+}
 function CadastroItem({ go, notify, params, usuario }) {
   const itemEditando = params?.item || null;
   const [tipo, setTipo] = useState(itemEditando?.tipoPublicacao || "DOAR");
@@ -447,7 +464,7 @@ function DetalhesItem({ go, notify, favorites, toggleFav, usuario, onlineIds, pa
 
   return (
     <div>
-      <TopBar title="Detalhes" onBack={() => go(-1)} right={<Share2 size={17} color={INK} />} />
+      <TopBar title="Detalhes" onBack={() => go(-1)} right={<button type="button" onClick={() => copiarLinkItem(notify)} aria-label="Compartilhar item" title="Compartilhar item" style={{ width: 34, height: 34, borderRadius: 12, background: "#F1EFE6", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Share2 size={17} color={INK} /></button>} />
       <div style={{ padding: "0 20px" }}>
         <div style={{ height: 190, borderRadius: 20, background: "var(--role-soft)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
           {fotos.length > 0

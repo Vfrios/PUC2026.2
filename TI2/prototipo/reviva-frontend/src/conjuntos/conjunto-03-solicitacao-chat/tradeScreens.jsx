@@ -73,6 +73,25 @@ function parseLocationMessage(texto) {
   }
 }
 
+function parseImageMessage(texto) {
+  if (!texto) return null;
+  try {
+    const payload = JSON.parse(texto);
+    return payload?.tipo === "IMAGEM" && payload.url ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+function ImageMessage({ image }) {
+  return (
+    <div>
+      <img src={image.url} alt={image.nome || "Imagem enviada"} style={{ display: "block", width: "min(240px, 100%)", maxHeight: 280, objectFit: "cover", borderRadius: 10 }} />
+      {image.nome && <div style={{ marginTop: 5, fontSize: 10.5, opacity: .8 }}>{image.nome}</div>}
+    </div>
+  );
+}
+
 function parseTradeEvent(texto) {
   if (!texto) return null;
   try {
@@ -212,6 +231,26 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
     notify(mensagem);
   };
 
+  const enviarFoto = async (file) => {
+    if (!file || !solicitacaoId) return;
+    setMenuAberto(false);
+    setSending(true);
+    try {
+      const url = await comprimirImagem(file);
+      const enviada = await api.enviarMensagem(solicitacaoId, JSON.stringify({
+        tipo: "IMAGEM",
+        url,
+        nome: file.name,
+      }));
+      setMessages(atual => atual.some(m => m.id === enviada.id) ? atual : [...atual, enviada]);
+      notify("Foto enviada.");
+    } catch (e) {
+      notify(e.message || "Não foi possível enviar a foto.");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const abrirConfirmacao = () => {
     if (!agendamento || agendamento.status === "CANCELADO") {
       go(papelAtual === "doador" ? "agendamentoDoador" : "agendamentoReceptor", params);
@@ -301,6 +340,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
         {messages.map((m) => {
           const mine = usuario && m.remetente?.id === usuario.id;
           const localizacao = parseLocationMessage(m.texto);
+          const imagem = parseImageMessage(m.texto);
           const evento = parseTradeEvent(m.texto);
           return (
             <div key={m.id} style={{
@@ -308,9 +348,9 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
               background: evento || localizacao ? "transparent" : (mine ? "var(--role-primary)" : "#F1EFE6"),
               color: mine ? "#fff" : INK, padding: "9px 13px", borderRadius: 16,
               borderBottomRightRadius: mine ? 4 : 16, borderBottomLeftRadius: mine ? 16 : 4,
-              fontSize: 13.5, maxWidth: evento || localizacao ? "88%" : "78%",
+              fontSize: 13.5, maxWidth: evento || localizacao || imagem ? "88%" : "78%",
             }}>
-              {evento ? <TradeEventMessage event={evento} /> : localizacao ? <LocationMessage {...localizacao} /> : <div>{m.texto}</div>}
+              {evento ? <TradeEventMessage event={evento} /> : localizacao ? <LocationMessage {...localizacao} /> : imagem ? <ImageMessage image={imagem} /> : <div>{m.texto}</div>}
               {mine && !evento && <div style={{ fontSize: 10, marginTop: 3, textAlign: "right", color: m.lida ? "#9BE7FF" : "rgba(255,255,255,.72)" }} aria-label={m.lida ? "Lido" : m.entregue ? "Entregue" : "Enviado"}>
                 {m.lida ? "✅✅" : m.entregue ? "✅✅" : "✅"}
               </div>}
@@ -319,8 +359,8 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
         })}
       </div>
       {menuAberto && <div style={{ padding: "8px 12px", display: "flex", gap: 8, borderTop: "1px solid #EDEBE1", background: "#FAFAF4" }}>
-        <input ref={fotoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { if (e.target.files?.[0]) avisarAnexo(`Foto selecionada: ${e.target.files[0].name}.`); e.target.value = ""; }} />
-        <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={e => { if (e.target.files?.[0]) avisarAnexo("Foto capturada pela câmera."); e.target.value = ""; }} />
+        <input ref={fotoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const file = e.target.files?.[0]; if (file) enviarFoto(file); e.target.value = ""; }} />
+        <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={e => { const file = e.target.files?.[0]; if (file) enviarFoto(file); e.target.value = ""; }} />
         <button type="button" onClick={() => fotoRef.current?.click()} style={{ ...iconBtn, background: "var(--role-soft)" }} aria-label="Enviar foto" title="Enviar foto"><ImagePlus size={17} color="var(--role-primary-dark)" /></button>
         <button type="button" onClick={() => cameraRef.current?.click()} style={{ ...iconBtn, background: "var(--role-soft)" }} aria-label="Abrir câmera" title="Abrir câmera"><Camera size={17} color="var(--role-primary-dark)" /></button>
         <button type="button" onClick={compartilharLocalizacao} style={{ ...iconBtn, background: "var(--role-soft)" }} aria-label="Compartilhar localização" title="Compartilhar localização"><MapPin size={17} color="var(--role-primary-dark)" /></button>
