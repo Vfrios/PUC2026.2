@@ -4,7 +4,7 @@ import { Client as StompClient } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import { ListaItens } from "../conjunto-01-publicacao-gestao/itemScreens.jsx";
 import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, Archive, RotateCcw, X } from "lucide-react";
-import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox } from "../../shared/shared.jsx";
+import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactoResumo, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox } from "../../shared/shared.jsx";
 
 function usePullRefresh(reload, notify) {
   const [pull, setPull] = useState(0);
@@ -15,7 +15,6 @@ function HomeDoador({ go, usuario, compact, notify, notifNaoLidas = 0 }) {
   const { loading, data: recebidas, reload } = useApiData(() => api.solicitacoesRecebidas(), [usuario?.id]);
   const pullProps = usePullRefresh(reload, notify);
   const destaque = (recebidas || [])[0];
-  const pct = Math.min(1, (usuario?.kgResiduoEvitado || 0) / 100);
 
   return (
     <Screen>
@@ -36,14 +35,7 @@ function HomeDoador({ go, usuario, compact, notify, notifNaoLidas = 0 }) {
         </button>
       </div>
       <div style={{ padding: "14px 20px 0" }}>
-        <div style={{ background: "linear-gradient(135deg,var(--role-primary),var(--role-primary-dark))", borderRadius: 22, padding: 18, color: "#fff", display: "flex", alignItems: "center", gap: 14 }}>
-          <ImpactRing pct={pct} size={72} label="kg reutilizados" value={Math.round(usuario?.kgResiduoEvitado || 0)} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, opacity: .85 }}>Seu impacto até agora</div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700 }}>{usuario?.itensDoados || 0} itens doados</div>
-            <div onClick={() => go("dashboardImpacto")} style={{ marginTop: 6, fontSize: 12, fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Ver painel completo →</div>
-          </div>
-        </div>
+        <ImpactoResumo usuario={usuario} onOpen={() => go("dashboardImpacto")} />
       </div>
       <div style={{ padding: "0 20px" }}>
         <SectionTitle>Atalhos</SectionTitle>

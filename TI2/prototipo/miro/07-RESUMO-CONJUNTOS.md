@@ -47,7 +47,6 @@ Permite cadastrar itens para doacao ou troca e administrar os itens publicados p
 
 #### O que falta implementar
 
-- permitir duplicar item semelhante;
 - mostrar quantidade de interessados;
 - responder solicitacoes diretamente na tela;
 - criar acoes em lote;
@@ -348,7 +347,7 @@ Total: **6 conjuntos e 12 telas funcionais**.
 ### Conjunto 6 - Endereco e seguranca
 
 - Enderecos: CRUD em `/api/enderecos`, varios enderecos com apelido, endereco padrao (sincroniza com o cadastro do usuario), preenchimento por CEP, validacao e integracao com cadastro de item e agendamento.
-- Seguranca e termos: alterar senha (`POST /api/usuarios/me/senha`), preferencias de notificacao respeitadas pelo backend (`/api/usuarios/me/preferencias`), sair de todos os outros dispositivos (`POST /api/usuarios/me/sessoes/encerrar`), notificacoes lidas/nao lidas (`GET /api/notificacoes?todas=true`) e telas separadas de Termos de uso e Politica de privacidade.
+- Seguranca e termos: alterar senha (`POST /api/usuarios/me/senha`), recuperar senha sem SMTP (`POST /api/auth/recuperar-senha` com e-mail + CPF/CNPJ), preferencias de notificacao respeitadas pelo backend (`/api/usuarios/me/preferencias`), sair de todos os outros dispositivos (`POST /api/usuarios/me/sessoes/encerrar`), notificacoes lidas/nao lidas (`GET /api/notificacoes?todas=true`) e telas separadas de Termos de uso e Politica de privacidade.
 
 ### Ainda pendente
 

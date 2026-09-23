@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { MapContainer, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { api, getToken, setToken, ApiError, wsUrl } from "../../api.js";
@@ -264,10 +265,48 @@ function MessageMeta({ mensagem, mine, onDark }) {
 }
 
 function upsertMensagem(lista, nova) {
-  const idx = lista.findIndex((m) => m.id === nova.id);
+  const key = nova.localKey || nova.id;
+  const idx = lista.findIndex((m) => m.id === nova.id || (nova.localKey && m.localKey === nova.localKey) || (key && m.localKey === key));
   if (idx < 0) return [...lista, nova];
   const next = [...lista];
-  next[idx] = { ...next[idx], ...nova };
+  next[idx] = { ...next[idx], ...nova, localKey: next[idx].localKey || nova.localKey };
+  return next;
+}
+
+/** Confirma envio trocando o temp pelo retorno da API, sem remontar o balão. */
+function confirmarEnvio(lista, localKey, enviada) {
+  return lista.map((m) => (m.localKey === localKey || m.id === localKey
+    ? { ...enviada, localKey: m.localKey || localKey }
+    : m));
+}
+
+function mensagemOtimista(usuario, texto) {
+  const localKey = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return {
+    id: localKey,
+    localKey,
+    texto,
+    criadaEm: new Date().toISOString(),
+    entregue: false,
+    lida: false,
+    pendente: true,
+    remetente: { id: usuario?.id, nome: usuario?.nome, fotoUrl: usuario?.fotoUrl },
+  };
+}
+
+/** Mantém balões ainda não confirmados ao aplicar a lista do servidor. */
+function mesclarComPendentes(servidor, atual) {
+  let next = [...(servidor || [])];
+  for (const m of atual || []) {
+    if (!m.pendente && !String(m.id).startsWith("local-") && !String(m.id).startsWith("temp-")) continue;
+    const jaConfirmada = next.some((s) =>
+      s.texto === m.texto
+      && s.remetente?.id
+      && s.remetente.id === m.remetente?.id
+      && Math.abs(new Date(s.criadaEm) - new Date(m.criadaEm)) < 60_000
+    );
+    if (!jaConfirmada) next = upsertMensagem(next, m);
+  }
   return next;
 }
 
@@ -339,9 +378,19 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
         if (silent) {
           let next = atual;
           for (const m of data || []) next = upsertMensagem(next, m);
+          // Tira pendentes que o servidor já confirmou (mesmo texto + remetente).
+          next = next.filter((m) => {
+            if (!m.pendente) return true;
+            return !next.some((s) =>
+              !s.pendente
+              && s.id !== m.id
+              && s.texto === m.texto
+              && s.remetente?.id === m.remetente?.id
+            );
+          });
           return mensagensIguais(atual, next) ? atual : next;
         }
-        return data;
+        return mesclarComPendentes(data, atual);
       });
       if (!silent) setErro("");
     } catch (e) {
@@ -375,7 +424,20 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
         setConexao("online");
         client.subscribe(`/topic/solicitacoes/${solicitacaoId}`, (frame) => {
           const nova = JSON.parse(frame.body);
-          setMessages((atual) => upsertMensagem(atual, nova));
+          setMessages((atual) => {
+            // Eco do próprio envio: confirma só o pendente mais antigo com o mesmo texto.
+            let trocou = false;
+            const limpa = atual.map((m) => {
+              if (trocou || !m.pendente) return m;
+              if (m.texto === nova.texto && m.remetente?.id && m.remetente.id === nova.remetente?.id) {
+                trocou = true;
+                return { ...nova, localKey: m.localKey, pendente: false };
+              }
+              return m;
+            });
+            if (trocou) return limpa;
+            return upsertMensagem(limpa, nova);
+          });
           const deOutraPessoa = usuario?.id && nova.remetente?.id && nova.remetente.id !== usuario.id;
           if (deOutraPessoa && document.visibilityState !== "visible" && "Notification" in window && Notification.permission === "granted") {
             new Notification(`Nova mensagem de ${nova.remetente?.nome || otherName || "Reviva"}`, { body: resumoMensagem(nova.texto) });
@@ -404,7 +466,6 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
 
   const send = async () => {
     if (!draft.trim() || !solicitacaoId || encerrada) return;
-    setSending(true);
     const texto = draft;
     const citacao = respondendo;
     setDraft("");
@@ -412,16 +473,20 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
     const payload = citacao
       ? JSON.stringify({ tipo: "RESPOSTA", texto: texto.trim(), citacao: { id: citacao.id, autor: citacao.remetente?.nome || "", texto: resumoMensagem(citacao.texto) } })
       : texto;
+    const otimista = mensagemOtimista(usuario, payload);
+    // flushSync: pinta o balão antes de qualquer await (senão parece que "carrega depois").
+    flushSync(() => {
+      setMessages((atual) => upsertMensagem(atual, otimista));
+    });
     try {
-        const enviada = await api.enviarMensagem(solicitacaoId, payload);
-        setMessages(atual => upsertMensagem(atual, enviada));
+      const enviada = await api.enviarMensagem(solicitacaoId, payload);
+      setMessages((atual) => confirmarEnvio(atual, otimista.localKey, { ...enviada, pendente: false }));
     } catch (e) {
+      setMessages((atual) => atual.filter((m) => m.localKey !== otimista.localKey));
       notify(e.message || "Não foi possível enviar a mensagem.");
-      setDraft(texto);
-      setRespondendo(citacao);
+      setDraft((atual) => atual || texto);
+      setRespondendo((atual) => atual || citacao);
       if (e.status === 409) recarregarSolicitacao({ silent: true });
-    } finally {
-      setSending(false);
     }
   };
 
@@ -436,13 +501,17 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
     setSending(true);
     try {
       const url = await comprimirImagem(file);
-      const enviada = await api.enviarMensagem(solicitacaoId, JSON.stringify({
-        tipo: "IMAGEM",
-        url,
-        nome: file.name,
-      }));
-      setMessages(atual => upsertMensagem(atual, enviada));
-      notify("Foto enviada.");
+      const payload = JSON.stringify({ tipo: "IMAGEM", url, nome: file.name });
+      const otimista = mensagemOtimista(usuario, payload);
+      flushSync(() => setMessages((atual) => upsertMensagem(atual, otimista)));
+      try {
+        const enviada = await api.enviarMensagem(solicitacaoId, payload);
+        setMessages((atual) => confirmarEnvio(atual, otimista.localKey, { ...enviada, pendente: false }));
+        notify("Foto enviada.");
+      } catch (e) {
+        setMessages((atual) => atual.filter((m) => m.localKey !== otimista.localKey));
+        throw e;
+      }
     } catch (e) {
       notify(e.message || "Não foi possível enviar a foto.");
     } finally {
@@ -497,12 +566,14 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
           longitude: pos.coords.longitude,
           horario,
         });
+        const otimista = mensagemOtimista(usuario, texto);
+        flushSync(() => setMessages((atual) => upsertMensagem(atual, otimista)));
         try {
           const enviada = await api.enviarMensagem(solicitacaoId, texto);
-          setMessages(atual => upsertMensagem(atual, enviada));
-          await carregar();
+          setMessages((atual) => confirmarEnvio(atual, otimista.localKey, { ...enviada, pendente: false }));
           notify("Localização compartilhada.");
         } catch (e) {
+          setMessages((atual) => atual.filter((m) => m.localKey !== otimista.localKey));
           notify(e.message || "Não foi possível compartilhar a localização.");
         } finally {
           setSending(false);
@@ -551,7 +622,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
           const resposta = parseReplyMessage(m.texto);
           return (
             <MensagemResponder
-              key={m.id}
+              key={m.localKey || m.id}
               ativo={!evento && !encerrada}
               onResponder={() => { setRespondendo(m); inputRef.current?.focus(); }}
               style={{ alignSelf: evento || localizacao ? "center" : (mine ? "flex-end" : "flex-start"), maxWidth: evento || localizacao || imagem ? "88%" : "78%" }}
@@ -614,7 +685,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
           placeholder="Escreva uma mensagem..."
           style={{ ...fieldInput, flex: 1, border: "1px solid #E9E7DC", borderRadius: 20, padding: "10px 14px" }}
         />
-        <button onClick={send} disabled={sending} aria-label="Enviar mensagem" style={{ ...iconBtn, background: "var(--role-primary)" }}>{sending ? <Loader2 size={16} color="#fff" style={{ animation: "spin .8s linear infinite" }} /> : <Send size={16} color="#fff" />}</button>
+        <button onClick={send} disabled={!draft.trim()} aria-label="Enviar mensagem" style={{ ...iconBtn, background: "var(--role-primary)", opacity: draft.trim() ? 1 : 0.55 }}><Send size={16} color="#fff" /></button>
       </div>}
       {!encerrada && <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
         <Button full variant="soft" icon={agendamento?.status !== "CONFIRMADO" ? Calendar : (papelAtual === "receptor" && !agendamento.confirmacaoAgendamentoReceptorEm ? CheckCircle2 : QrCode)} disabled={agendamento?.status === "CANCELADO" || agendamento?.status === "CONCLUIDO" || (papelAtual === "doador" && !agendamento?.confirmacaoAgendamentoReceptorEm)} onClick={papelAtual === "receptor" && agendamento?.status === "CONFIRMADO" && !agendamento.confirmacaoAgendamentoReceptorEm ? confirmarAgendamento : abrirConfirmacao}>
@@ -901,35 +972,61 @@ function DashboardImpacto({ go, usuario }) {
   const pontos = usuario?.pontos || 0;
   const idx = badgeIndex(usuario?.seloAtual);
   const proximo = BADGES[idx + 1];
+  const metaKg = 100;
+  const pct = Math.min(1, kg / metaKg);
+  const kgLabel = Number.isInteger(kg) ? String(kg) : kg.toFixed(1).replace(".", ",");
   return (
     <div>
       <TopBar title="Meu impacto" onBack={() => go(-1)} />
-      <div style={{ padding: "0 20px" }}>
-        <div style={{ display: "flex", justifyContent: "center", gap: 18, background: "#fff", border: "1px solid #EDEBE1", borderRadius: 20, padding: 18 }}>
-          <ImpactRing pct={Math.min(1, kg / 100)} size={110} value={`${kg.toFixed(1)} kg`} label="material reutilizado" />
+      <div style={{ padding: "0 20px 24px" }}>
+        <div style={{
+          borderRadius: 22, padding: "18px 18px 16px", color: "#fff", overflow: "hidden", position: "relative",
+          background: "linear-gradient(145deg, #1F6E43 0%, #164F31 55%, #123F27 100%)",
+        }}>
+          <div style={{ position: "absolute", right: -20, top: -28, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,.06)" }} />
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 6, fontSize: 10.5, fontWeight: 700,
+            letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(255,255,255,.9)",
+            background: "rgba(255,255,255,.12)", borderRadius: 999, padding: "5px 10px",
+          }}>
+            <Recycle size={13} strokeWidth={2.4} /> ODS 12
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 16, marginTop: 14 }}>
+            <ImpactRing pct={pct} size={96} value={kgLabel} label="kg" tone="light" />
+            <div style={{ flex: 1, paddingBottom: 4 }}>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 600, lineHeight: 1.25 }}>
+                Material fora do descarte
+              </div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,.7)", marginTop: 5, lineHeight: 1.4 }}>
+                Cada quilo é algo que ganhou outro uso.
+              </div>
+              <div style={{ marginTop: 10, fontSize: 11, fontWeight: 600, color: "#F6D48A" }}>
+                Meta {metaKg} kg · {Math.round(pct * 100)}%
+              </div>
+            </div>
+          </div>
         </div>
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 12 }}>
-          <StatBox value={itens} label="itens doados" Icon={Gift} />
+          <StatBox value={itens} label={itens === 1 ? "item doado" : "itens doados"} Icon={Gift} />
           <StatBox value={pontos} label="pontos" Icon={Award} />
           <StatBox value={(usuario?.reputacaoScore || 0).toFixed(1)} label="nota média" Icon={Star} />
         </div>
+
         <SectionTitle>Selo de impacto</SectionTitle>
-        <div style={{ background: "var(--role-soft)", borderRadius: 14, padding: 12, fontSize: 12, lineHeight: 1.5, color: "var(--role-primary-dark)" }}>
-          Cada quilo representa material que ganhou uma nova vida em vez de ser descartado. Essa métrica acompanha a ODS 12, de consumo e produção responsáveis.
-        </div>
         <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6 }}>
           {BADGES.map((b, i) => (
-            <div key={b.tier} style={{ minWidth: 78, textAlign: "center", opacity: i <= idx ? 1 : 0.4 }}>
-              <div style={{ width: 54, height: 54, borderRadius: "50%", background: b.color + "22", border: `2px solid ${b.color}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
-                <Award size={22} color={b.color} />
+            <div key={b.tier} style={{ minWidth: 78, textAlign: "center", opacity: i <= idx ? 1 : 0.35 }}>
+              <div style={{ width: 50, height: 50, borderRadius: "50%", background: b.color + "18", border: `1.5px solid ${b.color}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
+                <Award size={20} color={b.color} />
               </div>
               <div style={{ fontSize: 11, fontWeight: 700, color: INK, marginTop: 6 }}>{b.label}</div>
             </div>
           ))}
         </div>
         {proximo && (
-          <div style={{ background: "var(--role-soft)", borderRadius: 14, padding: 12, marginTop: 10, fontSize: 11.5, color: "var(--role-primary-dark)" }}>
-            Faltam <b>{Math.max(0, proximo.min - pontos)} pontos</b> para você alcançar o selo {proximo.label} 🏅
+          <div style={{ marginTop: 12, fontSize: 12, color: INK_SOFT, lineHeight: 1.45 }}>
+            Faltam <b style={{ color: INK }}>{Math.max(0, proximo.min - pontos)} pontos</b> para o selo {proximo.label}.
           </div>
         )}
       </div>

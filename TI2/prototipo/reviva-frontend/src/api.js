@@ -3,15 +3,21 @@
    Todas as chamadas HTTP do app passam por aqui.
    ============================================================ */
 
-const BASE_URL = import.meta.env.VITE_API_URL
-  || (import.meta.env.DEV ? "http://localhost:8080" : "");
-
 const TOKEN_KEY = "reviva_token";
 
-// SockJS precisa de uma URL absoluta; quando BASE_URL é "" (deploy same-origin),
+/** Em DEV, usa o mesmo host da página (:8080) para funcionar no PC e no celular na mesma rede. */
+function baseUrl() {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (import.meta.env.DEV && typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:8080`;
+  }
+  return "";
+}
+
+// SockJS precisa de uma URL absoluta; quando a base é "" (deploy same-origin),
 // completamos com a origem atual do navegador.
 export function wsUrl() {
-  const base = BASE_URL || (typeof window !== "undefined" ? window.location.origin : "");
+  const base = baseUrl() || (typeof window !== "undefined" ? window.location.origin : "");
   return base + "/ws";
 }
 
@@ -31,6 +37,7 @@ class ApiError extends Error {
 }
 
 async function request(path, { method = "GET", body, auth = true, params } = {}) {
+  const BASE_URL = baseUrl();
   let url = BASE_URL + path;
 
   if (params) {
@@ -89,6 +96,9 @@ export const api = {
 
   login: (email, senha) =>
     request("/api/auth/login", { method: "POST", auth: false, body: { email, senha } }),
+
+  recuperarSenha: (email, cpf, novaSenha) =>
+    request("/api/auth/recuperar-senha", { method: "POST", auth: false, body: { email, cpf, novaSenha } }),
 
   me: () => request("/api/usuarios/me"),
 

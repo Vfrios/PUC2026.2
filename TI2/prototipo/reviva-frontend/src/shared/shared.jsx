@@ -332,22 +332,95 @@ function SectionTitle({ children, right }) {
   );
 }
 
-function ImpactRing({ pct = 0, size = 84, label, value }) {
+function ImpactRing({ pct = 0, size = 84, label, value, tone = "ink" }) {
   const r = (size - 10) / 2;
   const c = 2 * Math.PI * r;
   const clamped = Math.max(0, Math.min(1, pct));
+  const valueColor = tone === "light" ? "#fff" : INK;
+  const labelColor = tone === "light" ? "rgba(255,255,255,.8)" : INK_SOFT;
+  const track = tone === "light" ? "rgba(255,255,255,.28)" : "#EAE7DC";
+  const stroke = tone === "light" ? "#F6D48A" : GOLD;
+  const valueSize = Math.max(16, size * 0.26);
+  const labelSize = Math.max(10, size * 0.12);
   return (
-    <div style={{ position: "relative", width: size, height: size }}>
-      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={size/2} cy={size/2} r={r} stroke="#EAE7DC" strokeWidth={8} fill="none" />
-        <circle cx={size/2} cy={size/2} r={r} stroke={GOLD} strokeWidth={8} fill="none"
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }} aria-hidden>
+        <circle cx={size / 2} cy={size / 2} r={r} stroke={track} strokeWidth={7} fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={r} stroke={stroke} strokeWidth={7} fill="none"
           strokeDasharray={c} strokeDashoffset={c * (1 - clamped)} strokeLinecap="round" />
       </svg>
-      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: size * 0.22, color: INK }}>{value}</div>
-        <div style={{ fontSize: size * 0.1, color: INK_SOFT, fontWeight: 600 }}>{label}</div>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 8, textAlign: "center" }}>
+        <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: valueSize, color: valueColor, lineHeight: 1.05 }}>{value}</div>
+        {label && <div style={{ fontSize: labelSize, color: labelColor, fontWeight: 600, lineHeight: 1.15, marginTop: 2 }}>{label}</div>}
       </div>
     </div>
+  );
+}
+
+/** Card da home: impacto com personalidade, sem poluir — ODS 12. */
+function ImpactoResumo({ usuario, onOpen }) {
+  const kg = Number(usuario?.kgResiduoEvitado || 0);
+  const itens = Number(usuario?.itensDoados || 0);
+  const metaKg = 100;
+  const pct = Math.min(1, kg / metaKg);
+  const kgLabel = Number.isInteger(kg) ? String(kg) : kg.toFixed(1).replace(".", ",");
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label="Abrir painel de impacto"
+      style={{
+        width: "100%", textAlign: "left", cursor: "pointer", border: "none",
+        borderRadius: 22, padding: "16px 18px 14px", overflow: "hidden", fontFamily: "var(--font-ui)",
+        background: "linear-gradient(145deg, #1F6E43 0%, #164F31 55%, #123F27 100%)",
+        color: "#fff", position: "relative",
+      }}
+    >
+      <div style={{
+        position: "absolute", right: -18, top: -22, width: 100, height: 100, borderRadius: "50%",
+        background: "rgba(255,255,255,.06)", pointerEvents: "none",
+      }} />
+
+      <div style={{
+        display: "inline-flex", alignItems: "center", gap: 6, fontSize: 10.5, fontWeight: 700,
+        letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(255,255,255,.9)",
+        background: "rgba(255,255,255,.12)", borderRadius: 999, padding: "5px 10px",
+      }}>
+        <Recycle size={13} strokeWidth={2.4} /> ODS 12
+      </div>
+
+      <div style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 600, marginTop: 11, lineHeight: 1.25 }}>
+        Seu impacto até agora
+      </div>
+      <div style={{ fontSize: 12, color: "rgba(255,255,255,.7)", marginTop: 3 }}>
+        Material reaproveitado em vez de descartado.
+      </div>
+
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 20, marginTop: 14 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+            <span style={{ fontFamily: "var(--font-display)", fontSize: 34, fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em" }}>{kgLabel}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#F6D48A" }}>kg</span>
+          </div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,.7)", marginTop: 4, fontWeight: 600 }}>reutilizados</div>
+        </div>
+        <div style={{ width: 1, height: 40, background: "rgba(255,255,255,.18)", marginBottom: 2 }} />
+        <div style={{ minWidth: 70 }}>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 34, fontWeight: 700, lineHeight: 1 }}>{itens}</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,.7)", marginTop: 4, fontWeight: 600 }}>{itens === 1 ? "item doado" : "itens doados"}</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12, height: 4, borderRadius: 999, background: "rgba(255,255,255,.14)", overflow: "hidden" }}>
+        <div style={{ width: `${Math.max(pct * 100, kg > 0 ? 4 : 0)}%`, height: "100%", borderRadius: 999, background: "#F2A93C" }} />
+      </div>
+
+      <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 12.5, fontWeight: 700 }}>Ver painel completo</span>
+        <ChevronRight size={15} color="rgba(255,255,255,.85)" />
+      </div>
+    </button>
   );
 }
 
@@ -663,4 +736,4 @@ function linkDoPerfil(usuarioId) {
 
 export { FotoPerfil, Toggle, linkDoPerfil };
 
-export { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCnpj, formatDocumento, formatCep, formatCelular, cpfValido, cnpjValido, documentoValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox, STATUS_ITEM, statusDoItem, StatusBadge, MODOS_ENTREGA, ETAPAS_SOLICITACAO, ETAPA_LABEL, EtapasSolicitacao, compartilhar, linkDoItem, FieldError, Checkbox };
+export { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCnpj, formatDocumento, formatCep, formatCelular, cpfValido, cnpjValido, documentoValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ImpactoResumo, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox, STATUS_ITEM, statusDoItem, StatusBadge, MODOS_ENTREGA, ETAPAS_SOLICITACAO, ETAPA_LABEL, EtapasSolicitacao, compartilhar, linkDoItem, FieldError, Checkbox };

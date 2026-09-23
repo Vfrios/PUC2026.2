@@ -29,6 +29,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Cobre a tela de Chat (Doador <-> Receptor de uma Solicitação).
@@ -103,24 +104,34 @@ public class MensagemController {
                 .build();
         Mensagem salva = mensagemRepository.save(mensagem);
 
-        // Preview no Inbox: última mensagem da conversa.
-        solicitacao.setMensagem(SolicitacaoResponse.previewTexto(req.texto()));
-        solicitacaoRepository.save(solicitacao);
+        // Só o preview — evita regravar o documento inteiro (e os DBRefs) no Atlas.
+        mongoTemplate.updateFirst(
+                Query.query(Criteria.where("_id").is(solicitacao.getId())),
+                new Update().set("mensagem", SolicitacaoResponse.previewTexto(req.texto())),
+                Solicitacao.class);
+        DbRefCache.limpar();
 
+        MensagemResponse resposta = MensagemResponse.from(salva);
+        messagingTemplate.convertAndSend("/topic/solicitacoes/" + solicitacaoId, resposta);
+
+        // Notificação fora do caminho crítico: o chat já recebeu via WebSocket/HTTP.
         if (destinatario != null) {
             String tituloItem = solicitacao.getItem() != null && solicitacao.getItem().getTitulo() != null
                     ? solicitacao.getItem().getTitulo()
                     : "item";
             String nome = usuario.getNome() != null ? usuario.getNome() : "Alguém";
-            notificacaoService.notificar(
-                    destinatario,
-                    nome + " enviou uma mensagem sobre \"" + tituloItem + "\"",
-                    Notificacao.Tipo.CHAT,
-                    solicitacao);
+            String titulo = nome + " enviou uma mensagem sobre \"" + tituloItem + "\"";
+            Usuario dest = destinatario;
+            Solicitacao sol = solicitacao;
+            CompletableFuture.runAsync(() -> {
+                try {
+                    notificacaoService.notificar(dest, titulo, Notificacao.Tipo.CHAT, sol);
+                } catch (Exception ignored) {
+                    // Falha de notificação não deve atrasar nem falhar o envio.
+                }
+            });
         }
 
-        MensagemResponse resposta = MensagemResponse.from(salva);
-        messagingTemplate.convertAndSend("/topic/solicitacoes/" + solicitacaoId, resposta);
         return resposta;
     }
 
@@ -128,11 +139,14 @@ public class MensagemController {
     private Solicitacao buscarEValidarAcesso(String solicitacaoId, Usuario usuario) {
         Solicitacao solicitacao = solicitacaoRepository.findValidById(solicitacaoId)
                 .orElseThrow(() -> new IllegalArgumentException("Solicitação não encontrada"));
-        if (solicitacao.getItem() == null || solicitacao.getReceptor() == null) {
+        if (solicitacao.getReceptor() == null) {
             throw new IllegalArgumentException("Esta conversa possui dados inválidos e não está disponível");
         }
-        boolean ehDoador = solicitacao.getItem().getDoador().getId().equals(usuario.getId());
         boolean ehReceptor = solicitacao.getReceptor().getId().equals(usuario.getId());
+        // doadorId denormalizado evita depender do DBRef item.doador no caminho quente.
+        boolean ehDoador = usuario.getId().equals(solicitacao.getDoadorId())
+                || (solicitacao.getItem() != null && solicitacao.getItem().getDoador() != null
+                && usuario.getId().equals(solicitacao.getItem().getDoador().getId()));
         if (!ehDoador && !ehReceptor) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não participa desta conversa");
         }

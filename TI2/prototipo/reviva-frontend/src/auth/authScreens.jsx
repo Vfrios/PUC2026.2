@@ -22,12 +22,13 @@ function Splash({ onDone }) {
   );
 }
 
-/* ---- AUTENTICAÇÃO (login / registro reais) ---- */
+/* ---- AUTENTICAÇÃO (login / registro / recuperar senha) ---- */
 function Auth({ go, onLogin, onRegister }) {
-  const [mode, setMode] = useState("login"); // login | registro
+  const [mode, setMode] = useState("login"); // login | registro | recuperar
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [documento, setDocumento] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -42,9 +43,11 @@ function Auth({ go, onLogin, onRegister }) {
   const [cepBuscando, setCepBuscando] = useState(false);
   const [cepErro, setCepErro] = useState("");
   const [erro, setErro] = useState("");
+  const [okMsg, setOkMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
   const cepDigits = onlyDigits(cep).slice(0, 8);
+  const tituloBarra = mode === "login" ? "Entrar" : mode === "registro" ? "Criar conta" : "Esqueceu a senha";
 
   useEffect(() => {
     if (mode !== "registro" || cepDigits.length !== 8) {
@@ -76,8 +79,55 @@ function Auth({ go, onLogin, onRegister }) {
     return () => { cancelado = true; };
   }, [mode, cepDigits]);
 
+  const irPara = (proximo) => {
+    setMode(proximo);
+    setErro("");
+    setOkMsg("");
+    setSenha("");
+    setConfirmarSenha("");
+    setMostrarSenha(false);
+  };
+
   const submit = async () => {
     setErro("");
+    setOkMsg("");
+
+    if (mode === "recuperar") {
+      if (!email || !documento || !senha || !confirmarSenha) {
+        setErro("Preencha e-mail, CPF/CNPJ e a nova senha.");
+        return;
+      }
+      if (!documentoValido(documento)) {
+        setErro("Informe um CPF ou CNPJ válido.");
+        return;
+      }
+      if (senha.length < 8) {
+        setErro("A nova senha precisa ter pelo menos 8 caracteres.");
+        return;
+      }
+      if (!/[A-Za-z]/.test(senha) || !/\d/.test(senha)) {
+        setErro("Use letras e números na nova senha.");
+        return;
+      }
+      if (senha !== confirmarSenha) {
+        setErro("As senhas não coincidem.");
+        return;
+      }
+      setLoading(true);
+      try {
+        const res = await api.recuperarSenha(email.trim(), onlyDigits(documento), senha);
+        setOkMsg(res?.mensagem || "Senha redefinida. Entre com a nova senha.");
+        setSenha("");
+        setConfirmarSenha("");
+        setMode("login");
+      } catch (e) {
+        setErro(e.message || "Não foi possível redefinir a senha.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!email || !senha || (mode === "registro" && (!nome || !documento || !telefone || !numero))) {
       setErro("Preencha todos os campos obrigatórios.");
       return;
@@ -138,25 +188,28 @@ function Auth({ go, onLogin, onRegister }) {
 
   return (
     <div style={{ padding: "10px 22px 30px", height: "100%", display: "flex", flexDirection: "column" }}>
-      <TopBar title={mode === "login" ? "Entrar" : "Criar conta"} />
+      <TopBar title={tituloBarra} onBack={mode === "recuperar" ? () => irPara("login") : undefined} />
       <div style={{ marginTop: 18, marginBottom: 22 }}>
         <div style={{ width: 46, height: 46, borderRadius: 14, background: "var(--role-soft)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
           <Recycle size={22} color="var(--role-primary-dark)" />
         </div>
         <div style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 600, color: INK }}>
-          {mode === "login" ? "Bem-vindo(a) de volta" : "Criar sua conta"}
+          {mode === "login" ? "Bem-vindo(a) de volta" : mode === "registro" ? "Criar sua conta" : "Redefinir senha"}
         </div>
-        <div style={{ fontSize: 13, color: INK_SOFT, marginTop: 4 }}>Entre para doar, trocar e reduzir o desperdício.</div>
+        <div style={{ fontSize: 13, color: INK_SOFT, marginTop: 4 }}>
+          {mode === "recuperar"
+            ? "Confirme o e-mail e o CPF/CNPJ da conta para criar uma nova senha. Sem envio de e-mail."
+            : "Entre para doar, trocar e reduzir o desperdício."}
+        </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-        <Chip active={mode === "login"} onClick={() => { setMode("login"); setErro(""); }}>Entrar</Chip>
-        <Chip active={mode === "registro"} onClick={() => { setMode("registro"); setErro(""); }}>Criar conta</Chip>
-      </div>
+      {mode !== "recuperar" && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+          <Chip active={mode === "login"} onClick={() => irPara("login")}>Entrar</Chip>
+          <Chip active={mode === "registro"} onClick={() => irPara("registro")}>Criar conta</Chip>
+        </div>
+      )}
 
-      {/* Envolver os campos (principalmente o de senha) num <form> remove o aviso do
-          Chrome/DevTools: "A form field element should have an id or name attribute"
-          / "password field is not contained in a form" — e dá Enter-to-submit de graça. */}
       <form onSubmit={e => { e.preventDefault(); submit(); }} autoComplete="on">
         {mode === "registro" && (
           <>
@@ -230,32 +283,64 @@ function Auth({ go, onLogin, onRegister }) {
             </div>
           </>
         )}
+
         <label style={fieldLabel}>E-mail</label>
         <div style={fieldBox}><Mail size={16} color={INK_SOFT} /><input type="email" name="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="voce@email.com" style={fieldInput} /></div>
-        <label style={fieldLabel}>Senha</label>
+
+        {mode === "recuperar" && (
+          <>
+            <label style={fieldLabel}>CPF / CNPJ da conta</label>
+            <div style={fieldBox}><User size={16} color={INK_SOFT} /><input name="documento" autoComplete="off" value={formatDocumento(documento)} onChange={e => setDocumento(e.target.value)} placeholder="CPF ou CNPJ cadastrado" inputMode="numeric" maxLength={18} style={fieldInput} /></div>
+          </>
+        )}
+
+        <label style={fieldLabel}>{mode === "recuperar" ? "Nova senha" : "Senha"}</label>
         <div style={fieldBox}>
           <Lock size={16} color={INK_SOFT} />
-          <input type={mostrarSenha ? "text" : "password"} name="senha" autoComplete={mode === "registro" ? "new-password" : "current-password"} value={senha} onChange={e => setSenha(e.target.value)} placeholder={mode === "registro" ? "mínimo 8 caracteres" : "••••••••"} style={fieldInput} />
+          <input type={mostrarSenha ? "text" : "password"} name="senha" autoComplete={mode === "login" ? "current-password" : "new-password"} value={senha} onChange={e => setSenha(e.target.value)} placeholder={mode === "login" ? "••••••••" : "mínimo 8 caracteres, letras e números"} style={fieldInput} />
           <button type="button" onClick={() => setMostrarSenha(visivel => !visivel)} aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"} title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"} style={{ border: "none", background: "none", padding: 0, color: INK_SOFT, cursor: "pointer", display: "flex" }}>
             {mostrarSenha ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
 
+        {mode === "recuperar" && (
+          <>
+            <label style={fieldLabel}>Confirmar nova senha</label>
+            <div style={fieldBox}>
+              <Lock size={16} color={INK_SOFT} />
+              <input type={mostrarSenha ? "text" : "password"} name="confirmarSenha" autoComplete="new-password" value={confirmarSenha} onChange={e => setConfirmarSenha(e.target.value)} placeholder="Repita a nova senha" style={fieldInput} />
+            </div>
+          </>
+        )}
+
+        {mode === "login" && (
+          <div style={{ marginTop: 8, textAlign: "right" }}>
+            <button type="button" onClick={() => irPara("recuperar")} style={{ border: "none", background: "none", padding: 0, fontSize: 12.5, fontWeight: 700, color: "var(--role-primary-dark)", cursor: "pointer", fontFamily: "var(--font-ui)" }}>
+              Esqueceu a senha?
+            </button>
+          </div>
+        )}
+
+        {okMsg && <div style={{ marginTop: 10, fontSize: 12, color: "#1F6E43", background: "#E4EFE7", padding: "8px 10px", borderRadius: 10 }}>{okMsg}</div>}
         {erro && <div style={{ marginTop: 10, fontSize: 12, color: "#9C4327", background: "#FBE8E0", padding: "8px 10px", borderRadius: 10 }}>{erro}</div>}
 
         <div style={{ marginTop: 18 }}>
-          <Button full type="submit" icon={mode === "login" ? LogIn : UserPlus} loading={loading}>
-            {mode === "login" ? "Entrar" : "Criar conta"}
+          <Button full type="submit" icon={mode === "login" ? LogIn : mode === "registro" ? UserPlus : ShieldCheck} loading={loading}>
+            {mode === "login" ? "Entrar" : mode === "registro" ? "Criar conta" : "Salvar nova senha"}
           </Button>
         </div>
       </form>
 
       <div style={{ flex: 1 }} />
       <div style={{ textAlign: "center", fontSize: 13, color: INK_SOFT, marginTop: 20, marginBottom: 6 }}>
-        {mode === "login" ? (
-          <>Novo por aqui? <span style={{ color: "var(--role-primary-dark)", fontWeight: 700, cursor: "pointer" }} onClick={() => setMode("registro")}>Criar conta</span></>
-        ) : (
-          <>Já tem conta? <span style={{ color: "var(--role-primary-dark)", fontWeight: 700, cursor: "pointer" }} onClick={() => setMode("login")}>Entrar</span></>
+        {mode === "login" && (
+          <>Novo por aqui? <span style={{ color: "var(--role-primary-dark)", fontWeight: 700, cursor: "pointer" }} onClick={() => irPara("registro")}>Criar conta</span></>
+        )}
+        {mode === "registro" && (
+          <>Já tem conta? <span style={{ color: "var(--role-primary-dark)", fontWeight: 700, cursor: "pointer" }} onClick={() => irPara("login")}>Entrar</span></>
+        )}
+        {mode === "recuperar" && (
+          <>Lembrou a senha? <span style={{ color: "var(--role-primary-dark)", fontWeight: 700, cursor: "pointer" }} onClick={() => irPara("login")}>Voltar ao login</span></>
         )}
       </div>
     </div>

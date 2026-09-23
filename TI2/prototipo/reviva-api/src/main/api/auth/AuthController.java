@@ -1,6 +1,7 @@
 package com.reviva.api.controller;
 
 import com.reviva.api.dto.LoginRequest;
+import com.reviva.api.dto.RecuperarSenhaRequest;
 import com.reviva.api.dto.RegistroRequest;
 import com.reviva.api.dto.TokenResponse;
 import com.reviva.api.model.Usuario;
@@ -13,6 +14,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Map;
 
 /** Cobre a tela de Cadastro / Login. */
 @RestController
@@ -88,6 +93,32 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais inválidas");
         }
         return TokenResponse.of(jwtService.gerarToken(usuario.getId(), usuario.getEmail()));
+    }
+
+    /**
+     * Esqueceu a senha sem SMTP: confere e-mail + CPF/CNPJ e grava a nova senha.
+     * Mensagem genérica evita revelar se o e-mail existe.
+     */
+    @PostMapping("/recuperar-senha")
+    public Map<String, String> recuperarSenha(@RequestBody @Valid RecuperarSenhaRequest req) {
+        String email = normalizarEmail(req.email());
+        String documento = somenteDigitos(req.cpf());
+        Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
+        if (usuario == null || usuario.getCpf() == null || !usuario.getCpf().equals(documento)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "E-mail ou CPF/CNPJ não conferem.");
+        }
+        if (!req.novaSenha().matches(".*[A-Za-z].*") || !req.novaSenha().matches(".*\\d.*")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use letras e números na nova senha.");
+        }
+        if (passwordEncoder.matches(req.novaSenha(), usuario.getSenhaHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A nova senha precisa ser diferente da atual.");
+        }
+        Instant agora = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        usuario.setSenhaHash(passwordEncoder.encode(req.novaSenha()));
+        usuario.setSenhaAlteradaEm(agora);
+        usuario.setSessoesRevogadasEm(agora);
+        usuarioRepository.save(usuario);
+        return Map.of("mensagem", "Senha redefinida. Entre com a nova senha.");
     }
 
     private static String somenteDigitos(String valor) {
