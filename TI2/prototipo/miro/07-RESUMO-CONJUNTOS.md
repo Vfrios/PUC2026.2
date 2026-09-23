@@ -322,18 +322,18 @@ Total: **6 conjuntos e 12 telas funcionais**.
 
 ### Conjunto 1 - Publicacao e gestao
 
-- Cadastro: validacao por campo (API e tela), rascunho automatico no navegador, ate 5 fotos por galeria ou camera com reordenacao e escolha de capa, modo de entrega (retirada, entrega ou a combinar) e regras de retirada, bloqueio de anuncio duplicado (409), edicao e duplicacao de item.
+- Cadastro: validacao por campo (API e tela), rascunho automatico no navegador, ate 5 fotos pela galeria (toque no quadro) com reordenacao e escolha de capa, modo de entrega (retirada no local ou a combinar) e regras de retirada, bloqueio de anuncio duplicado (409), edicao e duplicacao de item.
 - Gerenciar: abas Ativos / Em negociacao / Doados / Arquivados com contadores, numero de interessados por item, resposta e recusa de solicitacao na propria tela, acoes em lote (`POST /api/itens/lote`), restaurar, marcar como doado e remover com confirmacao.
 
 ### Conjunto 2 - Descoberta e detalhes
 
-- Busca: filtros combinados (termo, categoria, cidade/UF, tipo, condicao, raio em km pela localizacao), ordenacao por relevancia/proximidade/data, "so disponiveis" (`disponiveis=false` inclui reservados), limpar filtros, paginacao e sugestoes quando nao ha resultado.
+- Busca: filtros combinados (termo, categoria, cidade/UF, tipo, condicao), resultados por relevancia quando ha termo e por data nos demais casos, apenas itens disponiveis, paginacao e sugestoes quando nao ha resultado.
 - Detalhes: carrossel de fotos, status (disponivel, reservado, doado, removido), regras de retirada, impacto ambiental, reputacao e selo do anunciante, compartilhar (`?item=<id>` abre direto o item), tela de item inexistente (404) e atividade/interessados.
 
 ### Conjunto 3 - Solicitacao e chat
 
 - Solicitacao: etapas enviada/aceita/agendada/concluida/recusada/cancelada, `GET /api/solicitacoes/{id}` com checagem de permissao, cancelar e recusar com liberacao do item, notificacao de mudanca de status e bloqueio de solicitar item proprio ou indisponivel.
-- Chat: estado de conexao com reconexao automatica, conversa encerrada bloqueia envio, responder mensagem com citacao, alerta do navegador para mensagens novas, cancelar troca/encerrar conversa. Leitura, presenca e imagens ja existiam.
+- Chat: estado de conexao com reconexao automatica, conversa encerrada bloqueia envio, responder mensagem com citacao (arrastar para a direita no celular ou clique duplo no PC, como no WhatsApp), alerta do navegador para mensagens novas, cancelar troca (quando ha agendamento ativo). Leitura, presenca e imagens ja existiam.
 
 ### Conjunto 4 - Perfil e reputacao
 

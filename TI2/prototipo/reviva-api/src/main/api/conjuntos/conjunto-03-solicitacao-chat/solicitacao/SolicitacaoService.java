@@ -1,5 +1,6 @@
 package com.reviva.api.service;
 
+import com.reviva.api.config.CarregadorEmLote;
 import com.reviva.api.dto.SolicitacaoResponse;
 import com.reviva.api.model.Agendamento;
 import com.reviva.api.model.Item;
@@ -11,7 +12,9 @@ import com.reviva.api.repository.AgendamentoRepository;
 import com.reviva.api.repository.ItemRepository;
 import com.reviva.api.repository.MensagemRepository;
 import com.reviva.api.repository.SolicitacaoRepository;
+import com.mongodb.DBRef;
 import lombok.RequiredArgsConstructor;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
@@ -21,11 +24,17 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +47,7 @@ public class SolicitacaoService {
     private final MongoTemplate mongoTemplate;
     private final AgendamentoRepository agendamentoRepository;
     private final AgendamentoService agendamentoService;
+    private final CarregadorEmLote carregadorEmLote;
 
     @Transactional
     public Solicitacao solicitar(Item item, Usuario receptor, String mensagem) {
@@ -193,47 +203,42 @@ public class SolicitacaoService {
      * 4) findByItem(entidade) como último fallback + backfill de doadorId
      */
     public List<Solicitacao> listarConversas(Usuario usuario) {
-        Map<String, Solicitacao> porId = new LinkedHashMap<>();
         String usuarioId = usuario.getId();
+        List<Object> meusIds = idsParaQuery(usuarioId);
+        List<String> meusItens = idsDosItensDoDoador(usuarioId);
+        List<Object> itemIds = new ArrayList<>();
+        meusItens.forEach(id -> itemIds.addAll(idsParaQuery(id)));
 
-        for (Solicitacao s : solicitacaoRepository.findByDoadorId(usuarioId)) {
-            adicionarSeValida(porId, s);
+        // Uma consulta só: doador denormalizado, receptor ou qualquer item do usuário.
+        List<Criteria> criterios = new ArrayList<>(List.of(
+                Criteria.where("doadorId").is(usuarioId),
+                Criteria.where("receptor.$id").in(meusIds),
+                Criteria.where("receptor.id").in(meusIds)));
+        if (!itemIds.isEmpty()) {
+            criterios.add(Criteria.where("item.$id").in(itemIds));
+            criterios.add(Criteria.where("item.id").in(itemIds));
         }
+        Query q = new Query(new Criteria().orOperator(criterios));
 
-        for (Solicitacao s : solicitacaoRepository.findByReceptor_Id(usuarioId)) {
-            adicionarSeValida(porId, s);
-        }
-
-        // Itens do doador (entidade JWT + id)
-        List<Item> meusItens = itemRepository.findByDoador(usuario);
-        if (meusItens.isEmpty()) {
-            meusItens = itemRepository.findByDoador_Id(usuarioId);
-        }
-        if (meusItens.isEmpty()) {
-            meusItens = buscarItensDoDoadorViaTemplate(usuarioId);
-        }
-
-        if (!meusItens.isEmpty()) {
-            List<String> itemIds = meusItens.stream()
-                    .map(Item::getId)
-                    .filter(id -> id != null && !id.isBlank())
-                    .distinct()
-                    .toList();
-
-            for (Solicitacao s : buscarSolicitacoesPorItemIds(itemIds)) {
+        Map<String, Solicitacao> porId = new LinkedHashMap<>();
+        for (Solicitacao s : carregadorEmLote.buscar(q.getQueryObject(), Solicitacao.class)) {
+            if (s.getItem() != null && meusItens.contains(s.getItem().getId())) {
                 backfillDoadorId(s, usuarioId);
-                adicionarSeValida(porId, s);
             }
-
-            for (Item item : meusItens) {
-                for (Solicitacao s : solicitacaoRepository.findByItem(item)) {
-                    backfillDoadorId(s, usuarioId);
-                    adicionarSeValida(porId, s);
-                }
-            }
+            adicionarSeValida(porId, s);
         }
-
         return new ArrayList<>(porId.values());
+    }
+
+    /** Só os ids (sem carregar o doador de cada item). */
+    private List<String> idsDosItensDoDoador(String doadorId) {
+        List<Object> ids = idsParaQuery(doadorId);
+        Query q = new Query(new Criteria().orOperator(
+                Criteria.where("doador.$id").in(ids),
+                Criteria.where("doador.id").in(ids)
+        ));
+        q.fields().include("_id");
+        return mongoTemplate.find(q, Item.class).stream().map(Item::getId).filter(Objects::nonNull).toList();
     }
 
     public List<SolicitacaoResponse> listarConversasComPreview(Usuario usuario) {
@@ -253,35 +258,14 @@ public class SolicitacaoService {
     }
 
     public List<Solicitacao> listarEnviadas(Usuario receptor) {
-        return solicitacaoRepository.findByReceptor_Id(receptor.getId()).stream()
+        Document filtro = new Document("receptor.$id", new Document("$in", idsParaQuery(receptor.getId())));
+        return carregadorEmLote.buscar(filtro, Solicitacao.class).stream()
                 .filter(this::ehValidaBasica)
                 .toList();
     }
 
     public List<SolicitacaoResponse> listarEnviadasComPreview(Usuario receptor) {
         return comPreview(listarEnviadas(receptor));
-    }
-
-    private List<Item> buscarItensDoDoadorViaTemplate(String doadorId) {
-        List<Object> ids = idsParaQuery(doadorId);
-        Query q = new Query(new Criteria().orOperator(
-                Criteria.where("doador.$id").in(ids),
-                Criteria.where("doador.id").in(ids)
-        ));
-        return mongoTemplate.find(q, Item.class);
-    }
-
-    private List<Solicitacao> buscarSolicitacoesPorItemIds(List<String> itemIds) {
-        if (itemIds.isEmpty()) return List.of();
-        List<Object> ids = new ArrayList<>();
-        for (String id : itemIds) {
-            ids.addAll(idsParaQuery(id));
-        }
-        Query q = new Query(new Criteria().orOperator(
-                Criteria.where("item.$id").in(ids),
-                Criteria.where("item.id").in(ids)
-        ));
-        return mongoTemplate.find(q, Solicitacao.class);
     }
 
     private List<Object> idsParaQuery(String id) {
@@ -310,17 +294,89 @@ public class SolicitacaoService {
         if (ehValidaBasica(s)) porId.put(s.getId(), s);
     }
 
+    /** Resumo das mensagens de uma conversa: a última e quem já escreveu nela. */
+    private record ResumoConversa(String texto, Instant criadaEm, Set<String> remetentes) {}
+
+    /**
+     * Monta o Inbox com número fixo de consultas (uma agregação para as mensagens e uma
+     * para os agendamentos), em vez de três consultas por conversa.
+     */
     private List<SolicitacaoResponse> comPreview(List<Solicitacao> solicitacoes) {
-        record Par(Solicitacao s, Mensagem ultima) {}
+        if (solicitacoes.isEmpty()) return List.of();
+        List<Object> refIds = new ArrayList<>();
+        solicitacoes.forEach(s -> refIds.addAll(idsParaQuery(s.getId())));
+        Map<String, ResumoConversa> resumos = resumirConversas(refIds);
+        Map<String, Agendamento> agendamentos = agendamentosPorSolicitacao(refIds);
+
+        record Par(Solicitacao s, ResumoConversa resumo) {
+            Instant ordem() { return resumo != null && resumo.criadaEm() != null ? resumo.criadaEm() : s.getCriadaEm(); }
+        }
         return solicitacoes.stream()
-                .map(s -> new Par(s, mensagemRepository.findFirstBySolicitacaoOrderByCriadaEmDesc(s)))
-                .sorted(Comparator
-                        .comparing((Par p) -> p.ultima() != null ? p.ultima().getCriadaEm() : p.s().getCriadaEm(),
-                                Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(p -> SolicitacaoResponse.from(p.s(), p.ultima(),
-                        agendamentoRepository.findBySolicitacaoId(p.s().getId()).orElse(null),
-                        doadorRespondeu(p.s())))
+                .map(s -> new Par(s, resumos.get(s.getId())))
+                .sorted(Comparator.comparing(Par::ordem, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(p -> {
+                    ResumoConversa r = p.resumo();
+                    Mensagem ultima = r == null ? null : Mensagem.builder().texto(r.texto()).criadaEm(r.criadaEm()).build();
+                    String doadorId = doadorIdDe(p.s());
+                    boolean respondeu = r != null && doadorId != null && r.remetentes().contains(doadorId);
+                    return SolicitacaoResponse.from(p.s(), ultima, agendamentos.get(p.s().getId()), respondeu);
+                })
                 .toList();
+    }
+
+    private Map<String, ResumoConversa> resumirConversas(List<Object> solicitacaoRefIds) {
+        List<Document> pipeline = List.of(
+                new Document("$match", new Document("solicitacao.$id", new Document("$in", solicitacaoRefIds))),
+                new Document("$sort", new Document("criadaEm", -1)),
+                new Document("$group", new Document("_id", "$solicitacao")
+                        .append("texto", new Document("$first", "$texto"))
+                        .append("criadaEm", new Document("$first", "$criadaEm"))
+                        .append("remetentes", new Document("$addToSet", "$remetente"))));
+        Map<String, ResumoConversa> resumos = new HashMap<>();
+        for (Document d : mongoTemplate.getCollection(mongoTemplate.getCollectionName(Mensagem.class)).aggregate(pipeline)) {
+            String sid = idDaReferencia(d.get("_id"));
+            if (sid == null) continue;
+            Set<String> remetentes = new HashSet<>();
+            Object lista = d.get("remetentes");
+            if (lista instanceof List<?> refs) refs.forEach(ref -> { String id = idDaReferencia(ref); if (id != null) remetentes.add(id); });
+            Instant criadaEm = d.get("criadaEm") instanceof Date data ? data.toInstant() : null;
+            ResumoConversa novo = new ResumoConversa(d.getString("texto"), criadaEm, remetentes);
+            // Mesma conversa pode aparecer com id String e ObjectId: junta as duas.
+            resumos.merge(sid, novo, (a, b) -> {
+                Set<String> todos = new HashSet<>(a.remetentes());
+                todos.addAll(b.remetentes());
+                ResumoConversa maisRecente = a.criadaEm() != null && (b.criadaEm() == null || a.criadaEm().isAfter(b.criadaEm())) ? a : b;
+                return new ResumoConversa(maisRecente.texto(), maisRecente.criadaEm(), todos);
+            });
+        }
+        return resumos;
+    }
+
+    private Map<String, Agendamento> agendamentosPorSolicitacao(List<Object> solicitacaoRefIds) {
+        Map<String, Agendamento> porSolicitacao = new HashMap<>();
+        var docs = mongoTemplate.getCollection(mongoTemplate.getCollectionName(Agendamento.class))
+                .find(new Document("solicitacao.$id", new Document("$in", solicitacaoRefIds)))
+                .sort(new Document("_id", -1));
+        for (Document d : docs) {
+            String sid = idDaReferencia(d.remove("solicitacao"));
+            // A solicitação já está carregada; sem o campo, o conversor não busca de novo.
+            if (sid != null) porSolicitacao.putIfAbsent(sid, mongoTemplate.getConverter().read(Agendamento.class, d));
+        }
+        return porSolicitacao;
+    }
+
+    private static String idDaReferencia(Object ref) {
+        if (ref instanceof DBRef dbRef) return String.valueOf(dbRef.getId());
+        if (ref instanceof Document doc && doc.get("$id") != null) return String.valueOf(doc.get("$id"));
+        return null;
+    }
+
+    private String doadorIdDe(Solicitacao s) {
+        String doadorId = s.getDoadorId();
+        if ((doadorId == null || doadorId.isBlank()) && s.getItem() != null && s.getItem().getDoador() != null) {
+            doadorId = s.getItem().getDoador().getId();
+        }
+        return doadorId;
     }
 
     public SolicitacaoResponse detalhe(Solicitacao s) {

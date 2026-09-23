@@ -379,7 +379,7 @@ export default function RevivaApp() {
       "--font-display": "'Fraunces', ui-serif, Georgia, serif", "--font-ui": "'Inter', ui-sans-serif, system-ui, sans-serif",
       width: "100vw", minHeight: "var(--app-height, 100dvh)", background: "radial-gradient(circle at 20% 10%, #F3F1E6, #E9ECE3 60%)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      padding: "40px 20px", fontFamily: "var(--font-ui)", overflow: "hidden",
+      padding: "var(--shell-pad-y) 20px", fontFamily: "var(--font-ui)", overflow: "hidden",
     }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -389,7 +389,7 @@ export default function RevivaApp() {
 
         .reviva-phone-outer {
           width: min(390px, calc(100vw - 20px));
-          height: min(812px, calc(var(--app-height, 100dvh) - 24px));
+          height: min(812px, calc(var(--app-height, 100dvh) - 2 * var(--shell-pad-y)));
           max-width: 100%;
           border-radius: 46px; background: #0E120F; padding: 12px;
           box-shadow: 0 30px 60px -12px rgba(20,30,20,.35), 0 0 0 1px rgba(0,0,0,.05);
@@ -403,6 +403,8 @@ export default function RevivaApp() {
         /* Em telas de celular a moldura decorativa vira a própria tela do app,
            ocupando 100% da viewport, sem padding/borda e sem precisar rolar
            pra enxergar o app inteiro. */
+        :root { --shell-pad-y: clamp(10px, 3vh, 32px); }
+
         @media (max-width: 480px) {
           .reviva-shell {
             position: fixed;

@@ -1,6 +1,10 @@
 package com.reviva.api.controller;
 
+import com.reviva.api.config.CarregadorEmLote;
 import com.reviva.api.dto.ItemResponse;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+import java.util.ArrayList;
 import com.reviva.api.model.Favorito;
 import com.reviva.api.model.Item;
 import com.reviva.api.model.Usuario;
@@ -28,6 +32,7 @@ public class FavoritoController {
 
     private final FavoritoRepository favoritoRepository;
     private final ItemRepository itemRepository;
+    private final CarregadorEmLote carregadorEmLote;
 
     /** item é null quando o anúncio foi apagado; o app mostra como indisponível. */
     public record FavoritoResponse(String itemId, Instant salvoEm, boolean disponivel, ItemResponse item) {}
@@ -37,8 +42,13 @@ public class FavoritoController {
     @GetMapping
     public List<FavoritoResponse> listar(@AuthenticationPrincipal Usuario usuario) {
         List<Favorito> favoritos = favoritoRepository.findByUsuarioIdOrderBySalvoEmDesc(usuario.getId());
-        Map<String, Item> itens = itemRepository.findAllById(favoritos.stream().map(Favorito::getItemId).toList())
-                .stream().collect(Collectors.toMap(Item::getId, Function.identity()));
+        List<Object> ids = new ArrayList<>();
+        for (Favorito f : favoritos) {
+            ids.add(f.getItemId());
+            if (ObjectId.isValid(f.getItemId())) ids.add(new ObjectId(f.getItemId()));
+        }
+        Map<String, Item> itens = carregadorEmLote.buscar(new Document("_id", new Document("$in", ids)), Item.class)
+                .stream().collect(Collectors.toMap(Item::getId, Function.identity(), (a, b) -> a));
         return favoritos.stream().map(f -> {
             Item item = itens.get(f.getItemId());
             boolean disponivel = item != null && item.getStatus() == Item.StatusItem.ATIVO

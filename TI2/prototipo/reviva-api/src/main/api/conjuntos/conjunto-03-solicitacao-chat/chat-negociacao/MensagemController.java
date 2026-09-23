@@ -1,5 +1,9 @@
 package com.reviva.api.controller;
 
+import com.reviva.api.config.CarregadorEmLote;
+import com.reviva.api.config.DbRefCache;
+import org.bson.Document;
+import org.bson.types.ObjectId;
 import com.reviva.api.dto.MensagemRequest;
 import com.reviva.api.dto.MensagemResponse;
 import com.reviva.api.dto.SolicitacaoResponse;
@@ -13,6 +17,10 @@ import com.reviva.api.service.NotificacaoService;
 import com.reviva.api.service.PresencaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -39,12 +47,13 @@ public class MensagemController {
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificacaoService notificacaoService;
     private final PresencaService presencaService;
+    private final MongoTemplate mongoTemplate;
+    private final CarregadorEmLote carregadorEmLote;
 
     @GetMapping
     public List<MensagemResponse> listar(@PathVariable String solicitacaoId, @AuthenticationPrincipal Usuario usuario) {
         Solicitacao solicitacao = buscarEValidarAcesso(solicitacaoId, usuario);
-        List<Mensagem> mensagens = mensagemRepository.findBySolicitacaoOrderByCriadaEmAsc(solicitacao)
-                .stream().filter(mensagem -> mensagem.getRemetente() != null).toList();
+        List<Mensagem> mensagens = mensagensDa(solicitacao);
         // Abrir o chat = mensagem entregue + lida (checks azuis no WhatsApp).
         marcarRecebidas(solicitacaoId, mensagens, usuario, true);
         // Notificações CHAT dessa conversa saem da tela de Notificações.
@@ -60,10 +69,16 @@ public class MensagemController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void marcarLidas(@PathVariable String solicitacaoId, @AuthenticationPrincipal Usuario usuario) {
         Solicitacao solicitacao = buscarEValidarAcesso(solicitacaoId, usuario);
-        List<Mensagem> mensagens = mensagemRepository.findBySolicitacaoOrderByCriadaEmAsc(solicitacao)
-                .stream().filter(mensagem -> mensagem.getRemetente() != null).toList();
-        marcarRecebidas(solicitacaoId, mensagens, usuario, true);
+        marcarRecebidas(solicitacaoId, mensagensDa(solicitacao), usuario, true);
         notificacaoService.marcarChatComoLido(usuario, solicitacao);
+    }
+
+    private List<Mensagem> mensagensDa(Solicitacao solicitacao) {
+        List<Object> ids = new ArrayList<>(List.of(solicitacao.getId()));
+        if (ObjectId.isValid(solicitacao.getId())) ids.add(new ObjectId(solicitacao.getId()));
+        Document filtro = new Document("solicitacao.$id", new Document("$in", ids));
+        return carregadorEmLote.buscar(filtro, new Document("criadaEm", 1), 0, Mensagem.class)
+                .stream().filter(mensagem -> mensagem.getRemetente() != null).toList();
     }
 
     @PostMapping
@@ -148,7 +163,12 @@ public class MensagemController {
             if (mudou) atualizadas.add(mensagem);
         }
         if (atualizadas.isEmpty()) return;
-        mensagemRepository.saveAll(atualizadas);
+        // Uma única escrita em lote: saveAll faria uma ida ao banco por mensagem.
+        Update update = new Update().set("entregue", true);
+        if (comoLida) update.set("lida", true);
+        mongoTemplate.updateMulti(Query.query(Criteria.where("_id").in(atualizadas.stream().map(Mensagem::getId).toList())),
+                update, Mensagem.class);
+        DbRefCache.limpar();
         for (Mensagem mensagem : atualizadas) {
             messagingTemplate.convertAndSend("/topic/solicitacoes/" + solicitacaoId, MensagemResponse.from(mensagem));
         }

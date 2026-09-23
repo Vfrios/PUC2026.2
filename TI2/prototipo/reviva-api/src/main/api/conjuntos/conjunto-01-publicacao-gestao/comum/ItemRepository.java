@@ -40,12 +40,17 @@ public interface ItemRepository extends MongoRepository<Item, String> {
      */
     default List<Item> buscar(Item.Categoria categoria, Item.TipoPublicacao tipo, String termo,
                               String cidade, String uf, String doadorId, boolean somenteDisponiveis) {
-        String texto = termo == null ? null : termo.trim().toLowerCase();
-        String cidadeNormalizada = cidade == null ? null : cidade.trim().toLowerCase();
-        String ufNormalizada = uf == null ? null : uf.trim().toUpperCase();
         List<Item> base = somenteDisponiveis
                 ? findByStatus(Item.StatusItem.ATIVO)
                 : findByStatusIn(List.of(Item.StatusItem.ATIVO, Item.StatusItem.EM_NEGOCIACAO));
+        return filtrar(base, categoria, tipo, termo, cidade, uf, doadorId);
+    }
+
+    static List<Item> filtrar(List<Item> base, Item.Categoria categoria, Item.TipoPublicacao tipo, String termo,
+                              String cidade, String uf, String doadorId) {
+        String texto = termo == null ? null : termo.trim().toLowerCase();
+        String cidadeNormalizada = cidade == null ? null : cidade.trim().toLowerCase();
+        String ufNormalizada = uf == null ? null : uf.trim().toUpperCase();
         return base.stream()
                 .filter(item -> doadorId == null || item.getDoador() == null || !doadorId.equals(item.getDoador().getId()))
                 .filter(item -> categoria == null || item.getCategoria() == categoria)

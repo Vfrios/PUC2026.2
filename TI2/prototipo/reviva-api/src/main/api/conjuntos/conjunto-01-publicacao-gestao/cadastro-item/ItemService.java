@@ -1,5 +1,6 @@
 package com.reviva.api.service;
 
+import com.reviva.api.config.CarregadorEmLote;
 import com.reviva.api.dto.ItemRequest;
 import com.reviva.api.model.Item;
 import com.reviva.api.model.Solicitacao;
@@ -7,6 +8,7 @@ import com.reviva.api.model.Usuario;
 import com.reviva.api.repository.ItemRepository;
 import com.reviva.api.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -33,6 +35,7 @@ public class ItemService {
     private final UsuarioRepository usuarioRepository;
     private final PontuacaoService pontuacaoService;
     private final MongoTemplate mongoTemplate;
+    private final CarregadorEmLote carregadorEmLote;
 
     /** Prazo padrão de validade do anúncio — igual ao usado na publicação inicial (ver model/Item.java). */
     private static final long DIAS_VALIDADE_ANUNCIO = 60;
@@ -49,7 +52,14 @@ public class ItemService {
     public List<Item> buscar(Item.Categoria categoria, Item.TipoPublicacao tipo, String termo, String cidade, String uf,
                              boolean somenteDisponiveis, Usuario usuario) {
         Instant agora = Instant.now();
-        return itemRepository.buscar(categoria, tipo, termo, cidade, uf, usuario == null ? null : usuario.getId(), somenteDisponiveis)
+        List<String> status = somenteDisponiveis
+                ? List.of(Item.StatusItem.ATIVO.name())
+                : List.of(Item.StatusItem.ATIVO.name(), Item.StatusItem.EM_NEGOCIACAO.name());
+        Document filtro = new Document("status", new Document("$in", status));
+        if (categoria != null) filtro.append("categoria", categoria.name());
+        if (tipo != null) filtro.append("tipoPublicacao", tipo.name());
+        List<Item> base = carregadorEmLote.buscar(filtro, Item.class);
+        return ItemRepository.filtrar(base, categoria, tipo, termo, cidade, uf, usuario == null ? null : usuario.getId())
                 .stream()
                 .filter(item -> item.getExpiraEm() == null || item.getExpiraEm().isAfter(agora))
                 .toList();

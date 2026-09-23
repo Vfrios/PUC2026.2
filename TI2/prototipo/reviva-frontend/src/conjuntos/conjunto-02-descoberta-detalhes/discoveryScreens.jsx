@@ -186,8 +186,6 @@ function Busca({ go, favorites, toggleFav, usuario, onlineIds }) {
     setResultado({});
     setVersaoLista(v => v + 1);
   };
-  const temFiltros = !!(q || uf || cidade || categoria || origem);
-  
   const detectarLocalizacao = () => {
     if (!("geolocation" in navigator)) {
       setLocalizacaoErro("Seu navegador não oferece localização automática.");
@@ -282,10 +280,7 @@ function Busca({ go, favorites, toggleFav, usuario, onlineIds }) {
         <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
           {Object.entries(CATS).map(([k, v]) => <Chip key={k} active={categoria === k} onClick={() => escolherCategoria(k)}>{v.label}</Chip>)}
         </div>
-        <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
-          <Button full onClick={() => buscar()}>Buscar</Button>
-          {temFiltros && <Button variant="ghost" icon={X} onClick={limparTudo}>Limpar</Button>}
-        </div>
+        <div style={{ marginTop: 16 }}><Button full onClick={() => buscar()}>Buscar</Button></div>
       </div>
       <ListaItens key={versaoLista} go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={resultado} embedded onLimparFiltros={limparTudo} />
     </div>

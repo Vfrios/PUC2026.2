@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { api } from "../../api.js";
-import { Search, MapPin, Heart, MessageCircle, QrCode, ChevronLeft, ChevronRight, Camera, Send, Leaf, Gift, Share2, Loader2, Trash2, Pencil, CheckCircle2, Archive, RotateCcw, X, ImagePlus, Copy, Save, Users, Clock, Truck, AlertTriangle, Eye, CheckSquare } from "lucide-react";
+import { Search, MapPin, Heart, MessageCircle, QrCode, ChevronLeft, ChevronRight, Send, Leaf, Gift, Share2, Loader2, Trash2, Pencil, CheckCircle2, Archive, RotateCcw, X, ImagePlus, Copy, Save, Users, Clock, Truck, AlertTriangle, Eye, CheckSquare } from "lucide-react";
 import { INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCep, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ItemCard, Loading, ErrorBox, TopBar, fieldLabel, fieldBox, fieldInput, EmptyState, StatusBadge, statusDoItem, MODOS_ENTREGA, ETAPA_LABEL, EtapasSolicitacao, compartilhar, linkDoItem, FieldError, Checkbox } from "../../shared/shared.jsx";
 
 const MAX_FOTOS = 5;
@@ -35,7 +35,7 @@ function CadastroItem({ go, notify, params, usuario }) {
   const [titulo, setTitulo] = useState(params?.duplicar ? `${params.duplicar.titulo} (cópia)` : (inicial.titulo || ""));
   const [descricao, setDescricao] = useState(inicial.descricao || "");
   const [pesoKg, setPesoKg] = useState(inicial.pesoKg ?? "");
-  const [modoEntrega, setModoEntrega] = useState(inicial.modoEntrega || "RETIRADA");
+  const [modoEntrega, setModoEntrega] = useState(MODOS_ENTREGA[inicial.modoEntrega] ? inicial.modoEntrega : "RETIRADA");
   const [regrasRetirada, setRegrasRetirada] = useState(inicial.regrasRetirada || "");
   const [fotos, setFotos] = useState(inicial.fotosUrls || []);
   const [fotoEnviando, setFotoEnviando] = useState(false);
@@ -44,8 +44,6 @@ function CadastroItem({ go, notify, params, usuario }) {
   const [erros, setErros] = useState({});
   const [rascunhoRestaurado, setRascunhoRestaurado] = useState(!!rascunhoInicial);
   const galeriaRef = useRef(null);
-  const cameraRef = useRef(null);
-
   const [cep, setCep] = useState(inicial.cep || usuario?.cep || "");
   const [numero, setNumero] = useState(inicial.numero || usuario?.numero || "");
   const [complemento, setComplemento] = useState(inicial.complemento || usuario?.complemento || "");
@@ -236,17 +234,13 @@ function CadastroItem({ go, notify, params, usuario }) {
               </div>
             ))}
             {fotos.length < MAX_FOTOS && (
-              <div style={{ width: 86, height: 86, borderRadius: 14, background: "var(--role-soft)", border: "1.5px dashed var(--role-primary)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--role-primary-dark)" }}>
-                {fotoEnviando ? <Loader2 size={20} style={{ animation: "spin .8s linear infinite" }} /> : <span style={{ fontSize: 11, fontWeight: 700 }}>{fotos.length}/{MAX_FOTOS}</span>}
+              <div onClick={() => abrirSeletor(galeriaRef)} role="button" aria-label="Adicionar foto" style={{ width: 86, height: 86, borderRadius: 14, background: "var(--role-soft)", border: "1.5px dashed var(--role-primary)", flexShrink: 0, display: "flex", flexDirection: "column", gap: 4, alignItems: "center", justifyContent: "center", color: "var(--role-primary-dark)", cursor: fotoEnviando ? "default" : "pointer" }}>
+                {fotoEnviando ? <Loader2 size={20} style={{ animation: "spin .8s linear infinite" }} /> : <><ImagePlus size={20} /><span style={{ fontSize: 10.5, fontWeight: 700 }}>{fotos.length}/{MAX_FOTOS}</span></>}
               </div>
             )}
           </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <Button small variant="soft" icon={ImagePlus} disabled={fotoEnviando || fotos.length >= MAX_FOTOS} onClick={() => abrirSeletor(galeriaRef)} style={{ flex: 1 }}>Galeria / arquivo</Button>
-            <Button small variant="soft" icon={Camera} disabled={fotoEnviando || fotos.length >= MAX_FOTOS} onClick={() => abrirSeletor(cameraRef)} style={{ flex: 1 }}>Câmera</Button>
-          </div>
           <input ref={galeriaRef} type="file" accept="image/*" multiple onChange={adicionarFotos} style={{ display: "none" }} />
-          <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={adicionarFotos} style={{ display: "none" }} />
+          <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 6 }}>Toque no quadro para escolher fotos da galeria.</div>
           {fotos.length === 0 && <div style={{ fontSize: 11, color: "#9C6B14", marginTop: 6 }}>Anúncios com foto recebem muito mais interessados.</div>}
         </Secao>
 
@@ -567,12 +561,6 @@ function GerenciarItens({ go, notify }) {
 
 /* ---- LISTA DE ITENS (usada na Busca e nas categorias) ---- */
 const POR_PAGINA = 8;
-const ORDENACOES = [
-  { key: "relevancia", label: "Relevância" },
-  { key: "proximidade", label: "Mais perto" },
-  { key: "recentes", label: "Mais recentes" },
-];
-const RAIOS = [null, 2, 5, 10, 25];
 
 function pontuarRelevancia(item, termo) {
   if (!termo) return 0;
@@ -586,9 +574,6 @@ function pontuarRelevancia(item, termo) {
 
 function ListaItens({ go, favorites, toggleFav, usuario, onlineIds, params, embedded = false, onLimparFiltros }) {
   const [tipoFiltro, setTipoFiltro] = useState(null);
-  const [somenteDisponiveis, setSomenteDisponiveis] = useState(true);
-  const [ordenacao, setOrdenacao] = useState(params?.termo ? "relevancia" : "recentes");
-  const [raio, setRaio] = useState(null);
   const [condicao, setCondicao] = useState(null);
   const [pagina, setPagina] = useState(1);
   const categoria = params?.categoria || null;
@@ -598,8 +583,8 @@ function ListaItens({ go, favorites, toggleFav, usuario, onlineIds, params, embe
   const origem = params?.origem || (usuario?.latitude != null ? { latitude: usuario.latitude, longitude: usuario.longitude } : null);
 
   const { loading, error, data: itens, reload } = useApiData(
-    () => api.listarItens({ categoria, tipo: tipoFiltro, termo, uf, cidade, disponiveis: somenteDisponiveis }),
-    [categoria, tipoFiltro, termo, uf, cidade, somenteDisponiveis]
+    () => api.listarItens({ categoria, tipo: tipoFiltro, termo, uf, cidade, disponiveis: true }),
+    [categoria, tipoFiltro, termo, uf, cidade]
   );
   const semResultados = !loading && !error && (itens || []).length === 0;
   const { data: sugestoes } = useApiData(() => api.listarItens({}), [semResultados], { skip: !semResultados });
@@ -609,32 +594,23 @@ function ListaItens({ go, favorites, toggleFav, usuario, onlineIds, params, embe
     return () => clearInterval(intervalo);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { setPagina(1); }, [categoria, tipoFiltro, termo, uf, cidade, somenteDisponiveis, ordenacao, raio, condicao]);
-  useEffect(() => { if (termo) setOrdenacao("relevancia"); }, [termo]);
+  useEffect(() => { setPagina(1); }, [categoria, tipoFiltro, termo, uf, cidade, condicao]);
 
   const filtrados = useMemo(() => {
-    let lista = (itens || []).map(it => ({ ...it, _dist: origem ? distanciaKm(origem, it) : null }));
+    let lista = [...(itens || [])];
     if (condicao) lista = lista.filter(it => it.estadoConservacao === condicao);
-    if (raio && origem) lista = lista.filter(it => it._dist != null && it._dist <= raio);
     const porData = (a, b) => new Date(b.publicadoEm) - new Date(a.publicadoEm);
-    if (ordenacao === "proximidade" && origem) {
-      lista.sort((a, b) => (a._dist ?? Infinity) - (b._dist ?? Infinity) || porData(a, b));
-    } else if (ordenacao === "relevancia" && termo) {
-      lista.sort((a, b) => pontuarRelevancia(b, termo) - pontuarRelevancia(a, termo) || porData(a, b));
-    } else {
-      lista.sort(porData);
-    }
+    if (termo) lista.sort((a, b) => pontuarRelevancia(b, termo) - pontuarRelevancia(a, termo) || porData(a, b));
+    else lista.sort(porData);
     return lista;
-  }, [itens, condicao, raio, ordenacao, termo, origem?.latitude, origem?.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [itens, condicao, termo]);
 
   const visiveis = filtrados.slice(0, pagina * POR_PAGINA);
-  const filtrosLocaisAtivos = !!(tipoFiltro || condicao || raio || !somenteDisponiveis);
   const tituloRegiao = cidade ? ` em ${cidade}` : uf ? ` em ${uf}` : "";
   const titulo = termo ? `Resultados para "${termo}"` : categoria ? `${CATS[categoria]?.label || "Itens"}${tituloRegiao}` : `Itens perto de você${tituloRegiao}`;
 
   const limparTudo = () => {
-    setTipoFiltro(null); setCondicao(null); setRaio(null); setSomenteDisponiveis(true);
-    setOrdenacao("recentes");
+    setTipoFiltro(null); setCondicao(null);
     onLimparFiltros?.();
   };
 
@@ -643,26 +619,12 @@ function ListaItens({ go, favorites, toggleFav, usuario, onlineIds, params, embe
       {!embedded && <TopBar title={titulo} onBack={() => go(-1)} right={<MapPin size={18} color={INK} />} />}
       {embedded && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px 8px" }}><SectionTitle>{titulo}</SectionTitle>{!loading && <span style={{ fontSize: 11.5, color: INK_SOFT }}>{filtrados.length} resultado(s)</span>}</div>}
 
-      <div style={{ padding: "0 20px", display: "flex", gap: 8, overflowX: "auto", paddingBottom: 6 }}>
+      <div style={{ padding: "0 20px", display: "flex", gap: 8, overflowX: "auto", paddingBottom: 6, marginBottom: 6 }}>
         <Chip active={!tipoFiltro} onClick={() => setTipoFiltro(null)}>Todos</Chip>
         <Chip active={tipoFiltro === "DOAR"} onClick={() => setTipoFiltro("DOAR")}>Doação</Chip>
         <Chip active={tipoFiltro === "TROCAR"} onClick={() => setTipoFiltro("TROCAR")}>Troca</Chip>
         {ESTADOS.map(e => <Chip key={e.value} active={condicao === e.value} onClick={() => setCondicao(condicao === e.value ? null : e.value)}>{e.label}</Chip>)}
       </div>
-      <div style={{ padding: "0 20px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
-        <select value={ordenacao} onChange={e => setOrdenacao(e.target.value)} aria-label="Ordenar por" style={{ border: "1.5px solid #E1E4DE", borderRadius: 999, padding: "6px 10px", fontSize: 12, fontWeight: 600, color: INK_SOFT, background: "#fff", fontFamily: "var(--font-ui)" }}>
-          {ORDENACOES.map(o => <option key={o.key} value={o.key} disabled={(o.key === "proximidade" && !origem) || (o.key === "relevancia" && !termo)}>{o.label}</option>)}
-        </select>
-        <select value={raio ?? ""} onChange={e => setRaio(e.target.value ? Number(e.target.value) : null)} disabled={!origem} aria-label="Distância máxima" title={origem ? "Distância máxima" : "Ative sua localização para filtrar por distância"} style={{ border: "1.5px solid #E1E4DE", borderRadius: 999, padding: "6px 10px", fontSize: 12, fontWeight: 600, color: INK_SOFT, background: "#fff", fontFamily: "var(--font-ui)", opacity: origem ? 1 : .5 }}>
-          {RAIOS.map(r => <option key={r ?? "todos"} value={r ?? ""}>{r ? `Até ${r} km` : "Qualquer distância"}</option>)}
-        </select>
-        <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: INK_SOFT, cursor: "pointer" }}>
-          <input type="checkbox" checked={somenteDisponiveis} onChange={e => setSomenteDisponiveis(e.target.checked)} /> Só disponíveis
-        </label>
-        {(filtrosLocaisAtivos || onLimparFiltros) && <button type="button" onClick={limparTudo} style={{ border: "none", background: "none", color: "#9C4327", fontSize: 12, fontWeight: 700, cursor: "pointer", marginLeft: "auto" }}>Limpar filtros</button>}
-      </div>
-      {raio && origem && <div style={{ padding: "0 20px 6px", fontSize: 11, color: INK_SOFT }}>Itens sem localização precisa não aparecem no filtro de distância.</div>}
-
       <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
         {loading && <Loading label="Buscando itens..." />}
         {error && <ErrorBox message={error} onRetry={reload} />}

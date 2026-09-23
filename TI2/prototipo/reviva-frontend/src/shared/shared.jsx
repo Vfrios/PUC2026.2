@@ -547,7 +547,6 @@ function StatusBadge({ item, status, label }) {
 
 const MODOS_ENTREGA = {
   RETIRADA: { label: "Retirada no local", curto: "Retirada" },
-  ENTREGA:  { label: "Anunciante entrega", curto: "Entrega" },
   COMBINAR: { label: "A combinar no chat", curto: "A combinar" },
 };
 

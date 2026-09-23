@@ -168,6 +168,56 @@ function resumoMensagem(texto) {
   return base.length > 90 ? `${base.slice(0, 87)}...` : base;
 }
 
+const LIMITE_ARRASTE_RESPOSTA = 56;
+
+/** Arrastar para a direita (toque) ou clique duplo (mouse) cita a mensagem, como no WhatsApp. */
+function MensagemResponder({ ativo, onResponder, style, children }) {
+  const [deslocamento, setDeslocamento] = useState(0);
+  const gesto = useRef(null);
+
+  const iniciar = (e) => {
+    if (!ativo || e.pointerType === "mouse") return;
+    gesto.current = { x: e.clientX, y: e.clientY, horizontal: null, dx: 0 };
+  };
+  const mover = (e) => {
+    const g = gesto.current;
+    if (!g) return;
+    const dx = e.clientX - g.x;
+    const dy = e.clientY - g.y;
+    if (g.horizontal === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) g.horizontal = Math.abs(dx) > Math.abs(dy);
+    if (g.horizontal) {
+      g.dx = Math.max(0, Math.min(dx, LIMITE_ARRASTE_RESPOSTA + 20));
+      setDeslocamento(g.dx);
+    } else if (g.horizontal === false) gesto.current = null;
+  };
+  const finalizar = () => {
+    if (gesto.current?.horizontal && gesto.current.dx >= LIMITE_ARRASTE_RESPOSTA) {
+      navigator.vibrate?.(15);
+      onResponder();
+    }
+    gesto.current = null;
+    setDeslocamento(0);
+  };
+
+  return (
+    <div
+      onPointerDown={iniciar}
+      onPointerMove={mover}
+      onPointerUp={finalizar}
+      onPointerCancel={finalizar}
+      onDoubleClick={ativo ? (e) => { window.getSelection?.()?.removeAllRanges(); e.preventDefault(); onResponder(); } : undefined}
+      style={{ ...style, position: "relative", touchAction: "pan-y", userSelect: ativo ? "none" : undefined, transform: `translateX(${deslocamento}px)`, transition: deslocamento ? "none" : "transform .2s ease" }}
+    >
+      {deslocamento > 0 && (
+        <div style={{ position: "absolute", left: -28, top: "50%", transform: "translateY(-50%)", opacity: Math.min(deslocamento / LIMITE_ARRASTE_RESPOSTA, 1), color: "var(--role-primary)", display: "flex" }}>
+          <CornerUpLeft size={18} />
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
 function TradeEventMessage({ event }) {
   const labels = {
     AGENDAMENTO_CONFIRMADO: [CheckCircle2, "Agendamento confirmado", "O receptor confirmou a data, hora e local da retirada."],
@@ -279,6 +329,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
   const scrollRef = useRef(null);
   const fotoRef = useRef(null);
   const cameraRef = useRef(null);
+  const inputRef = useRef(null);
 
   const carregar = useCallback(async ({ silent = false } = {}) => {
     if (!solicitacaoId) return;
@@ -418,14 +469,11 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
   };
 
   const cancelarTroca = async () => {
-    const aviso = agendamento && agendamento.status !== "CANCELADO"
-      ? "Deseja cancelar esta troca? O agendamento será cancelado e a outra pessoa será avisada."
-      : "Deseja encerrar esta conversa? Nenhum dos dois poderá enviar novas mensagens.";
-    if (!window.confirm(aviso)) return;
+    if (!window.confirm("Deseja cancelar esta troca? O agendamento será cancelado e a outra pessoa será avisada.")) return;
     setCancelando(true);
     try {
       await api.cancelarSolicitacao(solicitacaoId);
-      notify(agendamento ? "Troca cancelada." : "Conversa encerrada.");
+      notify("Troca cancelada.");
       recarregarAgendamento();
       recarregarSolicitacao({ silent: true });
     } catch (e) {
@@ -491,7 +539,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
           {conexao === "reconectando" ? "Conexão perdida. Reconectando..." : "Tempo real indisponível. Tentando conectar; mensagens seguem chegando a cada 10s."}
         </div>
       )}
-      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "6px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "6px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
         {loading && <Loading label="Carregando conversa..." />}
         {erro && <ErrorBox message={erro} onRetry={carregar} />}
         {!loading && !erro && messages.length === 0 && <EmptyState Icon={MessageCircle} text="Ainda não há mensagens. Diga oi e combine os detalhes da retirada." />}
@@ -502,7 +550,12 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
           const evento = parseTradeEvent(m.texto);
           const resposta = parseReplyMessage(m.texto);
           return (
-            <div key={m.id} style={{ alignSelf: evento || localizacao ? "center" : (mine ? "flex-end" : "flex-start"), maxWidth: evento || localizacao || imagem ? "88%" : "78%", display: "flex", alignItems: "center", gap: 4, flexDirection: mine ? "row-reverse" : "row" }}>
+            <MensagemResponder
+              key={m.id}
+              ativo={!evento && !encerrada}
+              onResponder={() => { setRespondendo(m); inputRef.current?.focus(); }}
+              style={{ alignSelf: evento || localizacao ? "center" : (mine ? "flex-end" : "flex-start"), maxWidth: evento || localizacao || imagem ? "88%" : "78%" }}
+            >
               <div style={{
                 background: evento || localizacao ? "transparent" : (mine ? "var(--role-primary)" : "#F1EFE6"),
                 color: mine ? "#fff" : INK, padding: "9px 13px", borderRadius: 16,
@@ -518,12 +571,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
                 {evento ? <TradeEventMessage event={evento} /> : localizacao ? <LocationMessage {...localizacao} /> : imagem ? <ImageMessage image={imagem} /> : <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{resposta ? resposta.texto : m.texto}</div>}
                 {!evento && <MessageMeta mensagem={m} mine={mine} onDark={mine && !localizacao} />}
               </div>
-              {!evento && !encerrada && (
-                <button type="button" onClick={() => setRespondendo(m)} aria-label="Responder mensagem" title="Responder" style={{ border: "none", background: "none", color: INK_SOFT, cursor: "pointer", padding: 2, flexShrink: 0, display: "flex" }}>
-                  <CornerUpLeft size={14} />
-                </button>
-              )}
-            </div>
+            </MensagemResponder>
           );
         })}
       </div>
@@ -552,6 +600,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
         <button onClick={() => setMenuAberto(aberto => !aberto)} style={{ ...iconBtn, background: menuAberto ? "var(--role-primary)" : "var(--role-soft)" }} aria-label="Mais opções" title="Mais opções"><Plus size={18} color={menuAberto ? "#fff" : "var(--role-primary-dark)"} /></button>
         <button onClick={() => go(papelAtual === "doador" ? "agendamentoDoador" : "agendamentoReceptor", params)} style={{ ...iconBtn, background: "var(--role-soft)" }}><Calendar size={17} color="var(--role-primary-dark)" /></button>
         <input
+          ref={inputRef}
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => e.key === "Enter" && send()}
@@ -571,8 +620,8 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
         <Button full variant="soft" icon={agendamento?.status !== "CONFIRMADO" ? Calendar : (papelAtual === "receptor" && !agendamento.confirmacaoAgendamentoReceptorEm ? CheckCircle2 : QrCode)} disabled={agendamento?.status === "CANCELADO" || agendamento?.status === "CONCLUIDO" || (papelAtual === "doador" && !agendamento?.confirmacaoAgendamentoReceptorEm)} onClick={papelAtual === "receptor" && agendamento?.status === "CONFIRMADO" && !agendamento.confirmacaoAgendamentoReceptorEm ? confirmarAgendamento : abrirConfirmacao}>
           {agendamento?.status === "CONFIRMADO" ? (papelAtual === "receptor" && !agendamento.confirmacaoAgendamentoReceptorEm ? "Confirmar agendamento" : papelAtual === "doador" ? "Gerar código" : "Digitar código") : agendamento?.status === "CANCELADO" ? "Troca cancelada" : agendamento?.status === "CONCLUIDO" ? "Troca concluída" : "Combinar retirada"}
         </Button>
-        {agendamento?.status !== "CONCLUIDO" && solicitacao?.etapa !== "CONCLUIDA" && (
-          <Button full variant="ghost" icon={X} loading={cancelando} onClick={cancelarTroca}>{agendamento && agendamento.status !== "CANCELADO" ? "Cancelar troca" : "Encerrar conversa"}</Button>
+        {agendamento && !["CANCELADO", "CONCLUIDO"].includes(agendamento.status) && solicitacao?.etapa !== "CONCLUIDA" && (
+          <Button full variant="ghost" icon={X} loading={cancelando} onClick={cancelarTroca}>Cancelar troca</Button>
         )}
       </div>}
     </div>

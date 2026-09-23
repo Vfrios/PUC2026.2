@@ -1,10 +1,18 @@
 package com.reviva.api.service;
 
+import com.reviva.api.config.CarregadorEmLote;
+import com.reviva.api.config.DbRefCache;
+import org.bson.Document;
+import org.bson.types.ObjectId;
 import com.reviva.api.model.Notificacao;
 import com.reviva.api.model.Solicitacao;
 import com.reviva.api.model.Usuario;
 import com.reviva.api.repository.NotificacaoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +25,8 @@ import java.time.temporal.ChronoUnit;
 public class NotificacaoService {
 
     private final NotificacaoRepository notificacaoRepository;
+    private final MongoTemplate mongoTemplate;
+    private final CarregadorEmLote carregadorEmLote;
 
     public Notificacao notificar(Usuario usuario, String titulo, Notificacao.Tipo tipo) {
         if (!permite(usuario, tipo)) return null;
@@ -64,12 +74,18 @@ public class NotificacaoService {
 
     /** Tela de Notificações: só o que ainda não foi lido. Contatos ficam no Inbox/Mensagens. */
     public List<Notificacao> listarNaoLidas(Usuario usuario) {
-        return notificacaoRepository.findByUsuario_IdAndLidaFalseOrderByCriadaEmDesc(usuario.getId());
+        return carregadorEmLote.buscar(filtroDoUsuario(usuario).append("lida", false), new Document("criadaEm", -1), 0, Notificacao.class);
+    }
+
+    private static Document filtroDoUsuario(Usuario usuario) {
+        List<Object> ids = new java.util.ArrayList<>(List.of(usuario.getId()));
+        if (ObjectId.isValid(usuario.getId())) ids.add(new ObjectId(usuario.getId()));
+        return new Document("usuario.$id", new Document("$in", ids));
     }
 
     /** Aba "Todas": lidas e não lidas mais recentes. */
     public List<Notificacao> listarRecentes(Usuario usuario) {
-        return notificacaoRepository.findTop50ByUsuario_IdOrderByCriadaEmDesc(usuario.getId());
+        return carregadorEmLote.buscar(filtroDoUsuario(usuario), new Document("criadaEm", -1), 50, Notificacao.class);
     }
 
     public Instant limiteExpiracao(int dias) {
@@ -84,11 +100,15 @@ public class NotificacaoService {
     /** Marca todas as não lidas como lidas (somem da tela de Notificações). */
     @Transactional
     public long marcarTodasComoLidas(Usuario usuario) {
-        List<Notificacao> pendentes = listarNaoLidas(usuario);
-        for (Notificacao n : pendentes) {
-            n.setLida(true);
-        }
-        if (!pendentes.isEmpty()) notificacaoRepository.saveAll(pendentes);
+        return marcarLidasEmLote(listarNaoLidas(usuario));
+    }
+
+    /** Uma única escrita no banco em vez de um save por notificação. */
+    private long marcarLidasEmLote(List<Notificacao> pendentes) {
+        if (pendentes.isEmpty()) return 0;
+        mongoTemplate.updateMulti(Query.query(Criteria.where("_id").in(pendentes.stream().map(Notificacao::getId).toList())),
+                new Update().set("lida", true), Notificacao.class);
+        DbRefCache.limpar();
         return pendentes.size();
     }
 
@@ -106,11 +126,7 @@ public class NotificacaoService {
     @Transactional
     public void marcarChatComoLido(Usuario usuario, Solicitacao solicitacao) {
         if (usuario == null || solicitacao == null) return;
-        List<Notificacao> pendentes = notificacaoRepository
-                .findByUsuario_IdAndSolicitacao_IdAndLidaFalse(usuario.getId(), solicitacao.getId());
-        for (Notificacao n : pendentes) {
-            n.setLida(true);
-        }
-        if (!pendentes.isEmpty()) notificacaoRepository.saveAll(pendentes);
+        marcarLidasEmLote(notificacaoRepository
+                .findByUsuario_IdAndSolicitacao_IdAndLidaFalse(usuario.getId(), solicitacao.getId()));
     }
 }
