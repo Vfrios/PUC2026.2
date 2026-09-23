@@ -99,5 +99,19 @@ public class Usuario {
     @Builder.Default
     private Instant criadoEm = Instant.now();
 
+    /** Tokens emitidos antes deste instante deixam de valer ("sair de todos os dispositivos"). */
+    @JsonIgnore
+    private Instant sessoesRevogadasEm;
+
+    private Instant senhaAlteradaEm;
+
+    @Builder.Default
+    private PreferenciasNotificacao preferencias = new PreferenciasNotificacao();
+
+    public PreferenciasNotificacao getPreferencias() {
+        if (preferencias == null) preferencias = new PreferenciasNotificacao();
+        return preferencias;
+    }
+
     public enum SeloTier { BRONZE, PRATA, OURO, ESMERALDA }
 }

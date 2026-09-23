@@ -1,16 +1,20 @@
 package com.reviva.api.service;
 
 import com.reviva.api.dto.SolicitacaoResponse;
+import com.reviva.api.model.Agendamento;
 import com.reviva.api.model.Item;
 import com.reviva.api.model.Mensagem;
 import com.reviva.api.model.Notificacao;
 import com.reviva.api.model.Solicitacao;
 import com.reviva.api.model.Usuario;
+import com.reviva.api.repository.AgendamentoRepository;
 import com.reviva.api.repository.ItemRepository;
 import com.reviva.api.repository.MensagemRepository;
 import com.reviva.api.repository.SolicitacaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -32,16 +36,30 @@ public class SolicitacaoService {
     private final NotificacaoService notificacaoService;
     private final ItemRepository itemRepository;
     private final MongoTemplate mongoTemplate;
+    private final AgendamentoRepository agendamentoRepository;
+    private final AgendamentoService agendamentoService;
 
     @Transactional
     public Solicitacao solicitar(Item item, Usuario receptor, String mensagem) {
         String doadorId = item.getDoador() != null ? item.getDoador().getId() : null;
+        if (receptor.getId().equals(doadorId)) {
+            throw new IllegalArgumentException("Você não pode solicitar o seu próprio item.");
+        }
 
         Solicitacao existente = solicitacaoRepository.findByItem(item).stream()
                 .filter(s -> s.getReceptor() != null && receptor.getId().equals(s.getReceptor().getId()))
-                .filter(s -> s.getStatus() != Solicitacao.StatusSolicitacao.CANCELADA)
+                .filter(s -> s.getStatus() != Solicitacao.StatusSolicitacao.CANCELADA
+                        && s.getStatus() != Solicitacao.StatusSolicitacao.RECUSADA)
                 .findFirst()
                 .orElse(null);
+
+        boolean expirado = item.getExpiraEm() != null && item.getExpiraEm().isBefore(java.time.Instant.now());
+        if (existente == null && (item.getStatus() != Item.StatusItem.ATIVO || expirado)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    item.getStatus() == Item.StatusItem.EM_NEGOCIACAO
+                            ? "Este item está reservado para outra pessoa no momento."
+                            : "Este item não está mais disponível.");
+        }
 
         if (existente != null) {
             if (existente.getDoadorId() == null && doadorId != null) {
@@ -90,6 +108,81 @@ public class SolicitacaoService {
                 Notificacao.Tipo.CHAT, solicitacao);
 
         return solicitacao;
+    }
+
+    /** Só o doador do item ou o receptor da solicitação podem consultá-la. */
+    public Solicitacao buscarComAcesso(String id, Usuario usuario) {
+        Solicitacao solicitacao = solicitacaoRepository.findValidById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Solicitação não encontrada"));
+        if (!ehDoador(solicitacao, usuario) && !ehReceptor(solicitacao, usuario)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não participa desta solicitação");
+        }
+        return solicitacao;
+    }
+
+    /** Cancelamento por qualquer uma das partes enquanto a troca não foi concluída. */
+    @Transactional
+    public Solicitacao cancelar(String id, Usuario usuario) {
+        Solicitacao solicitacao = buscarComAcesso(id, usuario);
+        if (solicitacao.getStatus() == Solicitacao.StatusSolicitacao.CANCELADA
+                || solicitacao.getStatus() == Solicitacao.StatusSolicitacao.RECUSADA) {
+            return solicitacao;
+        }
+        var agendamento = agendamentoRepository.findBySolicitacaoId(solicitacao.getId()).orElse(null);
+        if (agendamento != null && agendamento.getStatus() != Agendamento.StatusAgendamento.CANCELADO) {
+            agendamentoService.cancelar(agendamento, usuario);
+            return solicitacaoRepository.findById(solicitacao.getId()).orElse(solicitacao);
+        }
+        solicitacao.setStatus(Solicitacao.StatusSolicitacao.CANCELADA);
+        solicitacao = solicitacaoRepository.save(solicitacao);
+        agendamentoService.publicarEventoPublico(solicitacao, usuario, "{\"tipo\":\"SOLICITACAO_CANCELADA\"}");
+        notificarOutraParte(solicitacao, usuario, " cancelou a conversa sobre \"");
+        return solicitacao;
+    }
+
+    /** O anunciante recusa o pedido; o item continua disponível para outras pessoas. */
+    @Transactional
+    public Solicitacao recusar(String id, Usuario doador) {
+        Solicitacao solicitacao = buscarComAcesso(id, doador);
+        if (!ehDoador(solicitacao, doador)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Somente o anunciante pode recusar a solicitação.");
+        }
+        var agendamento = agendamentoRepository.findBySolicitacaoId(solicitacao.getId()).orElse(null);
+        if (agendamento != null && agendamento.getStatus() == Agendamento.StatusAgendamento.CONCLUIDO) {
+            throw new IllegalArgumentException("Uma troca concluída não pode ser recusada.");
+        }
+        if (agendamento != null && agendamento.getStatus() != Agendamento.StatusAgendamento.CANCELADO) {
+            agendamento.setStatus(Agendamento.StatusAgendamento.CANCELADO);
+            agendamentoRepository.save(agendamento);
+        }
+        solicitacao.setStatus(Solicitacao.StatusSolicitacao.RECUSADA);
+        solicitacao = solicitacaoRepository.save(solicitacao);
+        agendamentoService.liberarItem(solicitacao.getItem());
+        agendamentoService.publicarEventoPublico(solicitacao, doador, "{\"tipo\":\"SOLICITACAO_RECUSADA\"}");
+        notificarOutraParte(solicitacao, doador, " recusou a solicitação do item \"");
+        return solicitacao;
+    }
+
+    private void notificarOutraParte(Solicitacao solicitacao, Usuario autor, String acao) {
+        Usuario outro = ehReceptor(solicitacao, autor)
+                ? (solicitacao.getItem() != null ? solicitacao.getItem().getDoador() : null)
+                : solicitacao.getReceptor();
+        if (outro == null) return;
+        String titulo = solicitacao.getItem() != null && solicitacao.getItem().getTitulo() != null
+                ? solicitacao.getItem().getTitulo() : "item";
+        notificacaoService.notificar(outro, autor.getNome() + acao + titulo + "\"", Notificacao.Tipo.LEMBRETE, solicitacao);
+    }
+
+    private boolean ehDoador(Solicitacao s, Usuario u) {
+        String doadorId = s.getDoadorId();
+        if ((doadorId == null || doadorId.isBlank()) && s.getItem() != null && s.getItem().getDoador() != null) {
+            doadorId = s.getItem().getDoador().getId();
+        }
+        return u != null && u.getId().equals(doadorId);
+    }
+
+    private boolean ehReceptor(Solicitacao s, Usuario u) {
+        return u != null && s.getReceptor() != null && u.getId().equals(s.getReceptor().getId());
     }
 
     /**
@@ -224,8 +317,28 @@ public class SolicitacaoService {
                 .sorted(Comparator
                         .comparing((Par p) -> p.ultima() != null ? p.ultima().getCriadaEm() : p.s().getCriadaEm(),
                                 Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(p -> SolicitacaoResponse.from(p.s(), p.ultima()))
+                .map(p -> SolicitacaoResponse.from(p.s(), p.ultima(),
+                        agendamentoRepository.findBySolicitacaoId(p.s().getId()).orElse(null),
+                        doadorRespondeu(p.s())))
                 .toList();
+    }
+
+    public SolicitacaoResponse detalhe(Solicitacao s) {
+        return SolicitacaoResponse.from(s, mensagemRepository.findFirstBySolicitacaoOrderByCriadaEmDesc(s),
+                agendamentoRepository.findBySolicitacaoId(s.getId()).orElse(null), doadorRespondeu(s));
+    }
+
+    private boolean doadorRespondeu(Solicitacao s) {
+        String doadorId = s.getDoadorId();
+        if ((doadorId == null || doadorId.isBlank()) && s.getItem() != null && s.getItem().getDoador() != null) {
+            doadorId = s.getItem().getDoador().getId();
+        }
+        if (doadorId == null) return false;
+        Query q = new Query(new Criteria().andOperator(
+                Criteria.where("solicitacao.$id").in(idsParaQuery(s.getId())),
+                Criteria.where("remetente.$id").in(idsParaQuery(doadorId))
+        ));
+        return mongoTemplate.exists(q, Mensagem.class);
     }
 
     /** Aceita conversa mesmo se item/receptor vierem incompletos no DBRef. */

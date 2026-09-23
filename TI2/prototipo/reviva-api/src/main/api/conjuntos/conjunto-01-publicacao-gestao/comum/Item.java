@@ -62,11 +62,19 @@ public class Item {
     @Builder.Default
     private List<String> fotosUrls = new ArrayList<>();
 
+    @Builder.Default
+    private ModoEntrega modoEntrega = ModoEntrega.RETIRADA;
+
+    /** Orientações livres do anunciante: horários, portaria, quem entrega etc. */
+    private String regrasRetirada;
+
     /** Gerado quando um agendamento é confirmado; escaneado na retirada. */
     private String qrCodeToken;
 
     @Builder.Default
     private Instant publicadoEm = Instant.now();
+
+    private Instant atualizadoEm;
 
     /** Prazo de validade do anúncio (padrão de 60 dias, igual à OLX). Ao editar
      *  o item o prazo é renovado — ver ItemService.editar. Anúncios vencidos
@@ -78,4 +86,5 @@ public class Item {
     public enum EstadoConservacao { NOVO, SEMINOVO, USADO }
     public enum TipoPublicacao { DOAR, TROCAR }
     public enum StatusItem { ATIVO, EM_NEGOCIACAO, DOADO, REMOVIDO }
+    public enum ModoEntrega { RETIRADA, ENTREGA, COMBINAR }
 }

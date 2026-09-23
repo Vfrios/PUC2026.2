@@ -8,4 +8,8 @@ import java.util.List;
 
 public interface AvaliacaoRepository extends MongoRepository<Avaliacao, String> {
     List<Avaliacao> findByAvaliado(Usuario avaliado);
+
+    List<Avaliacao> findByAvaliado_IdOrderByCriadaEmDesc(String avaliadoId);
+
+    List<Avaliacao> findByAgendamento_Id(String agendamentoId);
 }

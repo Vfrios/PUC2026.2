@@ -34,6 +34,7 @@ public class DevDataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (usuarioRepository.count() > 0) {
+            completarComunidadesAntigas();
             return; // já tem dados (ex: reinício sem perder o MongoDB), não duplica
         }
 
@@ -125,14 +126,30 @@ public class DevDataSeeder implements CommandLineRunner {
 
         comunidadeRepository.save(Comunidade.builder()
                 .nome("BH Solidária").descricao("Rede de doação e troca entre vizinhos de Belo Horizonte.")
-                .bairroReferencia("Região Centro-Sul").build());
+                .bairroReferencia("Região Centro-Sul").categoria("GERAL").cidade("Belo Horizonte").uf("MG").build());
 
         comunidadeRepository.save(Comunidade.builder()
                 .nome("ONG Reviver").descricao("Mutirões de doação de agasalhos e móveis para famílias em vulnerabilidade.")
-                .bairroReferencia("Funcionários").build());
+                .bairroReferencia("Funcionários").categoria("ROUPAS").cidade("Belo Horizonte").uf("MG").build());
+
+        comunidadeRepository.save(Comunidade.builder()
+                .nome("Leitores da Pampulha").descricao("Troca de livros didáticos, romances e HQs entre vizinhos.")
+                .bairroReferencia("Pampulha").categoria("LIVROS").cidade("Belo Horizonte").uf("MG").build());
 
         System.out.println("[DevDataSeeder] Banco populado com dados de demonstração.");
         System.out.println("[DevDataSeeder] Login doador:   doador@reviva.com   / reviva123");
         System.out.println("[DevDataSeeder] Login receptor: receptor@reviva.com / reviva123");
+    }
+
+    /** Bancos criados antes dos filtros de comunidade não têm categoria/cidade: preenche com padrões. */
+    private void completarComunidadesAntigas() {
+        for (Comunidade c : comunidadeRepository.findAll()) {
+            if (c.getCategoria() != null) continue;
+            c.setCategoria("ONG Reviver".equals(c.getNome()) ? "ROUPAS" : "GERAL");
+            if (c.getCidade() == null) c.setCidade("Belo Horizonte");
+            if (c.getUf() == null) c.setUf("MG");
+            c.normalizarMembros();
+            comunidadeRepository.save(c);
+        }
     }
 }

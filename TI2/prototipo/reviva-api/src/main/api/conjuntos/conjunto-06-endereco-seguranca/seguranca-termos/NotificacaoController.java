@@ -24,10 +24,11 @@ public class NotificacaoController {
     private int expiracaoDias;
 
     @GetMapping
-    public List<NotificacaoResponse> listar(@AuthenticationPrincipal Usuario usuario) {
-        // Só não lidas: histórico de conversas fica na tela de Mensagens (Inbox).
+    public List<NotificacaoResponse> listar(@AuthenticationPrincipal Usuario usuario,
+                                            @RequestParam(defaultValue = "false") boolean todas) {
+        // Padrão: só não lidas. Com ?todas=true inclui as já lidas (aba "Todas").
         return NotificacaoResponse.from(
-                notificacaoService.listarNaoLidas(usuario),
+                todas ? notificacaoService.listarRecentes(usuario) : notificacaoService.listarNaoLidas(usuario),
                 notificacaoService.limiteExpiracao(expiracaoDias));
     }
 

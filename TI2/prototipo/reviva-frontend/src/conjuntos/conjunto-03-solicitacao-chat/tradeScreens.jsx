@@ -4,8 +4,8 @@ import "leaflet/dist/leaflet.css";
 import { api, getToken, setToken, ApiError, wsUrl } from "../../api.js";
 import { Client as StompClient } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, RotateCcw, X } from "lucide-react";
-import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox } from "../../shared/shared.jsx";
+import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, RotateCcw, X, CornerUpLeft } from "lucide-react";
+import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox, ETAPA_LABEL } from "../../shared/shared.jsx";
 
 const dataAtual = new Date();
 const doisDigitos = valor => String(valor).padStart(2, "0");
@@ -137,20 +137,43 @@ function ImageMessage({ image }) {
   );
 }
 
+const EVENTOS_TROCA = ["AGENDAMENTO_CRIADO", "AGENDAMENTO_CONFIRMADO", "RETIRADA_CONFIRMADA", "SOLICITACAO_CANCELADA", "SOLICITACAO_RECUSADA"];
+
 function parseTradeEvent(texto) {
   if (!texto) return null;
   try {
     const payload = JSON.parse(texto);
-    return ["AGENDAMENTO_CRIADO", "AGENDAMENTO_CONFIRMADO", "RETIRADA_CONFIRMADA"].includes(payload?.tipo) ? payload : null;
+    return EVENTOS_TROCA.includes(payload?.tipo) ? payload : null;
   } catch {
     return null;
   }
+}
+
+function parseReplyMessage(texto) {
+  if (!texto) return null;
+  try {
+    const payload = JSON.parse(texto);
+    return payload?.tipo === "RESPOSTA" && typeof payload.texto === "string" ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Texto curto de uma mensagem para citações (respostas). */
+function resumoMensagem(texto) {
+  if (parseLocationMessage(texto)) return "Localização compartilhada";
+  if (parseImageMessage(texto)) return "Foto";
+  const resposta = parseReplyMessage(texto);
+  const base = resposta ? resposta.texto : texto || "";
+  return base.length > 90 ? `${base.slice(0, 87)}...` : base;
 }
 
 function TradeEventMessage({ event }) {
   const labels = {
     AGENDAMENTO_CONFIRMADO: [CheckCircle2, "Agendamento confirmado", "O receptor confirmou a data, hora e local da retirada."],
     RETIRADA_CONFIRMADA: [CheckCircle2, "Retirada confirmada", "A doação foi concluída com sucesso."],
+    SOLICITACAO_CANCELADA: [X, "Conversa cancelada", "Esta troca foi cancelada e não aceita novas mensagens."],
+    SOLICITACAO_RECUSADA: [X, "Solicitação recusada", "O anunciante recusou este pedido. O item segue disponível para outras pessoas."],
   };
   if (event.tipo === "AGENDAMENTO_CRIADO") {
     return <div style={{ background: "var(--role-soft)", color: "var(--role-primary-dark)", padding: "11px 13px", borderRadius: 14, fontSize: 12.5 }}><strong>Agendamento criado</strong><div style={{ marginTop: 4 }}>{fmtDateTime(event.dataHora)}{event.local ? ` · ${event.local}` : ""}</div></div>;
@@ -226,7 +249,7 @@ function Inbox({ go, usuario }) {
                 <div style={{ fontSize: 13, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{outroNome}</div>
                 {horario && <div style={{ fontSize: 10, color: INK_SOFT, flexShrink: 0 }}>{timeAgo(horario)}</div>}
               </div>
-              <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.item?.titulo || "Item"}</div>
+              <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.item?.titulo || "Item"}{s.etapa && <span style={{ color: ["CANCELADA", "RECUSADA"].includes(s.etapa) ? "#9C4327" : "var(--role-primary-dark)", fontWeight: 700 }}> · {ETAPA_LABEL[s.etapa]}</span>}</div>
               <div style={{ fontSize: 11.5, color: INK_SOFT, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</div>
             </div>
             {naoLidas > 0 && <span style={{ minWidth: 20, height: 20, borderRadius: 10, padding: "0 6px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--role-primary)", color: "#fff", fontSize: 10, fontWeight: 700 }}>{naoLidas}</span>}
@@ -242,6 +265,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
   const { data: item } = useApiData(() => api.itemPorId(itemId), [itemId], { skip: !itemId });
   const papelAtual = item?.doador?.id === usuario?.id ? "doador" : "receptor";
   const { data: agendamento, reload: recarregarAgendamento } = useApiData(() => api.agendamentoDaSolicitacao(solicitacaoId), [solicitacaoId], { skip: !solicitacaoId });
+  const { data: solicitacao, reload: recarregarSolicitacao } = useApiData(() => api.solicitacaoPorId(solicitacaoId), [solicitacaoId], { skip: !solicitacaoId });
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
@@ -249,6 +273,9 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
   const [sending, setSending] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
   const [cancelando, setCancelando] = useState(false);
+  const [conexao, setConexao] = useState("conectando");
+  const [respondendo, setRespondendo] = useState(null);
+  const encerrada = ["CANCELADA", "RECUSADA"].includes(solicitacao?.etapa);
   const scrollRef = useRef(null);
   const fotoRef = useRef(null);
   const cameraRef = useRef(null);
@@ -284,24 +311,33 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
   useEffect(() => {
     if (!solicitacaoId) return;
 
+    let jaConectou = false;
     const client = new StompClient({
       webSocketFactory: () => new SockJS(`${wsUrl()}?token=${encodeURIComponent(getToken() || "")}`),
       reconnectDelay: 4000,
+      onWebSocketClose: () => setConexao(jaConectou ? "reconectando" : "falhou"),
+      onStompError: () => setConexao("reconectando"),
       onConnect: () => {
+        // Ao reconectar, busca o que chegou enquanto o WebSocket estava fora.
+        if (jaConectou) carregar({ silent: true });
+        jaConectou = true;
+        setConexao("online");
         client.subscribe(`/topic/solicitacoes/${solicitacaoId}`, (frame) => {
           const nova = JSON.parse(frame.body);
           setMessages((atual) => upsertMensagem(atual, nova));
-          // Se a mensagem veio do outro lado, confirmamos leitura (checks azuis).
-          if (usuario?.id && nova.remetente?.id && nova.remetente.id !== usuario.id) {
+          const deOutraPessoa = usuario?.id && nova.remetente?.id && nova.remetente.id !== usuario.id;
+          if (deOutraPessoa && document.visibilityState !== "visible" && "Notification" in window && Notification.permission === "granted") {
+            new Notification(`Nova mensagem de ${nova.remetente?.nome || otherName || "Reviva"}`, { body: resumoMensagem(nova.texto) });
+          }
+          // Se a mensagem veio do outro lado e o chat está visível, confirmamos
+          // leitura (checks azuis). Com a aba oculta, o polling marca ao voltar.
+          if (usuario?.id && nova.remetente?.id && nova.remetente.id !== usuario.id
+            && document.visibilityState === "visible") {
             api.marcarMensagensLidas(solicitacaoId).catch(() => {});
           }
-          try {
-            const evento = JSON.parse(nova.texto);
-            if (["AGENDAMENTO_CRIADO", "AGENDAMENTO_CONFIRMADO", "RETIRADA_CONFIRMADA"].includes(evento?.tipo)) {
-              recarregarAgendamento();
-            }
-          } catch {
-            // Mensagens normais não alteram o estado do agendamento.
+          if (parseTradeEvent(nova.texto)) {
+            recarregarAgendamento();
+            recarregarSolicitacao({ silent: true });
           }
         });
       },
@@ -309,23 +345,30 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
     client.activate();
 
     return () => client.deactivate();
-  }, [solicitacaoId, usuario?.id]);
+  }, [solicitacaoId, usuario?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
   const send = async () => {
-    if (!draft.trim() || !solicitacaoId) return;
+    if (!draft.trim() || !solicitacaoId || encerrada) return;
     setSending(true);
     const texto = draft;
+    const citacao = respondendo;
     setDraft("");
+    setRespondendo(null);
+    const payload = citacao
+      ? JSON.stringify({ tipo: "RESPOSTA", texto: texto.trim(), citacao: { id: citacao.id, autor: citacao.remetente?.nome || "", texto: resumoMensagem(citacao.texto) } })
+      : texto;
     try {
-        const enviada = await api.enviarMensagem(solicitacaoId, texto);
+        const enviada = await api.enviarMensagem(solicitacaoId, payload);
         setMessages(atual => upsertMensagem(atual, enviada));
     } catch (e) {
       notify(e.message || "Não foi possível enviar a mensagem.");
       setDraft(texto);
+      setRespondendo(citacao);
+      if (e.status === 409) recarregarSolicitacao({ silent: true });
     } finally {
       setSending(false);
     }
@@ -375,12 +418,16 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
   };
 
   const cancelarTroca = async () => {
-    if (!window.confirm("Deseja cancelar esta troca? O agendamento será cancelado.")) return;
+    const aviso = agendamento && agendamento.status !== "CANCELADO"
+      ? "Deseja cancelar esta troca? O agendamento será cancelado e a outra pessoa será avisada."
+      : "Deseja encerrar esta conversa? Nenhum dos dois poderá enviar novas mensagens.";
+    if (!window.confirm(aviso)) return;
     setCancelando(true);
     try {
-      await api.cancelarAgendamento(solicitacaoId);
-      notify("Troca cancelada.");
+      await api.cancelarSolicitacao(solicitacaoId);
+      notify(agendamento ? "Troca cancelada." : "Conversa encerrada.");
       recarregarAgendamento();
+      recarregarSolicitacao({ silent: true });
     } catch (e) {
       notify(e.message || "Não foi possível cancelar a troca.");
     } finally {
@@ -418,7 +465,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
     );
   };
 
-  const itemStatus = item?.status === "DOADO" ? "Doado" : "Disponível";
+  const itemStatus = { DOADO: "Doado", EM_NEGOCIACAO: "Em negociação", REMOVIDO: "Removido" }[item?.status] || "Disponível";
   const itemFoto = item?.fotosUrls?.[0];
 
   if (!solicitacaoId) {
@@ -435,40 +482,73 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
       <TopBar title={<div><div>{otherName || "Conversa"}</div><div style={{ fontSize: 10.5, fontWeight: 500, color: otherId && onlineIds.has(otherId) ? "#2D8A57" : INK_SOFT }}>{otherId && onlineIds.has(otherId) ? "online" : "offline"}</div></div>} onBack={() => go(-1)} right={<button type="button" onClick={() => go("inbox")} style={{ ...iconBtn, width: 30, height: 30 }} aria-label="Abrir inbox" title="Abrir inbox"><MessageCircle size={15} color="var(--role-primary-dark)" /></button>} />
       <div onClick={() => itemId && go("detalhesItem", { itemId })} style={{ margin: "0 16px 8px", padding: 8, display: "flex", alignItems: "center", gap: 8, border: "1px solid #EDEBE1", borderRadius: 12, background: "#fff", cursor: itemId ? "pointer" : "default", flexShrink: 0 }}>
         {itemFoto ? <img src={itemFoto} alt="" style={{ width: 38, height: 38, objectFit: "cover", borderRadius: 8 }} /> : <Avatar label={otherName} size={38} />}
-        <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 12.5, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item?.titulo || itemTitulo || "Item da conversa"}</div><div style={{ fontSize: 10.5, color: itemStatus === "Doado" ? "#9C4327" : "var(--role-primary)" }}>{itemStatus}</div></div>
+        <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 12.5, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item?.titulo || itemTitulo || "Item da conversa"}</div><div style={{ fontSize: 10.5, color: itemStatus === "Disponível" ? "var(--role-primary)" : "#9C4327" }}>{itemStatus}{solicitacao?.etapa ? ` · ${ETAPA_LABEL[solicitacao.etapa]}` : ""}</div></div>
         {itemId && <ChevronRight size={15} color={INK_SOFT} />}
       </div>
+      {conexao !== "online" && conexao !== "conectando" && (
+        <div role="status" style={{ margin: "0 16px 6px", padding: "6px 10px", borderRadius: 10, background: "#FDEFD9", color: "#9C6B14", fontSize: 11.5, display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <Loader2 size={12} style={{ animation: "spin .8s linear infinite" }} />
+          {conexao === "reconectando" ? "Conexão perdida. Reconectando..." : "Tempo real indisponível. Tentando conectar; mensagens seguem chegando a cada 10s."}
+        </div>
+      )}
       <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "6px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
         {loading && <Loading label="Carregando conversa..." />}
         {erro && <ErrorBox message={erro} onRetry={carregar} />}
-        {!loading && messages.length === 0 && <EmptyState Icon={MessageCircle} text="Ainda não há mensagens. Diga oi 👋" />}
+        {!loading && !erro && messages.length === 0 && <EmptyState Icon={MessageCircle} text="Ainda não há mensagens. Diga oi e combine os detalhes da retirada." />}
         {messages.map((m) => {
           const mine = usuario && m.remetente?.id === usuario.id;
           const localizacao = parseLocationMessage(m.texto);
           const imagem = parseImageMessage(m.texto);
           const evento = parseTradeEvent(m.texto);
+          const resposta = parseReplyMessage(m.texto);
           return (
-            <div key={m.id} style={{
-              alignSelf: evento || localizacao ? "center" : (mine ? "flex-end" : "flex-start"),
-              background: evento || localizacao ? "transparent" : (mine ? "var(--role-primary)" : "#F1EFE6"),
-              color: mine ? "#fff" : INK, padding: "9px 13px", borderRadius: 16,
-              borderBottomRightRadius: mine ? 4 : 16, borderBottomLeftRadius: mine ? 16 : 4,
-              fontSize: 13.5, maxWidth: evento || localizacao || imagem ? "88%" : "78%",
-            }}>
-              {evento ? <TradeEventMessage event={evento} /> : localizacao ? <LocationMessage {...localizacao} /> : imagem ? <ImageMessage image={imagem} /> : <div>{m.texto}</div>}
-              {!evento && <MessageMeta mensagem={m} mine={mine} onDark={mine && !localizacao} />}
+            <div key={m.id} style={{ alignSelf: evento || localizacao ? "center" : (mine ? "flex-end" : "flex-start"), maxWidth: evento || localizacao || imagem ? "88%" : "78%", display: "flex", alignItems: "center", gap: 4, flexDirection: mine ? "row-reverse" : "row" }}>
+              <div style={{
+                background: evento || localizacao ? "transparent" : (mine ? "var(--role-primary)" : "#F1EFE6"),
+                color: mine ? "#fff" : INK, padding: "9px 13px", borderRadius: 16,
+                borderBottomRightRadius: mine ? 4 : 16, borderBottomLeftRadius: mine ? 16 : 4,
+                fontSize: 13.5, minWidth: 0,
+              }}>
+                {resposta && (
+                  <div style={{ borderLeft: `3px solid ${mine ? "rgba(255,255,255,.7)" : "var(--role-primary)"}`, background: mine ? "rgba(255,255,255,.14)" : "#fff", borderRadius: 8, padding: "5px 8px", marginBottom: 6, fontSize: 11.5 }}>
+                    <div style={{ fontWeight: 700 }}>{resposta.citacao?.autor || "Mensagem"}</div>
+                    <div style={{ opacity: .85 }}>{resposta.citacao?.texto}</div>
+                  </div>
+                )}
+                {evento ? <TradeEventMessage event={evento} /> : localizacao ? <LocationMessage {...localizacao} /> : imagem ? <ImageMessage image={imagem} /> : <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{resposta ? resposta.texto : m.texto}</div>}
+                {!evento && <MessageMeta mensagem={m} mine={mine} onDark={mine && !localizacao} />}
+              </div>
+              {!evento && !encerrada && (
+                <button type="button" onClick={() => setRespondendo(m)} aria-label="Responder mensagem" title="Responder" style={{ border: "none", background: "none", color: INK_SOFT, cursor: "pointer", padding: 2, flexShrink: 0, display: "flex" }}>
+                  <CornerUpLeft size={14} />
+                </button>
+              )}
             </div>
           );
         })}
       </div>
-      {menuAberto && <div style={{ padding: "8px 12px", display: "flex", gap: 8, borderTop: "1px solid #EDEBE1", background: "#FAFAF4", flexShrink: 0 }}>
+      {encerrada && (
+        <div style={{ padding: "10px 16px", borderTop: "1px solid #EDEBE1", background: "#F1EFE6", fontSize: 12.5, color: INK_SOFT, textAlign: "center", flexShrink: 0 }}>
+          {solicitacao?.etapa === "RECUSADA" ? "O anunciante recusou esta solicitação." : "Esta conversa foi cancelada."} O histórico continua disponível para consulta.
+        </div>
+      )}
+      {respondendo && !encerrada && (
+        <div style={{ padding: "8px 12px 0", display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, borderLeft: "3px solid var(--role-primary)", background: "var(--role-soft)", borderRadius: 8, padding: "5px 8px", fontSize: 11.5 }}>
+            <div style={{ fontWeight: 700, color: "var(--role-primary-dark)" }}>Respondendo a {respondendo.remetente?.id === usuario?.id ? "você" : (respondendo.remetente?.nome || otherName)}</div>
+            <div style={{ color: INK_SOFT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{resumoMensagem(respondendo.texto)}</div>
+          </div>
+          <button type="button" onClick={() => setRespondendo(null)} aria-label="Cancelar resposta" style={{ border: "none", background: "none", cursor: "pointer", color: INK_SOFT }}><X size={16} /></button>
+        </div>
+      )}
+      {menuAberto && !encerrada && <div style={{ padding: "8px 12px", display: "flex", gap: 8, borderTop: "1px solid #EDEBE1", background: "#FAFAF4", flexShrink: 0 }}>
         <input ref={fotoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const file = e.target.files?.[0]; if (file) enviarFoto(file); e.target.value = ""; }} />
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={e => { const file = e.target.files?.[0]; if (file) enviarFoto(file); e.target.value = ""; }} />
         <button type="button" onClick={() => fotoRef.current?.click()} style={{ ...iconBtn, background: "var(--role-soft)" }} aria-label="Enviar foto" title="Enviar foto"><ImagePlus size={17} color="var(--role-primary-dark)" /></button>
         <button type="button" onClick={() => cameraRef.current?.click()} style={{ ...iconBtn, background: "var(--role-soft)" }} aria-label="Abrir câmera" title="Abrir câmera"><Camera size={17} color="var(--role-primary-dark)" /></button>
         <button type="button" onClick={compartilharLocalizacao} style={{ ...iconBtn, background: "var(--role-soft)" }} aria-label="Compartilhar localização" title="Compartilhar localização"><MapPin size={17} color="var(--role-primary-dark)" /></button>
       </div>}
-      <div style={{ padding: 12, display: "flex", gap: 8, alignItems: "center", borderTop: "1px solid #EDEBE1", flexShrink: 0 }}>
+      {!encerrada && <div style={{ padding: 12, display: "flex", gap: 8, alignItems: "center", borderTop: respondendo ? "none" : "1px solid #EDEBE1", flexShrink: 0 }}>
         <button onClick={() => setMenuAberto(aberto => !aberto)} style={{ ...iconBtn, background: menuAberto ? "var(--role-primary)" : "var(--role-soft)" }} aria-label="Mais opções" title="Mais opções"><Plus size={18} color={menuAberto ? "#fff" : "var(--role-primary-dark)"} /></button>
         <button onClick={() => go(papelAtual === "doador" ? "agendamentoDoador" : "agendamentoReceptor", params)} style={{ ...iconBtn, background: "var(--role-soft)" }}><Calendar size={17} color="var(--role-primary-dark)" /></button>
         <input
@@ -485,16 +565,16 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
           placeholder="Escreva uma mensagem..."
           style={{ ...fieldInput, flex: 1, border: "1px solid #E9E7DC", borderRadius: 20, padding: "10px 14px" }}
         />
-        <button onClick={send} disabled={sending} style={{ ...iconBtn, background: "var(--role-primary)" }}><Send size={16} color="#fff" /></button>
-      </div>
-      <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+        <button onClick={send} disabled={sending} aria-label="Enviar mensagem" style={{ ...iconBtn, background: "var(--role-primary)" }}>{sending ? <Loader2 size={16} color="#fff" style={{ animation: "spin .8s linear infinite" }} /> : <Send size={16} color="#fff" />}</button>
+      </div>}
+      {!encerrada && <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
         <Button full variant="soft" icon={agendamento?.status !== "CONFIRMADO" ? Calendar : (papelAtual === "receptor" && !agendamento.confirmacaoAgendamentoReceptorEm ? CheckCircle2 : QrCode)} disabled={agendamento?.status === "CANCELADO" || agendamento?.status === "CONCLUIDO" || (papelAtual === "doador" && !agendamento?.confirmacaoAgendamentoReceptorEm)} onClick={papelAtual === "receptor" && agendamento?.status === "CONFIRMADO" && !agendamento.confirmacaoAgendamentoReceptorEm ? confirmarAgendamento : abrirConfirmacao}>
           {agendamento?.status === "CONFIRMADO" ? (papelAtual === "receptor" && !agendamento.confirmacaoAgendamentoReceptorEm ? "Confirmar agendamento" : papelAtual === "doador" ? "Gerar código" : "Digitar código") : agendamento?.status === "CANCELADO" ? "Troca cancelada" : agendamento?.status === "CONCLUIDO" ? "Troca concluída" : "Combinar retirada"}
         </Button>
-        {agendamento && agendamento.status !== "CONCLUIDO" && agendamento.status !== "CANCELADO" && (
-          <Button full variant="ghost" icon={X} loading={cancelando} onClick={cancelarTroca}>Cancelar troca</Button>
+        {agendamento?.status !== "CONCLUIDO" && solicitacao?.etapa !== "CONCLUIDA" && (
+          <Button full variant="ghost" icon={X} loading={cancelando} onClick={cancelarTroca}>{agendamento && agendamento.status !== "CANCELADO" ? "Cancelar troca" : "Encerrar conversa"}</Button>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
@@ -506,13 +586,26 @@ function Agendamento({ go, role, notify, params, usuario }) {
   const papelAtual = item?.doador?.id === usuario?.id ? "doador" : "receptor";
   const [data, setData] = useState(dataLocalAtual);
   const [hora, setHora] = useState(horaLocalAtual);
-  const [local, setLocal] = useState("Portaria do Ed. Alameda, Funcionários");
+  const [local, setLocal] = useState("");
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+  const { data: enderecos, loading: carregandoEnderecos } = useApiData(() => api.enderecos(), [usuario?.id], { skip: !usuario?.id });
+  const formatarEndereco = (e) => [
+    [e.logradouro, e.numero].filter(Boolean).join(", "),
+    e.complemento, e.bairro, e.cidade,
+  ].filter(Boolean).join(" · ");
+
+  useEffect(() => {
+    if (local || !enderecos) return;
+    const principal = enderecos.find(e => e.principal) || enderecos[0];
+    if (principal) setLocal(formatarEndereco(principal));
+  }, [enderecos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const confirmar = async () => {
     if (!solicitacaoId) { setErro("Solicitação não identificada — volte pelo chat."); return; }
     if (!data) { setErro("Escolha uma data."); return; }
+    if (new Date(`${data}T${hora || "10:00"}:00`) < new Date(Date.now() - 60_000)) { setErro("Escolha uma data e horário no futuro."); return; }
+    if (local.trim().length < 5) { setErro("Informe o local de encontro."); return; }
     setErro("");
     setLoading(true);
     try {
@@ -536,7 +629,17 @@ function Agendamento({ go, role, notify, params, usuario }) {
         <SectionTitle>Horário</SectionTitle>
         <div style={fieldBox}><Clock size={16} color={INK_SOFT} /><input type="time" value={hora} onChange={e => setHora(e.target.value)} style={fieldInput} /></div>
         <SectionTitle>Local de encontro</SectionTitle>
-        <div style={fieldBox}><MapPin size={16} color={INK_SOFT} /><input value={local} onChange={e => setLocal(e.target.value)} style={fieldInput} /></div>
+        {(enderecos || []).length > 0 && (
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
+            {enderecos.map(e => <Chip key={e.id} active={local === formatarEndereco(e)} onClick={() => setLocal(formatarEndereco(e))}>{e.apelido || e.bairro}{e.principal ? " ★" : ""}</Chip>)}
+          </div>
+        )}
+        <div style={fieldBox}><MapPin size={16} color={INK_SOFT} /><input value={local} onChange={e => setLocal(e.target.value)} placeholder="Ex: portaria do prédio, praça, estação..." style={fieldInput} /></div>
+        {!carregandoEnderecos && (enderecos || []).length === 0 && (
+          <div style={{ fontSize: 11.5, color: INK_SOFT, marginTop: 6 }}>
+            Dica: <span onClick={() => go("enderecos")} style={{ ...linkText, fontSize: 11.5 }}>salve seus endereços</span> para preencher o local com um toque.
+          </div>
+        )}
         <div style={{ background: "var(--role-soft)", borderRadius: 14, padding: 12, marginTop: 14, fontSize: 11.5, color: "var(--role-primary-dark)", display: "flex", gap: 8 }}>
           <QrCode size={16} /> Ao confirmar, um código de retirada é gerado automaticamente para fechar a doação com 1 toque.
         </div>
@@ -661,18 +764,36 @@ function ConfirmRecebimento({ go, notify, params, refreshUsuario }) {
 }
 
 /* ---- AVALIAÇÃO (compartilhado) ---- */
+const CATEGORIAS_AVALIACAO = [
+  { key: "pontualidade", label: "Pontualidade" },
+  { key: "comunicacao", label: "Comunicação" },
+  { key: "estadoItem", label: "Item conforme anunciado" },
+];
+
+function EstrelasInput({ value, onChange, size = 30, label }) {
+  return (
+    <div role="radiogroup" aria-label={label} style={{ display: "flex", gap: 4 }}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <Star key={i} role="radio" aria-checked={i === value} aria-label={`${i} estrela(s)`} size={size} onClick={() => onChange(i)} fill={i <= value ? GOLD : "none"} color={i <= value ? GOLD : "#D6D6D0"} style={{ cursor: "pointer" }} />
+      ))}
+    </div>
+  );
+}
+
 function Avaliar({ go, notify, params }) {
   const { quem, avaliadoId, agendamentoId, next } = params || {};
   const [nota, setNota] = useState(5);
+  const [categorias, setCategorias] = useState({ pontualidade: 5, comunicacao: 5, estadoItem: 5 });
   const [comentario, setComentario] = useState("");
   const [loading, setLoading] = useState(false);
+  const { data: jaAvaliada, loading: verificando } = useApiData(() => api.jaAvaliei(agendamentoId), [agendamentoId], { skip: !agendamentoId });
 
   const enviar = async () => {
     if (!agendamentoId || !avaliadoId) { go(next || "homeDoador"); return; }
     setLoading(true);
     try {
-      await api.avaliar(agendamentoId, avaliadoId, nota, comentario);
-      notify("Avaliação enviada — obrigado!");
+      await api.avaliar(agendamentoId, avaliadoId, nota, comentario.trim(), categorias);
+      notify("Avaliação enviada — obrigado! A reputação foi atualizada.");
       go(next || "homeDoador");
     } catch (e) {
       notify(e.message || "Não foi possível enviar a avaliação.");
@@ -681,22 +802,43 @@ function Avaliar({ go, notify, params }) {
     }
   };
 
+  if (verificando) return <div><TopBar title="Avaliação" onBack={() => go(-1)} /><Loading /></div>;
+  if (jaAvaliada) {
+    return (
+      <div>
+        <TopBar title="Avaliação" onBack={() => go(-1)} />
+        <div style={{ padding: "30px 24px", textAlign: "center" }}>
+          <CheckCircle2 size={40} color="var(--role-primary)" />
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 600, color: INK, marginTop: 12 }}>Você já avaliou esta troca</div>
+          <div style={{ fontSize: 13, color: INK_SOFT, marginTop: 6 }}>Sua nota foi {jaAvaliada.nota} estrela(s). Cada troca pode ser avaliada uma única vez.</div>
+          <Button full style={{ marginTop: 20 }} onClick={() => go(next || "homeDoador")}>Continuar</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <TopBar title="Avaliação" onBack={() => go(-1)} />
-      <div style={{ height: "100%", padding: "30px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+      <div style={{ padding: "24px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
       <Avatar label={quem || "Usuário"} size={64} tone="var(--role-primary)" />
       <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 600, color: INK, marginTop: 14 }}>Como foi com {quem || "essa pessoa"}?</div>
-      <div style={{ display: "flex", gap: 6, margin: "16px 0" }}>
-        {[1,2,3,4,5].map(i => (
-          <Star key={i} size={30} onClick={() => setNota(i)} fill={i <= nota ? GOLD : "none"} color={i <= nota ? GOLD : "#D6D6D0"} style={{ cursor: "pointer" }} />
+      <div style={{ margin: "14px 0 6px" }}><EstrelasInput value={nota} onChange={setNota} label="Nota geral" /></div>
+      <div style={{ fontSize: 11.5, color: INK_SOFT }}>Nota geral</div>
+      <div style={{ width: "100%", background: "#fff", border: "1px solid #EDEBE1", borderRadius: 16, padding: 12, marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+        {CATEGORIAS_AVALIACAO.map(c => (
+          <div key={c.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: INK, textAlign: "left" }}>{c.label}</span>
+            <EstrelasInput value={categorias[c.key]} onChange={v => setCategorias(x => ({ ...x, [c.key]: v }))} size={20} label={c.label} />
+          </div>
         ))}
       </div>
-      <div style={{ ...fieldBox, width: "100%", alignItems: "flex-start" }}>
-        <textarea rows={3} value={comentario} onChange={e => setComentario(e.target.value)} placeholder="Deixe um comentário (opcional)" style={{ ...fieldInput, resize: "none" }} />
+      <div style={{ ...fieldBox, width: "100%", alignItems: "flex-start", marginTop: 12 }}>
+        <textarea rows={3} maxLength={400} value={comentario} onChange={e => setComentario(e.target.value)} placeholder="Deixe um comentário (opcional)" style={{ ...fieldInput, resize: "none" }} />
       </div>
-      <div style={{ marginTop: 20, width: "100%" }}>
+      <div style={{ marginTop: 20, width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
         <Button full loading={loading} onClick={enviar}>Enviar avaliação</Button>
+        <Button full variant="ghost" onClick={() => go(next || "homeDoador")}>Avaliar depois</Button>
       </div>
       </div>
     </div>

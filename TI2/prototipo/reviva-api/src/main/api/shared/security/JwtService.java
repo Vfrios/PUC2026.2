@@ -39,6 +39,12 @@ public class JwtService {
                 .parseSignedClaims(token).getPayload().getSubject();
     }
 
+    public Instant extrairEmitidoEm(String token) {
+        Date iat = Jwts.parser().verifyWith(key).build()
+                .parseSignedClaims(token).getPayload().getIssuedAt();
+        return iat != null ? iat.toInstant() : Instant.EPOCH;
+    }
+
     public boolean valido(String token) {
         try {
             Jwts.parser().verifyWith(key).build().parseSignedClaims(token);

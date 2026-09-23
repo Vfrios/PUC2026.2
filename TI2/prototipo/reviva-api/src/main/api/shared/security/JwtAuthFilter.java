@@ -34,7 +34,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String token = header.substring(7);
             if (jwtService.valido(token)) {
                 String usuarioId = jwtService.extrairUsuarioId(token);
-                Optional<Usuario> usuario = usuarioRepository.findById(usuarioId);
+                Optional<Usuario> usuario = usuarioRepository.findById(usuarioId)
+                        .filter(u -> u.getSessoesRevogadasEm() == null
+                                || !jwtService.extrairEmitidoEm(token).isBefore(u.getSessoesRevogadasEm()));
                 usuario.ifPresent(u -> {
                     var auth = new UsernamePasswordAuthenticationToken(u, null, List.of());
                     SecurityContextHolder.getContext().setAuthentication(auth);

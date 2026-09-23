@@ -39,5 +39,5 @@ public class Notificacao {
     @Builder.Default
     private Instant criadaEm = Instant.now();
 
-    public enum Tipo { CHAT, MATCH, WISHLIST, LEMBRETE, AVALIACAO, MODERACAO }
+    public enum Tipo { CHAT, MATCH, WISHLIST, LEMBRETE, AVALIACAO, MODERACAO, COMUNIDADE }
 }

@@ -34,7 +34,7 @@ public class WsAuthChannelInterceptor implements ChannelInterceptor {
                 throw new IllegalArgumentException("Inscrição não permitida.");
             }
 
-            if ("/topic/presence".equals(destino)) return message;
+            if ("/topic/presence".equals(destino) || "/app/presence/online".equals(destino)) return message;
             if (!destino.startsWith("/topic/solicitacoes/")) {
                 throw new IllegalArgumentException("Inscrição não permitida.");
             }

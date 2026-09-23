@@ -30,14 +30,22 @@ const SCREEN_LABELS = {
   comunidades:"Comunidades", favoritos:"Favoritos",
   perfilPublico:"Perfil do anunciante",
   notificacoes:"Notificações", moderacao:"Moderação",
+  enderecos:"Endereços salvos", seguranca:"Segurança e privacidade", termos:"Termos de uso", privacidade:"Política de privacidade",
 };
+
+function lerLinkCompartilhado() {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get("item")) return { screen: "detalhesItem", params: { itemId: p.get("item") } };
+  if (p.get("perfil")) return { screen: "perfilPublico", params: { usuarioId: p.get("perfil") } };
+  return null;
+}
 
 export default function RevivaApp() {
   const [nav, setNav] = useState({ screen: "splash", params: {} });
   const [history, setHistory] = useState([]);
-  const [favorites, setFavorites] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("reviva_favoritos") || "{}"); } catch { return {}; }
-  });
+  const [favorites, setFavorites] = useState({});
+  const linkCompartilhadoRef = useRef(lerLinkCompartilhado());
+  const notifAnteriorRef = useRef(null);
   const [toast, setToast] = useState(null);
   const [usuario, setUsuario] = useState(null);
   const [conteudoRolado, setConteudoRolado] = useState(false);
@@ -93,9 +101,26 @@ export default function RevivaApp() {
     };
   }, []);
 
+  // Favoritos ficam na API (por conta). Os que existiam só no navegador são enviados uma vez.
   useEffect(() => {
-    localStorage.setItem("reviva_favoritos", JSON.stringify(favorites));
-  }, [favorites]);
+    if (!usuario?.id) { setFavorites({}); return undefined; }
+    let alive = true;
+    (async () => {
+      let antigos = {};
+      try { antigos = JSON.parse(localStorage.getItem("reviva_favoritos") || "{}"); } catch { /* formato antigo inválido */ }
+      try {
+        const ids = Object.keys(antigos);
+        if (ids.length) {
+          await Promise.allSettled(ids.map(id => api.adicionarFavorito(id)));
+          localStorage.removeItem("reviva_favoritos");
+        }
+        const lista = await api.favoritos();
+        if (!alive) return;
+        setFavorites(Object.fromEntries((lista || []).filter(f => f.item).map(f => [f.itemId, f.item])));
+      } catch { /* sem conexão: corações começam vazios */ }
+    })();
+    return () => { alive = false; };
+  }, [usuario?.id]);
 
   const notify = (text) => { setToast(text); setTimeout(() => setToast(null), 2400); };
 
@@ -119,6 +144,7 @@ export default function RevivaApp() {
   // Badge global do sino: atualiza a cada 10s e ao trocar de tela.
   useEffect(() => {
     if (!usuario?.id || !getToken()) {
+      notifAnteriorRef.current = null;
       setNotifNaoLidas(0);
       return undefined;
     }
@@ -127,7 +153,15 @@ export default function RevivaApp() {
       api.notificacoes()
         .then(lista => {
           if (!alive) return;
-          setNotifNaoLidas((lista || []).filter(n => !n.lida).length);
+          const naoLidas = (lista || []).filter(n => !n.lida);
+          const anterior = notifAnteriorRef.current;
+          notifAnteriorRef.current = naoLidas.length;
+          setNotifNaoLidas(naoLidas.length);
+          if (anterior !== null && naoLidas.length > anterior && naoLidas[0] && screen !== "notificacoes") {
+            const nova = naoLidas[0];
+            const ehChatAberto = nova.tipo === "CHAT" && nav.params?.solicitacaoId === nova.solicitacaoId;
+            if (!ehChatAberto) notify(nova.titulo);
+          }
         })
         .catch(() => {});
     };
@@ -162,8 +196,19 @@ export default function RevivaApp() {
     }
   };
 
+  const abrirLinkCompartilhado = () => {
+    const destino = linkCompartilhadoRef.current;
+    if (!destino) return false;
+    linkCompartilhadoRef.current = null;
+    window.history.replaceState(null, "", window.location.pathname);
+    setHistory([{ screen: "homeDoador", params: {} }]);
+    setNav(destino);
+    return true;
+  };
+
   const finishSplash = () => {
     if (usuarioRef.current) {
+      if (abrirLinkCompartilhado()) return;
       go("homeDoador"); // perfil unificado: sempre a mesma home, sem escolher Doador/Receptor
     } else {
       go("auth");
@@ -199,7 +244,15 @@ export default function RevivaApp() {
           client.publish({ destination: "/app/presence/heartbeat", body: "{}" });
         };
         enviarHeartbeat();
+        const snapshot = client.subscribe("/app/presence/online", frame => {
+          setOnlineIds(new Set(JSON.parse(frame.body)));
+          snapshot.unsubscribe();
+        });
         client.__heartbeat = setInterval(enviarHeartbeat, 10000);
+      },
+      onWebSocketClose: () => {
+        if (client.__heartbeat) clearInterval(client.__heartbeat);
+        setOnlineIds(new Set());
       },
     });
     client.activate();
@@ -214,7 +267,7 @@ export default function RevivaApp() {
     setToken(res.token);
     const u = await refreshUsuario();
     setHistory([]);
-    setNav({ screen: "homeDoador", params: {} }); // perfil unificado: sempre a mesma home
+    if (!abrirLinkCompartilhado()) setNav({ screen: "homeDoador", params: {} }); // perfil unificado: sempre a mesma home
     notify(`Bem-vindo(a) de volta, ${u?.nome?.split(" ")[0] || ""}!`);
   };
 
@@ -245,10 +298,31 @@ export default function RevivaApp() {
     setNav({ screen: r.toUpperCase() === "RECEPTOR" ? "homeReceptor" : "homeDoador", params: {} });
   };
 
-  const toggleFav = (item) => setFavorites(f => {
+  const toggleFav = async (item) => {
+    const estava = !!favorites[item.id];
+    setFavorites(f => {
+      const n = { ...f };
+      if (estava) delete n[item.id];
+      else n[item.id] = item;
+      return n;
+    });
+    try {
+      if (estava) await api.removerFavorito(item.id);
+      else await api.adicionarFavorito(item.id);
+    } catch (e) {
+      setFavorites(f => {
+        const n = { ...f };
+        if (estava) n[item.id] = item;
+        else delete n[item.id];
+        return n;
+      });
+      notify(e.message || "Não foi possível atualizar os favoritos.");
+    }
+  };
+
+  const onFavoritosRemovidos = (ids) => setFavorites(f => {
     const n = { ...f };
-    if (n[item.id]) delete n[item.id];
-    else n[item.id] = item;
+    ids.forEach(id => delete n[id]);
     return n;
   });
 
@@ -279,18 +353,22 @@ export default function RevivaApp() {
     case "busca": ScreenView = <conjunto2Screens.Busca go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} />; break;
     case "listaItens": ScreenView = <conjunto2Screens.ListaItens go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={params} />; break;
     case "detalhesItem": ScreenView = <conjunto2Screens.DetalhesItem go={go} notify={notify} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={params} />; break;
-    case "solicitacao": ScreenView = <conjunto3Screens.Solicitacao go={go} notify={notify} params={params} />; break;
+    case "solicitacao": ScreenView = <conjunto3Screens.Solicitacao go={go} notify={notify} params={params} usuario={usuario} />; break;
     case "chatReceptor": ScreenView = <conjunto3Screens.Chat go={go} role="receptor" notify={notify} params={params} usuario={usuario} onlineIds={onlineIds} />; break;
     case "agendamentoReceptor": ScreenView = <conjunto3Screens.Agendamento go={go} role="receptor" notify={notify} params={params} usuario={usuario} />; break;
     case "confirmRecebimento": ScreenView = <conjunto3Screens.ConfirmRecebimento go={go} notify={notify} params={params} usuario={usuario} refreshUsuario={refreshUsuario} />; break;
     case "avaliarDoador": ScreenView = <conjunto3Screens.Avaliar go={go} notify={notify} params={params} />; break;
     case "historico": ScreenView = <conjunto4Screens.Historico go={go} />; break;
-    case "perfil": ScreenView = <conjunto4Screens.Perfil go={go} usuario={usuario} favorites={favorites} notify={notify} onLogout={logout} />; break;
-    case "perfilPublico": ScreenView = <conjunto4Screens.PerfilPublico go={go} usuario={usuario} onlineIds={onlineIds} favorites={favorites} toggleFav={toggleFav} params={params} />; break;
-    case "reputacao": ScreenView = <conjunto4Screens.Reputacao go={go} usuario={usuario} />; break;
+    case "perfil": ScreenView = <conjunto4Screens.Perfil go={go} usuario={usuario} favorites={favorites} notify={notify} onLogout={logout} refreshUsuario={refreshUsuario} />; break;
+    case "perfilPublico": ScreenView = <conjunto4Screens.PerfilPublico go={go} usuario={usuario} onlineIds={onlineIds} favorites={favorites} toggleFav={toggleFav} params={params} notify={notify} />; break;
+    case "reputacao": ScreenView = <conjunto4Screens.Reputacao go={go} usuario={usuario} refreshUsuario={refreshUsuario} />; break;
     case "comunidades": ScreenView = <conjunto5Screens.Comunidades go={go} notify={notify} usuario={usuario} />; break;
-    case "favoritos": ScreenView = <conjunto5Screens.Favoritos go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} />; break;
+    case "favoritos": ScreenView = <conjunto5Screens.Favoritos go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} notify={notify} onFavoritosRemovidos={onFavoritosRemovidos} />; break;
     case "notificacoes": ScreenView = <conjunto6Screens.Notificacoes go={go} role={role} usuario={usuario} />; break;
+    case "enderecos": ScreenView = <conjunto6Screens.Enderecos go={go} notify={notify} usuario={usuario} refreshUsuario={refreshUsuario} />; break;
+    case "seguranca": ScreenView = <conjunto6Screens.Seguranca go={go} notify={notify} usuario={usuario} />; break;
+    case "termos": ScreenView = <conjunto6Screens.Termos go={go} />; break;
+    case "privacidade": ScreenView = <conjunto6Screens.Privacidade go={go} />; break;
     case "moderacao": ScreenView = <conjunto4Screens.Moderacao go={go} notify={notify} params={params} />; break;
     default: ScreenView = <div />;
   }

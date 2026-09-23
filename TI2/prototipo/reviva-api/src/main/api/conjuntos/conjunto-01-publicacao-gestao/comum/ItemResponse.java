@@ -29,9 +29,18 @@ public record ItemResponse(
         List<String> fotosUrls,
         Instant publicadoEm,
         Instant expiraEm,
-        boolean expirado
+        boolean expirado,
+        String modoEntrega,
+        String regrasRetirada,
+        Instant atualizadoEm,
+        /** Pessoas com conversa ativa sobre o item; null quando não calculado. */
+        Integer interessados
 ) {
     public static ItemResponse from(Item i) {
+        return from(i, null);
+    }
+
+    public static ItemResponse from(Item i, Integer interessados) {
         if (i == null) return null;
         return new ItemResponse(
                 i.getId(),
@@ -55,7 +64,11 @@ public record ItemResponse(
                 i.getFotosUrls(),
                 i.getPublicadoEm(),
                 i.getExpiraEm(),
-                i.getExpiraEm() != null && i.getExpiraEm().isBefore(Instant.now())
+                i.getExpiraEm() != null && i.getExpiraEm().isBefore(Instant.now()),
+                i.getModoEntrega() != null ? i.getModoEntrega().name() : Item.ModoEntrega.RETIRADA.name(),
+                i.getRegrasRetirada(),
+                i.getAtualizadoEm(),
+                interessados
         );
     }
 

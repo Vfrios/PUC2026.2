@@ -315,3 +315,44 @@ Permite guardar locais de retirada ou entrega e administrar seguranca, notificac
 | 6 | Endereco + Seguranca e termos | Criar endereco salvo e configuracoes da conta |
 
 Total: **6 conjuntos e 12 telas funcionais**.
+
+---
+
+## Status de implementacao (atualizado em 22/09/2026)
+
+### Conjunto 1 - Publicacao e gestao
+
+- Cadastro: validacao por campo (API e tela), rascunho automatico no navegador, ate 5 fotos por galeria ou camera com reordenacao e escolha de capa, modo de entrega (retirada, entrega ou a combinar) e regras de retirada, bloqueio de anuncio duplicado (409), edicao e duplicacao de item.
+- Gerenciar: abas Ativos / Em negociacao / Doados / Arquivados com contadores, numero de interessados por item, resposta e recusa de solicitacao na propria tela, acoes em lote (`POST /api/itens/lote`), restaurar, marcar como doado e remover com confirmacao.
+
+### Conjunto 2 - Descoberta e detalhes
+
+- Busca: filtros combinados (termo, categoria, cidade/UF, tipo, condicao, raio em km pela localizacao), ordenacao por relevancia/proximidade/data, "so disponiveis" (`disponiveis=false` inclui reservados), limpar filtros, paginacao e sugestoes quando nao ha resultado.
+- Detalhes: carrossel de fotos, status (disponivel, reservado, doado, removido), regras de retirada, impacto ambiental, reputacao e selo do anunciante, compartilhar (`?item=<id>` abre direto o item), tela de item inexistente (404) e atividade/interessados.
+
+### Conjunto 3 - Solicitacao e chat
+
+- Solicitacao: etapas enviada/aceita/agendada/concluida/recusada/cancelada, `GET /api/solicitacoes/{id}` com checagem de permissao, cancelar e recusar com liberacao do item, notificacao de mudanca de status e bloqueio de solicitar item proprio ou indisponivel.
+- Chat: estado de conexao com reconexao automatica, conversa encerrada bloqueia envio, responder mensagem com citacao, alerta do navegador para mensagens novas, cancelar troca/encerrar conversa. Leitura, presenca e imagens ja existiam.
+
+### Conjunto 4 - Perfil e reputacao
+
+- Perfil: foto salva na conta (`PUT /api/usuarios/me`), edicao de nome e celular, indicador de perfil incompleto, resumo de impacto, secoes Dados pessoais / Endereco / Atividade / Conta e seguranca, historico detalhado (`GET /api/usuarios/me/historico`) e perfil publico completo (`GET /api/usuarios/{id}/publico`, sem dados pessoais, compartilhavel por `?perfil=<id>`).
+- Reputacao: avaliacao por categoria (pontualidade, comunicacao, item conforme anunciado), medias e distribuicao de notas (`GET /api/usuarios/{id}/avaliacoes`), historico de avaliacoes, explicacao dos pontos, progresso ate o proximo selo, conquistas e bloqueio de avaliacao duplicada (409 + `GET /api/avaliacoes/agendamento/{id}/minha`).
+
+### Conjunto 5 - Comunidades e favoritos
+
+- Comunidades: categoria, cidade e UF, contagem real de membros, participar e sair com feedback, filtros (minhas, minha cidade, categoria, busca por nome/bairro), mural de publicacoes com apoios (`/api/comunidades/{id}/posts`), notificacao aos membros e compartilhamento.
+- Favoritos: persistidos na API (`GET/POST/DELETE /api/favoritos`, `POST /api/favoritos/remover`), migracao automatica dos favoritos antigos do navegador, ordenacao, filtro por categoria, data em que foi salvo, aviso de itens indisponiveis/removidos e remocao em lote.
+
+### Conjunto 6 - Endereco e seguranca
+
+- Enderecos: CRUD em `/api/enderecos`, varios enderecos com apelido, endereco padrao (sincroniza com o cadastro do usuario), preenchimento por CEP, validacao e integracao com cadastro de item e agendamento.
+- Seguranca e termos: alterar senha (`POST /api/usuarios/me/senha`), preferencias de notificacao respeitadas pelo backend (`/api/usuarios/me/preferencias`), sair de todos os outros dispositivos (`POST /api/usuarios/me/sessoes/encerrar`), notificacoes lidas/nao lidas (`GET /api/notificacoes?todas=true`) e telas separadas de Termos de uso e Politica de privacidade.
+
+### Ainda pendente
+
+- Autenticacao em duas etapas: aparece na tela como "ainda nao disponivel".
+- Verificacao de e-mail e celular.
+- Lista detalhada de cada dispositivo conectado (hoje e possivel encerrar todas as outras sessoes de uma vez).
+- Textos de Termos e Privacidade sao uma versao de prototipo e precisam de revisao da equipe.

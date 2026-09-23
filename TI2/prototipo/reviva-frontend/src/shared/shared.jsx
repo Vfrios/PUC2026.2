@@ -66,7 +66,7 @@ const MOTIVOS_DENUNCIA = [
 
 const NOTIF_ICONS = {
   CHAT: MessageCircle, MATCH: Sparkles, WISHLIST: Heart,
-  LEMBRETE: Clock, AVALIACAO: Star, MODERACAO: Flag,
+  LEMBRETE: Clock, AVALIACAO: Star, MODERACAO: Flag, COMUNIDADE: Users,
 };
 
 // Feed de comunidade e desafio do mês: o backend ainda não tem um modelo de
@@ -221,20 +221,20 @@ function comprimirImagem(file, maxDim = 900, qualidade = 0.72) {
 
 /* ---------------- Hook genérico de fetch ---------------- */
 function useApiData(fetcher, deps, { skip = false } = {}) {
-  const [state, setState] = useState({ loading: !skip, error: null, data: null });
+  const [state, setState] = useState({ loading: !skip, error: null, errorStatus: null, data: null });
   const reloadRef = useRef(0);
   const reload = ({ silent = false } = {}) => {
     reloadRef.current += 1;
-    setState(s => ({ ...s, loading: silent ? false : true, error: null }));
+    setState(s => ({ ...s, loading: silent ? false : true, error: null, errorStatus: null }));
   };
 
   useEffect(() => {
-    if (skip) { setState({ loading: false, error: null, data: null }); return; }
+    if (skip) { setState({ loading: false, error: null, errorStatus: null, data: null }); return; }
     let alive = true;
-    setState(s => ({ ...s, loading: !s.data ? true : s.loading, error: null }));
+    setState(s => ({ ...s, loading: !s.data ? true : s.loading, error: null, errorStatus: null }));
     fetcher()
-      .then(data => { if (alive) setState({ loading: false, error: null, data }); })
-      .catch(err => { if (alive) setState({ loading: false, error: err.message || "Erro ao carregar", data: null }); });
+      .then(data => { if (alive) setState({ loading: false, error: null, errorStatus: null, data }); })
+      .catch(err => { if (alive) setState({ loading: false, error: err.message || "Erro ao carregar", errorStatus: err.status ?? null, data: null }); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, skip, reloadRef.current]);
@@ -388,6 +388,7 @@ function ItemCard({ item, onClick, favorite, onFav, usuario, onlineIds = new Set
             background: item.tipoPublicacao === "DOAR" ? "var(--role-soft)" : "#FBE8E0",
             color: item.tipoPublicacao === "DOAR" ? "var(--role-primary-dark)" : "#9C4327",
           }}>{item.tipoPublicacao === "DOAR" ? "DOAÇÃO" : "TROCA"}</span>
+          {statusDoItem(item) !== "ATIVO" && <StatusBadge item={item} label={statusDoItem(item) === "EM_NEGOCIACAO" ? "Reservado" : undefined} />}
           {localizacao && <span style={{ fontSize: 11, color: INK_SOFT }}><MapPin size={11} style={{ verticalAlign: "-2px" }} /> {localizacao}</span>}
           {distancia != null && <span style={{ fontSize: 11, color: INK_SOFT }}>{distancia < 1 ? "menos de 1 km" : `${Math.round(distancia)} km`}</span>}
           <span style={{ fontSize: 11, color: anuncianteOnline ? "#2D8A57" : INK_SOFT, display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: anuncianteOnline ? "#2D8A57" : "#A7ADA3" }} /> {anuncianteOnline ? "online" : "offline"}</span>
@@ -519,4 +520,148 @@ function StatBox({ value, label, Icon }) {
   );
 }
 
-export { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCnpj, formatDocumento, formatCep, formatCelular, cpfValido, cnpjValido, documentoValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox };
+/* ---------------- Status e etapas compartilhados entre conjuntos ---------------- */
+
+const STATUS_ITEM = {
+  ATIVO:         { label: "Disponível",    bg: "var(--role-soft)", color: "var(--role-primary-dark)" },
+  EM_NEGOCIACAO: { label: "Em negociação", bg: "#FDEFD9",          color: "#9C6B14" },
+  DOADO:         { label: "Doado",         bg: "#EDEBE1",          color: INK_SOFT },
+  REMOVIDO:      { label: "Removido",      bg: "#F1EFE6",          color: INK_SOFT },
+  EXPIRADO:      { label: "Expirado",      bg: "#FBE8E0",          color: "#9C4327" },
+};
+
+function statusDoItem(item) {
+  if (!item) return "ATIVO";
+  if (item.status !== "DOADO" && item.status !== "REMOVIDO" && item.expirado) return "EXPIRADO";
+  return item.status || "ATIVO";
+}
+
+function StatusBadge({ item, status, label }) {
+  const s = STATUS_ITEM[status || statusDoItem(item)] || STATUS_ITEM.ATIVO;
+  return (
+    <span style={{ fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: s.bg, color: s.color, whiteSpace: "nowrap" }}>
+      {label || s.label}
+    </span>
+  );
+}
+
+const MODOS_ENTREGA = {
+  RETIRADA: { label: "Retirada no local", curto: "Retirada" },
+  ENTREGA:  { label: "Anunciante entrega", curto: "Entrega" },
+  COMBINAR: { label: "A combinar no chat", curto: "A combinar" },
+};
+
+const ETAPAS_SOLICITACAO = [
+  { key: "ENVIADA",   label: "Enviada" },
+  { key: "ACEITA",    label: "Aceita" },
+  { key: "AGENDADA",  label: "Agendada" },
+  { key: "CONCLUIDA", label: "Concluída" },
+];
+
+const ETAPA_LABEL = {
+  ENVIADA: "Aguardando resposta", ACEITA: "Em conversa", AGENDADA: "Retirada agendada",
+  CONCLUIDA: "Concluída", RECUSADA: "Recusada", CANCELADA: "Cancelada",
+};
+
+function EtapasSolicitacao({ etapa }) {
+  const encerrada = etapa === "RECUSADA" || etapa === "CANCELADA";
+  const idx = ETAPAS_SOLICITACAO.findIndex(e => e.key === etapa);
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        {ETAPAS_SOLICITACAO.map((e, i) => {
+          const feito = !encerrada && i <= idx;
+          return (
+            <React.Fragment key={e.key}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 54 }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                  background: feito ? "var(--role-primary)" : "#EDEBE1", color: feito ? "#fff" : INK_SOFT, fontSize: 11, fontWeight: 700,
+                }}>{feito ? <CheckCircle2 size={13} /> : i + 1}</div>
+                <span style={{ fontSize: 10, fontWeight: feito ? 700 : 500, color: feito ? INK : INK_SOFT }}>{e.label}</span>
+              </div>
+              {i < ETAPAS_SOLICITACAO.length - 1 && <div style={{ flex: 1, height: 2, marginBottom: 16, background: !encerrada && i < idx ? "var(--role-primary)" : "#EDEBE1" }} />}
+            </React.Fragment>
+          );
+        })}
+      </div>
+      {encerrada && (
+        <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: "#9C4327", textAlign: "center" }}>
+          {etapa === "RECUSADA" ? "O anunciante recusou esta solicitação." : "Esta solicitação foi cancelada."}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Compartilha via menu nativo do aparelho; sem suporte, copia o link. */
+async function compartilhar({ titulo, texto, url }, notify) {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: titulo, text: texto, url });
+      return;
+    } catch (e) {
+      if (e?.name === "AbortError") return;
+    }
+  }
+  const conteudo = url || texto || "";
+  try {
+    await navigator.clipboard.writeText(conteudo);
+  } catch {
+    const area = document.createElement("textarea");
+    area.value = conteudo;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    document.execCommand("copy");
+    area.remove();
+  }
+  notify?.("Link copiado.");
+}
+
+function linkDoItem(itemId) {
+  return `${window.location.origin}${window.location.pathname}?item=${encodeURIComponent(itemId)}`;
+}
+
+function FieldError({ children }) {
+  if (!children) return null;
+  return <div style={{ fontSize: 11.5, color: "#9C4327", marginTop: 4 }}>{children}</div>;
+}
+
+function Checkbox({ checked, onChange, label }) {
+  return (
+    <button type="button" onClick={(e) => { e.stopPropagation(); onChange(!checked); }} aria-label={label} aria-pressed={checked} style={{
+      width: 22, height: 22, borderRadius: 7, flexShrink: 0, cursor: "pointer", padding: 0,
+      border: checked ? "none" : "1.5px solid #C7C9C1", background: checked ? "var(--role-primary)" : "#fff",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>{checked && <CheckCircle2 size={14} color="#fff" />}</button>
+  );
+}
+
+function FotoPerfil({ usuario, size = 40 }) {
+  if (usuario?.fotoUrl) {
+    return <img src={usuario.fotoUrl} alt={`Foto de ${usuario.nome || "usuário"}`} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />;
+  }
+  return <Avatar label={usuario?.nome} size={size} tone="var(--role-primary)" />;
+}
+
+function Toggle({ checked, onChange, label, disabled }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={() => onChange(!checked)} style={{
+      width: 42, height: 24, borderRadius: 999, border: "none", padding: 2, flexShrink: 0,
+      background: checked ? "var(--role-primary)" : "#D6D6D0", cursor: disabled ? "not-allowed" : "pointer",
+      opacity: disabled ? 0.5 : 1, display: "flex", justifyContent: checked ? "flex-end" : "flex-start", transition: "background .2s",
+    }}>
+      <span style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)" }} />
+    </button>
+  );
+}
+
+function linkDoPerfil(usuarioId) {
+  return `${window.location.origin}${window.location.pathname}?perfil=${encodeURIComponent(usuarioId)}`;
+}
+
+export { FotoPerfil, Toggle, linkDoPerfil };
+
+export { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCnpj, formatDocumento, formatCep, formatCelular, cpfValido, cnpjValido, documentoValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox, STATUS_ITEM, statusDoItem, StatusBadge, MODOS_ENTREGA, ETAPAS_SOLICITACAO, ETAPA_LABEL, EtapasSolicitacao, compartilhar, linkDoItem, FieldError, Checkbox };

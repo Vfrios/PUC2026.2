@@ -43,7 +43,7 @@ public class AgendamentoController {
             .orElseThrow(() -> new IllegalArgumentException("Solicitação não encontrada"));
         validarParticipante(solicitacao, usuario);
         return agendamentoRepository.findBySolicitacaoId(solicitacaoId)
-            .map(agendamentoService::cancelar)
+            .map(agendamento -> agendamentoService.cancelar(agendamento, usuario))
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agendamento não encontrado"));
         }
 

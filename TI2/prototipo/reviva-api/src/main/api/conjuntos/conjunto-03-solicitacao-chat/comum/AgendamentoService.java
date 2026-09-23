@@ -65,13 +65,19 @@ public class AgendamentoService {
                 .build();
 
         Agendamento salvo = agendamentoRepository.save(agendamento);
+        Item itemAgendado = solicitacao.getItem();
+        if (itemAgendado.getStatus() == Item.StatusItem.ATIVO) {
+            itemAgendado.setStatus(Item.StatusItem.EM_NEGOCIACAO);
+            itemAgendado.setAtualizadoEm(Instant.now());
+            itemRepository.save(itemAgendado);
+        }
         publicarEvento(solicitacao, usuario, String.format(
                 "{\"tipo\":\"AGENDAMENTO_CRIADO\",\"dataHora\":\"%s\",\"local\":\"%s\"}",
                 dataHora, escapar(local)));
         notificacaoService.notificar(solicitacao.getItem().getDoador(),
             usuario.getNome() + " agendou a retirada do item \""
                 + solicitacao.getItem().getTitulo() + "\"",
-                com.reviva.api.model.Notificacao.Tipo.CHAT, solicitacao);
+                com.reviva.api.model.Notificacao.Tipo.LEMBRETE, solicitacao);
         return salvo;
     }
 
@@ -189,6 +195,12 @@ public class AgendamentoService {
 
     @Transactional
     public Agendamento cancelar(Agendamento agendamento) {
+        return cancelar(agendamento, null);
+    }
+
+    /** Cancela a troca: agendamento, solicitação e devolve o item para a vitrine. */
+    @Transactional
+    public Agendamento cancelar(Agendamento agendamento, Usuario usuario) {
         if (agendamento.getStatus() == Agendamento.StatusAgendamento.CONCLUIDO) {
             throw new IllegalArgumentException("Uma troca concluída não pode ser cancelada.");
         }
@@ -196,6 +208,41 @@ public class AgendamentoService {
         Solicitacao solicitacao = agendamento.getSolicitacao();
         solicitacao.setStatus(Solicitacao.StatusSolicitacao.CANCELADA);
         solicitacaoRepository.save(solicitacao);
-        return agendamentoRepository.save(agendamento);
+        liberarItem(solicitacao.getItem());
+        Agendamento salvo = agendamentoRepository.save(agendamento);
+        if (usuario != null) {
+            publicarEvento(solicitacao, usuario, "{\"tipo\":\"SOLICITACAO_CANCELADA\"}");
+            Usuario outro = outraParte(solicitacao, usuario);
+            if (outro != null) {
+                notificacaoService.notificar(outro,
+                        usuario.getNome() + " cancelou a troca do item \"" + tituloDo(solicitacao) + "\"",
+                        com.reviva.api.model.Notificacao.Tipo.LEMBRETE, solicitacao);
+            }
+        }
+        return salvo;
+    }
+
+    public void liberarItem(Item item) {
+        if (item != null && item.getStatus() == Item.StatusItem.EM_NEGOCIACAO) {
+            item.setStatus(Item.StatusItem.ATIVO);
+            item.setAtualizadoEm(Instant.now());
+            itemRepository.save(item);
+        }
+    }
+
+    public void publicarEventoPublico(Solicitacao solicitacao, Usuario remetente, String texto) {
+        publicarEvento(solicitacao, remetente, texto);
+    }
+
+    private Usuario outraParte(Solicitacao solicitacao, Usuario usuario) {
+        if (solicitacao.getReceptor() != null && solicitacao.getReceptor().getId().equals(usuario.getId())) {
+            return solicitacao.getItem() != null ? solicitacao.getItem().getDoador() : null;
+        }
+        return solicitacao.getReceptor();
+    }
+
+    private String tituloDo(Solicitacao solicitacao) {
+        return solicitacao.getItem() != null && solicitacao.getItem().getTitulo() != null
+                ? solicitacao.getItem().getTitulo() : "item";
     }
 }

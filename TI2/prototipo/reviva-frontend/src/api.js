@@ -92,12 +92,41 @@ export const api = {
 
   me: () => request("/api/usuarios/me"),
 
+  atualizarPerfil: (payload) => request("/api/usuarios/me", { method: "PUT", body: payload }),
+
+  meuHistorico: () => request("/api/usuarios/me/historico"),
+
   atualizarLocalizacao: (latitude, longitude, raioBuscaKm) =>
     request("/api/usuarios/me/localizacao", { method: "PATCH", params: { latitude, longitude, raioBuscaKm } }),
 
   reputacaoDe: (usuarioId) => request(`/api/usuarios/${usuarioId}/reputacao`),
 
+  perfilPublico: (usuarioId) => request(`/api/usuarios/${usuarioId}/publico`, { auth: false }),
+
+  avaliacoesDe: (usuarioId) => request(`/api/usuarios/${usuarioId}/avaliacoes`, { auth: false }),
+
   itensDeUsuario: (usuarioId) => request(`/api/usuarios/${usuarioId}/itens`, { auth: false }),
+
+  /* ---------------- Segurança e preferências ---------------- */
+  alterarSenha: (senhaAtual, novaSenha) =>
+    request("/api/usuarios/me/senha", { method: "POST", body: { senhaAtual, novaSenha } }),
+
+  preferencias: () => request("/api/usuarios/me/preferencias"),
+
+  salvarPreferencias: (payload) => request("/api/usuarios/me/preferencias", { method: "PUT", body: payload }),
+
+  encerrarOutrasSessoes: () => request("/api/usuarios/me/sessoes/encerrar", { method: "POST" }),
+
+  /* ---------------- Endereços salvos ---------------- */
+  enderecos: () => request("/api/enderecos"),
+
+  criarEndereco: (payload) => request("/api/enderecos", { method: "POST", body: payload }),
+
+  editarEndereco: (id, payload) => request(`/api/enderecos/${id}`, { method: "PUT", body: payload }),
+
+  excluirEndereco: (id) => request(`/api/enderecos/${id}`, { method: "DELETE" }),
+
+  definirEnderecoPrincipal: (id) => request(`/api/enderecos/${id}/principal`, { method: "POST" }),
 
   /* ---------------- Geolocalização (CEP) ---------------- */
   // Preenche bairro/cidade/lat/long automaticamente a partir do CEP ao
@@ -114,10 +143,12 @@ export const api = {
   listarCidades: (uf) => request(`/api/geo/estados/${uf}/cidades`, { auth: false }),
 
   /* ---------------- Itens ---------------- */
-  listarItens: ({ categoria, tipo, termo, cidade, uf } = {}) =>
-    request("/api/itens", { params: { categoria, tipo, termo, cidade: cidade?.trim(), uf: uf?.trim().toUpperCase() } }),
+  listarItens: ({ categoria, tipo, termo, cidade, uf, disponiveis } = {}) =>
+    request("/api/itens", { params: { categoria, tipo, termo, cidade: cidade?.trim(), uf: uf?.trim().toUpperCase(), disponiveis } }),
 
   itemPorId: (id) => request(`/api/itens/${id}`, { auth: false }),
+
+  acaoItensEmLote: (ids, acao) => request("/api/itens/lote", { method: "POST", body: { ids, acao } }),
 
   meusItens: () => request("/api/itens/meus"),
 
@@ -140,6 +171,12 @@ export const api = {
   solicitacoesEnviadas: () => request("/api/solicitacoes/enviadas"),
 
   conversas: () => request("/api/solicitacoes/conversas"),
+
+  solicitacaoPorId: (id) => request(`/api/solicitacoes/${id}`),
+
+  cancelarSolicitacao: (id) => request(`/api/solicitacoes/${id}/cancelar`, { method: "POST" }),
+
+  recusarSolicitacao: (id) => request(`/api/solicitacoes/${id}/recusar`, { method: "POST" }),
 
   /* ---------------- Chat (mensagens por solicitação) ---------------- */
   listarMensagens: (solicitacaoId) => request(`/api/solicitacoes/${solicitacaoId}/mensagens`),
@@ -172,22 +209,46 @@ export const api = {
   reportarProblema: (id) => request(`/api/agendamentos/${id}/reportar-problema`, { method: "POST" }),
 
   /* ---------------- Avaliações ---------------- */
-  avaliar: (agendamentoId, avaliadoId, nota, comentario) =>
-    request("/api/avaliacoes", { method: "POST", body: { agendamentoId, avaliadoId, nota, comentario } }),
+  avaliar: (agendamentoId, avaliadoId, nota, comentario, categorias = {}) =>
+    request("/api/avaliacoes", { method: "POST", body: { agendamentoId, avaliadoId, nota, comentario, ...categorias } }),
+
+  jaAvaliei: (agendamentoId) => request(`/api/avaliacoes/agendamento/${agendamentoId}/minha`).catch(error => {
+    if (error.status === 404) return null;
+    throw error;
+  }),
 
   /* ---------------- Notificações ---------------- */
-  notificacoes: () => request("/api/notificacoes"),
+  notificacoes: ({ todas = false } = {}) => request("/api/notificacoes", { params: { todas: todas || undefined } }),
 
   marcarNotificacaoLida: (id) => request(`/api/notificacoes/${id}/lida`, { method: "POST" }),
+
+  marcarTodasNotificacoesLidas: () => request("/api/notificacoes/lidas", { method: "POST" }),
 
   limparNotificacoes: () => request("/api/notificacoes", { method: "DELETE" }),
 
   excluirNotificacoesExpiradas: () => request("/api/notificacoes/expiradas", { method: "DELETE" }),
 
   /* ---------------- Comunidades ---------------- */
-  comunidades: () => request("/api/comunidades", { auth: false }),
+  comunidades: () => request("/api/comunidades"),
 
   participarComunidade: (id) => request(`/api/comunidades/${id}/participar`, { method: "POST" }),
+
+  sairComunidade: (id) => request(`/api/comunidades/${id}/sair`, { method: "POST" }),
+
+  postsComunidade: (id) => request(`/api/comunidades/${id}/posts`),
+
+  publicarNaComunidade: (id, texto) => request(`/api/comunidades/${id}/posts`, { method: "POST", body: { texto } }),
+
+  apoiarPost: (comunidadeId, postId) => request(`/api/comunidades/${comunidadeId}/posts/${postId}/apoiar`, { method: "POST" }),
+
+  /* ---------------- Favoritos ---------------- */
+  favoritos: () => request("/api/favoritos"),
+
+  adicionarFavorito: (itemId) => request(`/api/favoritos/${itemId}`, { method: "POST" }),
+
+  removerFavorito: (itemId) => request(`/api/favoritos/${itemId}`, { method: "DELETE" }),
+
+  removerFavoritosLote: (itemIds) => request("/api/favoritos/remover", { method: "POST", body: { itemIds } }),
 
   /* ---------------- Denúncias ---------------- */
   denunciar: (motivo, detalhes) =>

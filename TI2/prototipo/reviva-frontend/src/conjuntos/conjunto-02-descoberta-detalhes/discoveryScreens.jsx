@@ -151,22 +151,42 @@ function Busca({ go, favorites, toggleFav, usuario, onlineIds }) {
   const [q, setQ] = useState("");
   const [uf, setUf] = useState("");
   const [cidade, setCidade] = useState("");
+  const [categoria, setCategoria] = useState(null);
+  const [origem, setOrigem] = useState(null);
   const [localizando, setLocalizando] = useState(false);
   const [localizacaoAuto, setLocalizacaoAuto] = useState(false);
   const [localizacaoErro, setLocalizacaoErro] = useState("");
   const qRef = useRef(q);
   const [resultado, setResultado] = useState({});
+  const [versaoLista, setVersaoLista] = useState(0);
 
   useEffect(() => { qRef.current = q; }, [q]);
 
-  const { data: estados } = useApiData(() => api.listarEstados(), []);
-  const { data: cidades, loading: cidadesLoading } = useApiData(
+  const { data: estados, error: erroEstados } = useApiData(() => api.listarEstados(), []);
+  const { data: cidades, loading: cidadesLoading, error: erroCidades } = useApiData(
     () => (uf ? api.listarCidades(uf) : Promise.resolve([])),
     [uf]
   );
 
-  const buscar = (ufParam = uf, cidadeParam = cidade, termoParam = q) =>
-    setResultado({ termo: termoParam || undefined, uf: ufParam || undefined, cidade: cidadeParam || undefined });
+  const buscar = (ufParam = uf, cidadeParam = cidade, termoParam = q, categoriaParam = categoria, origemParam = origem) =>
+    setResultado({
+      termo: termoParam?.trim() || undefined, uf: ufParam || undefined, cidade: cidadeParam || undefined,
+      categoria: categoriaParam || undefined, origem: origemParam || undefined,
+    });
+
+  const escolherCategoria = (k) => {
+    const nova = categoria === k ? null : k;
+    setCategoria(nova);
+    buscar(uf, cidade, q, nova);
+  };
+
+  const limparTudo = () => {
+    setQ(""); setUf(""); setCidade(""); setCategoria(null); setOrigem(null);
+    setLocalizacaoAuto(false); setLocalizacaoErro("");
+    setResultado({});
+    setVersaoLista(v => v + 1);
+  };
+  const temFiltros = !!(q || uf || cidade || categoria || origem);
   
   const detectarLocalizacao = () => {
     if (!("geolocation" in navigator)) {
@@ -182,13 +202,15 @@ function Busca({ go, favorites, toggleFav, usuario, onlineIds }) {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          const res = await api.reverseGeo(pos.coords.latitude, pos.coords.longitude);
+          const coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+          setOrigem(coords);
+          const res = await api.reverseGeo(coords.latitude, coords.longitude);
           if (!res?.uf) throw new Error("Não foi possível determinar sua região.");
           const cidadeAtual = res.cidade || "";
           setUf(res.uf);
           setCidade(cidadeAtual);
           setLocalizacaoAuto(true);
-          buscar(res.uf, cidadeAtual, qRef.current);
+          buscar(res.uf, cidadeAtual, qRef.current, categoria, coords);
         } catch (e) {
           setLocalizacaoErro(e.message || "Não foi possível detectar sua região automaticamente.");
         } finally {
@@ -254,13 +276,18 @@ function Busca({ go, favorites, toggleFav, usuario, onlineIds }) {
           </div>
         </div>
 
-        <SectionTitle>Sugestões</SectionTitle>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {(["Roupas","Livros","Eletrônicos","Móveis","Cozinha"].map(s => <Chip key={s} onClick={() => { setQ(s); buscar(uf, cidade, s); }}>{s}</Chip>))}
+        {(erroEstados || erroCidades) && <div style={{ fontSize: 11.5, color: "#9C4327", marginTop: 6 }}>Não foi possível carregar a lista de {erroEstados ? "estados" : "cidades"}. Tente novamente em instantes.</div>}
+
+        <SectionTitle>Categoria</SectionTitle>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+          {Object.entries(CATS).map(([k, v]) => <Chip key={k} active={categoria === k} onClick={() => escolherCategoria(k)}>{v.label}</Chip>)}
         </div>
-        <div style={{ marginTop: 16 }}><Button full onClick={() => buscar()}>Buscar</Button></div>
+        <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
+          <Button full onClick={() => buscar()}>Buscar</Button>
+          {temFiltros && <Button variant="ghost" icon={X} onClick={limparTudo}>Limpar</Button>}
+        </div>
       </div>
-      {resultado && <ListaItens go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={resultado} embedded />}
+      <ListaItens key={versaoLista} go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={resultado} embedded onLimparFiltros={limparTudo} />
     </div>
   );
 }

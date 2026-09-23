@@ -34,6 +34,11 @@ public class Avaliacao {
     @Min(1) @Max(5)
     private int nota;
 
+    /** Notas opcionais por categoria (1 a 5). */
+    private Integer pontualidade;
+    private Integer comunicacao;
+    private Integer estadoItem;
+
     private String comentario;
 
     @Builder.Default

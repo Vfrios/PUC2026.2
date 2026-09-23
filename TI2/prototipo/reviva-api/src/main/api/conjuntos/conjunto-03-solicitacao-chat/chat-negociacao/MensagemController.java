@@ -10,6 +10,7 @@ import com.reviva.api.model.Usuario;
 import com.reviva.api.repository.MensagemRepository;
 import com.reviva.api.repository.SolicitacaoRepository;
 import com.reviva.api.service.NotificacaoService;
+import com.reviva.api.service.PresencaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -37,6 +38,7 @@ public class MensagemController {
     private final SolicitacaoRepository solicitacaoRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificacaoService notificacaoService;
+    private final PresencaService presencaService;
 
     @GetMapping
     public List<MensagemResponse> listar(@PathVariable String solicitacaoId, @AuthenticationPrincipal Usuario usuario) {
@@ -69,11 +71,19 @@ public class MensagemController {
     public MensagemResponse enviar(@PathVariable String solicitacaoId, @RequestBody @Valid MensagemRequest req,
                                    @AuthenticationPrincipal Usuario usuario) {
         Solicitacao solicitacao = buscarEValidarAcesso(solicitacaoId, usuario);
+        if (solicitacao.getStatus() == Solicitacao.StatusSolicitacao.CANCELADA
+                || solicitacao.getStatus() == Solicitacao.StatusSolicitacao.RECUSADA) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta conversa foi encerrada e não aceita novas mensagens.");
+        }
+        Usuario destinatario = destinatarioDa(solicitacao, usuario);
+        // Destinatário online já recebe no aparelho (2 checks cinza); offline fica
+        // em 1 check até ele conectar (ver PresencaService).
+        boolean destinatarioOnline = destinatario != null && presencaService.estaOnline(destinatario.getId());
         Mensagem mensagem = Mensagem.builder()
                 .solicitacao(solicitacao)
                 .remetente(usuario)
                 .texto(req.texto())
-                .entregue(false)
+                .entregue(destinatarioOnline)
                 .lida(false)
                 .build();
         Mensagem salva = mensagemRepository.save(mensagem);
@@ -82,7 +92,6 @@ public class MensagemController {
         solicitacao.setMensagem(SolicitacaoResponse.previewTexto(req.texto()));
         solicitacaoRepository.save(solicitacao);
 
-        Usuario destinatario = destinatarioDa(solicitacao, usuario);
         if (destinatario != null) {
             String tituloItem = solicitacao.getItem() != null && solicitacao.getItem().getTitulo() != null
                     ? solicitacao.getItem().getTitulo()

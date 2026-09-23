@@ -11,6 +11,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -29,12 +30,39 @@ public class Comunidade {
     private String descricao;
     private String bairroReferencia;
 
-    // Evita serializar a coleção de membros diretamente na resposta da comunidade.
-    // Use o endpoint específico de membros quando essa lista for necessária.
+    /** Tema principal: ROUPAS, MOVEIS, ELETRONICOS, LIVROS, INFANTIL, GERAL... */
+    private String categoria;
+    private String cidade;
+    private String uf;
+
+    @Builder.Default
+    private Instant criadaEm = Instant.now();
+
+    /** Ids dos participantes. Substitui a lista de DBRef, cuja comparação por igualdade não era confiável. */
+    @Builder.Default
+    @JsonIgnore
+    private Set<String> membrosIds = new HashSet<>();
+
+    // Formato antigo (mantido só para leitura de dados já gravados).
     @Builder.Default
     @DBRef(lazy = false)
     @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<Usuario> membros = new HashSet<>();
+
+    /** Une os participantes do formato antigo e do novo. */
+    public Set<String> idsDosMembros() {
+        Set<String> ids = new HashSet<>(membrosIds != null ? membrosIds : Set.of());
+        if (membros != null) {
+            membros.stream().filter(u -> u != null && u.getId() != null).forEach(u -> ids.add(u.getId()));
+        }
+        return ids;
+    }
+
+    /** Converte para o formato novo, descartando a lista de DBRef. */
+    public void normalizarMembros() {
+        membrosIds = idsDosMembros();
+        membros = new HashSet<>();
+    }
 }

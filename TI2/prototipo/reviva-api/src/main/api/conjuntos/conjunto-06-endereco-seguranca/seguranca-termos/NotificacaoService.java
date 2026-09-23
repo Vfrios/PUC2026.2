@@ -19,8 +19,14 @@ public class NotificacaoService {
     private final NotificacaoRepository notificacaoRepository;
 
     public Notificacao notificar(Usuario usuario, String titulo, Notificacao.Tipo tipo) {
+        if (!permite(usuario, tipo)) return null;
         Notificacao n = Notificacao.builder().usuario(usuario).titulo(titulo).tipo(tipo).build();
         return notificacaoRepository.save(n);
+    }
+
+    /** Respeita as preferências de notificação da conta (tela Segurança e termos). */
+    private boolean permite(Usuario usuario, Notificacao.Tipo tipo) {
+        return usuario == null || usuario.getPreferencias().permite(tipo);
     }
 
     /**
@@ -29,6 +35,7 @@ public class NotificacaoService {
      * o histórico fica no Inbox/Mensagens.
      */
     public Notificacao notificar(Usuario usuario, String titulo, Notificacao.Tipo tipo, Solicitacao solicitacao) {
+        if (!permite(usuario, tipo)) return null;
         if (tipo == Notificacao.Tipo.CHAT && solicitacao != null && usuario != null) {
             List<Notificacao> pendentes = notificacaoRepository
                     .findByUsuario_IdAndSolicitacao_IdAndLidaFalse(usuario.getId(), solicitacao.getId());
@@ -58,6 +65,11 @@ public class NotificacaoService {
     /** Tela de Notificações: só o que ainda não foi lido. Contatos ficam no Inbox/Mensagens. */
     public List<Notificacao> listarNaoLidas(Usuario usuario) {
         return notificacaoRepository.findByUsuario_IdAndLidaFalseOrderByCriadaEmDesc(usuario.getId());
+    }
+
+    /** Aba "Todas": lidas e não lidas mais recentes. */
+    public List<Notificacao> listarRecentes(Usuario usuario) {
+        return notificacaoRepository.findTop50ByUsuario_IdOrderByCriadaEmDesc(usuario.getId());
     }
 
     public Instant limiteExpiracao(int dias) {

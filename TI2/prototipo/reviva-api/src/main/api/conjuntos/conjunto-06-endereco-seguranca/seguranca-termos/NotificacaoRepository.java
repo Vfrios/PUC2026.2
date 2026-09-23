@@ -16,6 +16,8 @@ public interface NotificacaoRepository extends MongoRepository<Notificacao, Stri
     /** Preferir id — evita falha de match em DBRef com a entidade do JWT. */
     List<Notificacao> findByUsuario_IdAndLidaFalseOrderByCriadaEmDesc(String usuarioId);
 
+    List<Notificacao> findTop50ByUsuario_IdOrderByCriadaEmDesc(String usuarioId);
+
     List<Notificacao> findByUsuarioAndSolicitacaoAndLidaFalse(Usuario usuario, Solicitacao solicitacao);
 
     List<Notificacao> findByUsuario_IdAndSolicitacao_IdAndLidaFalse(String usuarioId, String solicitacaoId);

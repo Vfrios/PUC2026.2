@@ -49,4 +49,20 @@ public class SolicitacaoController {
     public List<SolicitacaoResponse> enviadas(@AuthenticationPrincipal Usuario receptor) {
         return solicitacaoService.listarEnviadasComPreview(receptor);
     }
+
+    /** Abre a solicitação diretamente pelo identificador (somente participantes). */
+    @GetMapping("/{id}")
+    public SolicitacaoResponse buscar(@PathVariable String id, @AuthenticationPrincipal Usuario usuario) {
+        return solicitacaoService.detalhe(solicitacaoService.buscarComAcesso(id, usuario));
+    }
+
+    @PostMapping("/{id}/cancelar")
+    public SolicitacaoResponse cancelar(@PathVariable String id, @AuthenticationPrincipal Usuario usuario) {
+        return solicitacaoService.detalhe(solicitacaoService.cancelar(id, usuario));
+    }
+
+    @PostMapping("/{id}/recusar")
+    public SolicitacaoResponse recusar(@PathVariable String id, @AuthenticationPrincipal Usuario doador) {
+        return solicitacaoService.detalhe(solicitacaoService.recusar(id, doador));
+    }
 }
