@@ -25,8 +25,9 @@ public class NotificacaoController {
 
     @GetMapping
     public List<NotificacaoResponse> listar(@AuthenticationPrincipal Usuario usuario) {
+        // Só não lidas: histórico de conversas fica na tela de Mensagens (Inbox).
         return NotificacaoResponse.from(
-                notificacaoService.listar(usuario),
+                notificacaoService.listarNaoLidas(usuario),
                 notificacaoService.limiteExpiracao(expiracaoDias));
     }
 
@@ -38,9 +39,17 @@ public class NotificacaoController {
         notificacaoService.marcarComoLida(n);
     }
 
+    /** Marca todas as não lidas como lidas (somem da lista de Notificações). */
+    @PostMapping("/lidas")
+    public void marcarTodasLidas(@AuthenticationPrincipal Usuario usuario) {
+        notificacaoService.marcarTodasComoLidas(usuario);
+    }
+
     @DeleteMapping
     public void limpar(@AuthenticationPrincipal Usuario usuario) {
-        notificacaoService.limpar(usuario);
+        // Na prática: limpar a tela de Notificações = marcar não lidas como lidas.
+        // O histórico de mensagens continua no Inbox.
+        notificacaoService.marcarTodasComoLidas(usuario);
     }
 
     @DeleteMapping("/expiradas")

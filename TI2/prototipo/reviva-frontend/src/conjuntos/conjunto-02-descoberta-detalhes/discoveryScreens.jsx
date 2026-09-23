@@ -11,9 +11,8 @@ function usePullRefresh(reload, notify) {
   const start = useRef(0);
   return { pull, onTouchStart: e => { if (e.currentTarget.parentElement?.parentElement?.scrollTop === 0) start.current = e.touches[0].clientY; }, onTouchMove: e => { if (start.current) setPull(Math.min(64, Math.max(0, e.touches[0].clientY - start.current))); }, onTouchEnd: () => { if (pull > 48) { reload(); notify("Atualizando conteúdo..."); } start.current = 0; setPull(0); } };
 }
-function HomeDoador({ go, usuario, compact, notify }) {
+function HomeDoador({ go, usuario, compact, notify, notifNaoLidas = 0 }) {
   const { loading, data: recebidas, reload } = useApiData(() => api.solicitacoesRecebidas(), [usuario?.id]);
-  const { data: notificacoes } = useApiData(() => api.notificacoes(), [usuario?.id]);
   const pullProps = usePullRefresh(reload, notify);
   const destaque = (recebidas || [])[0];
   const pct = Math.min(1, (usuario?.kgResiduoEvitado || 0) / 100);
@@ -27,7 +26,14 @@ function HomeDoador({ go, usuario, compact, notify }) {
           <div style={{ fontSize: 12.5, color: INK_SOFT }}>Olá,</div>
           <div style={{ fontFamily: "var(--font-display)", fontSize: 21, fontWeight: 600, color: INK }}>{usuario?.nome?.split(" ")[0] || "Você"} 👋</div>
         </div>
-        <button onClick={() => go("notificacoes")} style={{ ...iconBtn, position: "relative" }}><Bell size={18} color={INK} />{(notificacoes || []).filter(n => !n.lida && !n.expirada).length > 0 && <span style={{ position: "absolute", top: -3, right: -3, minWidth: 15, height: 15, borderRadius: 8, background: "#D44D3B", color: "#fff", fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>{(notificacoes || []).filter(n => !n.lida && !n.expirada).length}</span>}</button>
+        <button onClick={() => go("notificacoes")} style={{ ...iconBtn, position: "relative" }} aria-label="Notificações">
+          <Bell size={18} color={INK} />
+          {notifNaoLidas > 0 && (
+            <span style={{ position: "absolute", top: -3, right: -3, minWidth: 15, height: 15, borderRadius: 8, background: "#D44D3B", color: "#fff", fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
+              {notifNaoLidas}
+            </span>
+          )}
+        </button>
       </div>
       <div style={{ padding: "14px 20px 0" }}>
         <div style={{ background: "linear-gradient(135deg,var(--role-primary),var(--role-primary-dark))", borderRadius: 22, padding: 18, color: "#fff", display: "flex", alignItems: "center", gap: 14 }}>
@@ -76,9 +82,8 @@ function HomeDoador({ go, usuario, compact, notify }) {
   );
 }
 
-function HomeReceptor({ go, favorites, toggleFav, usuario, onlineIds, compact, notify }) {
+function HomeReceptor({ go, favorites, toggleFav, usuario, onlineIds, compact, notify, notifNaoLidas = 0 }) {
   const { loading, error, data: itens, reload } = useApiData(() => api.listarItens(), []);
-  const { data: notificacoes } = useApiData(() => api.notificacoes(), [usuario?.id]);
   const [quickItem, setQuickItem] = useState(null);
   const pullProps = usePullRefresh(reload, notify);
   const quickTimer = useRef(null);
@@ -87,6 +92,7 @@ function HomeReceptor({ go, favorites, toggleFav, usuario, onlineIds, compact, n
     const intervalo = setInterval(() => reload({ silent: true }), 15000);
     return () => clearInterval(intervalo);
   }, []);
+
   return (
     <Screen>
       <div {...pullProps} style={{ position: "relative" }}>
@@ -96,7 +102,14 @@ function HomeReceptor({ go, favorites, toggleFav, usuario, onlineIds, compact, n
           <div style={{ fontSize: 12.5, color: INK_SOFT }}>Perto de você</div>
           <div style={{ fontFamily: "var(--font-display)", fontSize: 21, fontWeight: 600, color: INK }}>Encontre um item 🔎</div>
         </div>
-        <button onClick={() => go("notificacoes")} style={{ ...iconBtn, position: "relative" }}><Bell size={18} color={INK} />{(notificacoes || []).filter(n => !n.lida && !n.expirada).length > 0 && <span style={{ position: "absolute", top: -3, right: -3, minWidth: 15, height: 15, borderRadius: 8, background: "#D44D3B", color: "#fff", fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>{(notificacoes || []).filter(n => !n.lida && !n.expirada).length}</span>}</button>
+        <button onClick={() => go("notificacoes")} style={{ ...iconBtn, position: "relative" }} aria-label="Notificações">
+          <Bell size={18} color={INK} />
+          {notifNaoLidas > 0 && (
+            <span style={{ position: "absolute", top: -3, right: -3, minWidth: 15, height: 15, borderRadius: 8, background: "#D44D3B", color: "#fff", fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
+              {notifNaoLidas}
+            </span>
+          )}
+        </button>
       </div>
       <div style={{ padding: "12px 20px 0" }} onClick={() => go("busca")}>
         <div style={{ background: "#fff", border: "1.5px solid #EDEBE1", borderRadius: 16, padding: "12px 14px", display: "flex", gap: 10, alignItems: "center", color: INK_SOFT }}>

@@ -223,7 +223,7 @@ Usuario 1 ---- N Denuncia
 - JWT: segredo por `JWT_SECRET` e validade padrão de 1440 minutos.
 - Notificações: expiração padrão de 30 dias.
 - Swagger: `http://localhost:8080/swagger-ui.html`.
-- Frontend: `npm install` e `npm run dev` dentro de `reviva-frontend`.
+- Frontend: `pnpm install` e `pnpm run dev` dentro de `reviva-frontend`.
 
 ## 9. Contratos de requisição principais
 

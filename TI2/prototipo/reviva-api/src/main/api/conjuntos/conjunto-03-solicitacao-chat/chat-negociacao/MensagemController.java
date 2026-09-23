@@ -1,12 +1,15 @@
 package com.reviva.api.controller;
 
 import com.reviva.api.dto.MensagemRequest;
-import com.reviva.api.model.Mensagem;
 import com.reviva.api.dto.MensagemResponse;
+import com.reviva.api.dto.SolicitacaoResponse;
+import com.reviva.api.model.Mensagem;
+import com.reviva.api.model.Notificacao;
 import com.reviva.api.model.Solicitacao;
 import com.reviva.api.model.Usuario;
 import com.reviva.api.repository.MensagemRepository;
 import com.reviva.api.repository.SolicitacaoRepository;
+import com.reviva.api.service.NotificacaoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -33,6 +36,7 @@ public class MensagemController {
     private final MensagemRepository mensagemRepository;
     private final SolicitacaoRepository solicitacaoRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final NotificacaoService notificacaoService;
 
     @GetMapping
     public List<MensagemResponse> listar(@PathVariable String solicitacaoId, @AuthenticationPrincipal Usuario usuario) {
@@ -41,6 +45,8 @@ public class MensagemController {
                 .stream().filter(mensagem -> mensagem.getRemetente() != null).toList();
         // Abrir o chat = mensagem entregue + lida (checks azuis no WhatsApp).
         marcarRecebidas(solicitacaoId, mensagens, usuario, true);
+        // Notificações CHAT dessa conversa saem da tela de Notificações.
+        notificacaoService.marcarChatComoLido(usuario, solicitacao);
         return MensagemResponse.from(mensagens);
     }
 
@@ -55,6 +61,7 @@ public class MensagemController {
         List<Mensagem> mensagens = mensagemRepository.findBySolicitacaoOrderByCriadaEmAsc(solicitacao)
                 .stream().filter(mensagem -> mensagem.getRemetente() != null).toList();
         marcarRecebidas(solicitacaoId, mensagens, usuario, true);
+        notificacaoService.marcarChatComoLido(usuario, solicitacao);
     }
 
     @PostMapping
@@ -70,6 +77,24 @@ public class MensagemController {
                 .lida(false)
                 .build();
         Mensagem salva = mensagemRepository.save(mensagem);
+
+        // Preview no Inbox: última mensagem da conversa.
+        solicitacao.setMensagem(SolicitacaoResponse.previewTexto(req.texto()));
+        solicitacaoRepository.save(solicitacao);
+
+        Usuario destinatario = destinatarioDa(solicitacao, usuario);
+        if (destinatario != null) {
+            String tituloItem = solicitacao.getItem() != null && solicitacao.getItem().getTitulo() != null
+                    ? solicitacao.getItem().getTitulo()
+                    : "item";
+            String nome = usuario.getNome() != null ? usuario.getNome() : "Alguém";
+            notificacaoService.notificar(
+                    destinatario,
+                    nome + " enviou uma mensagem sobre \"" + tituloItem + "\"",
+                    Notificacao.Tipo.CHAT,
+                    solicitacao);
+        }
+
         MensagemResponse resposta = MensagemResponse.from(salva);
         messagingTemplate.convertAndSend("/topic/solicitacoes/" + solicitacaoId, resposta);
         return resposta;
@@ -88,6 +113,14 @@ public class MensagemController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Você não participa desta conversa");
         }
         return solicitacao;
+    }
+
+    private Usuario destinatarioDa(Solicitacao solicitacao, Usuario remetente) {
+        boolean ehReceptor = solicitacao.getReceptor().getId().equals(remetente.getId());
+        if (ehReceptor) {
+            return solicitacao.getItem() != null ? solicitacao.getItem().getDoador() : null;
+        }
+        return solicitacao.getReceptor();
     }
 
     private void marcarRecebidas(String solicitacaoId, List<Mensagem> mensagens, Usuario usuario, boolean comoLida) {

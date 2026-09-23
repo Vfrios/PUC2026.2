@@ -1,12 +1,13 @@
 {
   "name": "reviva-monorepo",
   "version": "1.0.0",
+  "packageManager": "pnpm@12.5.1",
   "engines": {
     "node": ">=20 <21"
   },
   "scripts": {
-    "setup": "cd reviva-frontend && npm install",
-    "start:frontend": "npm run dev --prefix reviva-frontend",
+    "setup": "pnpm install",
+    "start:frontend": "pnpm --filter reviva-frontend dev",
     "start:backend": "node start-backend.cjs",
     "seed:mongodb": "node --env-file=atlas-credentials.env reviva_massa_completa.js",
     "migrate:mongodb-ids": "node --env-file=atlas-credentials.env migrate-mongo-ids-to-objectid.js",
@@ -14,7 +15,7 @@
     "clear:mongodb": "node --env-file=atlas-credentials.env limpar_banco.js --confirm",
     "delete:mongodb-ids:preview": "node --env-file=atlas-credentials.env delete_users_by_ids.js",
     "delete:mongodb-ids": "node --env-file=atlas-credentials.env delete_users_by_ids.js --confirm",
-    "dev": "npm run setup && concurrently -n \"FRONT,API\" -c \"cyan,green\" \"npm run start:frontend\" \"npm run start:backend\""
+    "dev": "pnpm run setup && pnpm exec concurrently -n \"FRONT,API\" -c \"cyan,green\" \"pnpm run start:frontend\" \"pnpm run start:backend\""
   },
   "dependencies": {
     "mongodb": "^6.18.0"

@@ -5,7 +5,6 @@ import com.reviva.api.dto.SolicitacaoResponse;
 import com.reviva.api.model.Item;
 import com.reviva.api.model.Usuario;
 import com.reviva.api.repository.ItemRepository;
-import com.reviva.api.repository.SolicitacaoRepository;
 import com.reviva.api.service.SolicitacaoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +23,6 @@ import java.util.List;
 public class SolicitacaoController {
 
     private final SolicitacaoService solicitacaoService;
-    private final SolicitacaoRepository solicitacaoRepository;
     private final ItemRepository itemRepository;
 
     @PostMapping
@@ -37,19 +35,18 @@ public class SolicitacaoController {
     /** Conversas em todos os itens publicados pelo usuário logado. */
     @GetMapping("/recebidas")
     public List<SolicitacaoResponse> recebidas(@AuthenticationPrincipal Usuario doador) {
-        return SolicitacaoResponse.from(solicitacaoRepository.findByItem_Doador_IdOrderByCriadaEmDesc(doador.getId()));
+        return solicitacaoService.listarRecebidasComPreview(doador);
     }
 
     /** Caixa de mensagens: inclui conversas iniciadas ou recebidas pelo usuário. */
     @GetMapping("/conversas")
     public List<SolicitacaoResponse> conversas(@AuthenticationPrincipal Usuario usuario) {
-        return SolicitacaoResponse.from(
-                solicitacaoRepository.findByItem_Doador_IdOrReceptor_IdOrderByCriadaEmDesc(usuario.getId(), usuario.getId()));
+        return solicitacaoService.listarConversasComPreview(usuario);
     }
 
     /** Solicitações que o usuário logado enviou para itens de outros. */
     @GetMapping("/enviadas")
     public List<SolicitacaoResponse> enviadas(@AuthenticationPrincipal Usuario receptor) {
-        return SolicitacaoResponse.from(solicitacaoRepository.findByReceptor_IdOrderByCriadaEmDesc(receptor.getId()));
+        return solicitacaoService.listarEnviadasComPreview(receptor);
     }
 }

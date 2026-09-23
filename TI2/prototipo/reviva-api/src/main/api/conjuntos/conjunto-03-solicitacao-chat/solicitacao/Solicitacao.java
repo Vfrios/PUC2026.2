@@ -1,6 +1,7 @@
 package com.reviva.api.model;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.AllArgsConstructor;
@@ -35,6 +36,13 @@ public class Solicitacao {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Usuario receptor;
+
+    /**
+     * Id do doador do item, denormalizado para o Inbox funcionar sem join em DBRef.
+     * Preenchido na criação e no backfill de listarConversas.
+     */
+    @Indexed
+    private String doadorId;
 
     private String mensagem;
 

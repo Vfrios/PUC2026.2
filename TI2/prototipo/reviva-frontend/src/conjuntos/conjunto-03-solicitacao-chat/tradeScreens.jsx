@@ -12,6 +12,51 @@ const doisDigitos = valor => String(valor).padStart(2, "0");
 const dataLocalAtual = `${dataAtual.getFullYear()}-${doisDigitos(dataAtual.getMonth() + 1)}-${doisDigitos(dataAtual.getDate())}`;
 const horaLocalAtual = `${doisDigitos(dataAtual.getHours())}:${doisDigitos(dataAtual.getMinutes())}`;
 
+/** Polling de Inbox/Chat: valida mensagens novas a cada 10s. */
+const POLL_MS = 10_000;
+
+function usePolling(callback, enabled = true) {
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+
+    const tick = () => {
+      if (document.visibilityState === "visible") callbackRef.current();
+    };
+
+    const id = window.setInterval(tick, POLL_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") callbackRef.current();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [enabled]);
+}
+
+function previewMensagemInbox(s) {
+  const ultima = s?.ultimaMensagem?.texto;
+  if (ultima) return ultima;
+  if (s?.mensagem) return s.mensagem;
+  return s?.item?.titulo || "Conversa";
+}
+
+function mensagensIguais(a, b) {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  return a.every((m, i) =>
+    m.id === b[i]?.id
+    && m.texto === b[i]?.texto
+    && !!m.lida === !!b[i]?.lida
+    && !!m.entregue === !!b[i]?.entregue
+  );
+}
+
 function LocationMessage({ latitude, longitude, horario }) {
   const lat = Number(latitude);
   const lng = Number(longitude);
@@ -155,23 +200,35 @@ function upsertMensagem(lista, nova) {
 
 function Inbox({ go, usuario }) {
   const { loading, error, data: conversas, reload } = useApiData(() => api.conversas(), [usuario?.id]);
-  const visiveis = conversas || [];
+  // Não exige item/receptor completos — conversas antigas com DBRef quebrado ainda devem aparecer.
+  const visiveis = (conversas || []).filter(s => s?.id);
+
+  usePolling(() => reload({ silent: true }), !!usuario?.id);
 
   return (
     <div>
-      <TopBar title="Inbox" onBack={() => go(-1)} />
+      <TopBar title="Inbox" onBack={() => go(-1)} right={<button type="button" onClick={() => reload()} style={{ ...iconBtn, width: 30, height: 30 }} aria-label="Atualizar conversas" title="Atualizar"><RotateCcw size={14} color="var(--role-primary-dark)" /></button>} />
       <div style={{ padding: "0 20px" }}>
         {loading && <Loading label="Carregando conversas..." />}
         {error && <ErrorBox message={error} onRetry={reload} />}
         {!loading && !error && visiveis.length === 0 && <EmptyState Icon={MessageCircle} text="Nenhuma conversa por aqui." />}
         {visiveis.map(s => {
           const naoLidas = s.mensagensNaoLidas || s.unreadCount || 0;
-          const souDoador = s.item?.doador?.id === usuario?.id;
-          const outroNome = souDoador ? s.receptor?.nome : s.item?.doador?.nome;
+          const souDoador = s.item?.doador?.id === usuario?.id || s.doadorId === usuario?.id;
+          const outroNome = souDoador ? (s.receptor?.nome || "Interessado") : (s.item?.doador?.nome || "Doador");
           const outroId = souDoador ? s.receptor?.id : s.item?.doador?.id;
+          const preview = previewMensagemInbox(s);
+          const horario = s.ultimaMensagem?.criadaEm || s.criadaEm;
           return <div key={s.id} onClick={() => go(souDoador ? "chatDoador" : "chatReceptor", { solicitacaoId: s.id, otherId: outroId, otherName: outroNome, itemTitulo: s.item?.titulo, itemId: s.item?.id })} style={{ display: "flex", alignItems: "center", gap: 10, padding: 12, marginBottom: 8, background: "#fff", border: "1px solid #EDEBE1", borderRadius: 14, cursor: "pointer" }}>
             <Avatar label={outroNome} size={40} />
-            <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{outroNome || "Conversa"}</div><div style={{ fontSize: 11.5, color: INK_SOFT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.item?.titulo || "Conversa"}</div></div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{outroNome}</div>
+                {horario && <div style={{ fontSize: 10, color: INK_SOFT, flexShrink: 0 }}>{timeAgo(horario)}</div>}
+              </div>
+              <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.item?.titulo || "Item"}</div>
+              <div style={{ fontSize: 11.5, color: INK_SOFT, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</div>
+            </div>
             {naoLidas > 0 && <span style={{ minWidth: 20, height: 20, borderRadius: 10, padding: "0 6px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--role-primary)", color: "#fff", fontSize: 10, fontWeight: 700 }}>{naoLidas}</span>}
           </div>;
         })}
@@ -196,16 +253,23 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
   const fotoRef = useRef(null);
   const cameraRef = useRef(null);
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async ({ silent = false } = {}) => {
     if (!solicitacaoId) return;
     try {
       const data = await api.listarMensagens(solicitacaoId);
-      setMessages(data);
-      setErro("");
+      setMessages((atual) => {
+        if (silent) {
+          let next = atual;
+          for (const m of data || []) next = upsertMensagem(next, m);
+          return mensagensIguais(atual, next) ? atual : next;
+        }
+        return data;
+      });
+      if (!silent) setErro("");
     } catch (e) {
-      setErro(e.message || "Não foi possível carregar as mensagens.");
+      if (!silent) setErro(e.message || "Não foi possível carregar as mensagens.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [solicitacaoId]);
 
@@ -213,9 +277,10 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
     carregar();
   }, [carregar]);
 
+  // Polling a cada 10s: valida se chegou mensagem nova (além do WebSocket).
+  usePolling(() => carregar({ silent: true }), !!solicitacaoId);
+
   // Chat em tempo real: assina o tópico desta conversa via STOMP/WebSocket.
-  // Substitui o polling — a mensagem chega assim que o outro lado envia,
-  // sem esperar um intervalo nem recarregar a tela.
   useEffect(() => {
     if (!solicitacaoId) return;
 

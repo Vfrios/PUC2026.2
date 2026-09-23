@@ -5,22 +5,27 @@ import com.reviva.api.model.Solicitacao;
 import com.reviva.api.model.Usuario;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface SolicitacaoRepository extends MongoRepository<Solicitacao, String> {
     List<Solicitacao> findByItem(Item item);
+
+    List<Solicitacao> findByItemIn(Collection<Item> itens);
+
     List<Solicitacao> findByReceptor(Usuario receptor);
-    List<Solicitacao> findByItem_DoadorAndStatus(Usuario doador, Solicitacao.StatusSolicitacao status);
 
-    /** Solicitações recebidas pelo doador (em todos os seus itens). */
-    List<Solicitacao> findByItem_Doador_IdOrderByCriadaEmDesc(String doadorId);
+    List<Solicitacao> findByReceptor_Id(String receptorId);
 
-    /** Solicitações enviadas pelo receptor. */
     List<Solicitacao> findByReceptor_IdOrderByCriadaEmDesc(String receptorId);
 
-    /** Conversas dos dois lados para a caixa de mensagens. */
-    List<Solicitacao> findByItem_Doador_IdOrReceptor_IdOrderByCriadaEmDesc(String doadorId, String receptorId);
+    /** Inbox do doador — campo denormalizado (confiável). */
+    List<Solicitacao> findByDoadorId(String doadorId);
+
+    List<Solicitacao> findByItem_DoadorAndStatus(Usuario doador, Solicitacao.StatusSolicitacao status);
+
+    List<Solicitacao> findByItem_Doador_IdOrderByCriadaEmDesc(String doadorId);
 
     default Optional<Solicitacao> findValidById(String id) {
         return findById(id);

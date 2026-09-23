@@ -8,4 +8,7 @@ import java.util.List;
 
 public interface MensagemRepository extends MongoRepository<Mensagem, String> {
     List<Mensagem> findBySolicitacaoOrderByCriadaEmAsc(Solicitacao solicitacao);
+
+    /** Última mensagem da conversa (para preview no Inbox). */
+    Mensagem findFirstBySolicitacaoOrderByCriadaEmDesc(Solicitacao solicitacao);
 }

@@ -1,6 +1,7 @@
 package com.reviva.api.repository;
 
 import com.reviva.api.model.Notificacao;
+import com.reviva.api.model.Solicitacao;
 import com.reviva.api.model.Usuario;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
@@ -9,6 +10,15 @@ import java.time.Instant;
 
 public interface NotificacaoRepository extends MongoRepository<Notificacao, String> {
     List<Notificacao> findByUsuarioOrderByCriadaEmDesc(Usuario usuario);
+
+    List<Notificacao> findByUsuarioAndLidaFalseOrderByCriadaEmDesc(Usuario usuario);
+
+    /** Preferir id — evita falha de match em DBRef com a entidade do JWT. */
+    List<Notificacao> findByUsuario_IdAndLidaFalseOrderByCriadaEmDesc(String usuarioId);
+
+    List<Notificacao> findByUsuarioAndSolicitacaoAndLidaFalse(Usuario usuario, Solicitacao solicitacao);
+
+    List<Notificacao> findByUsuario_IdAndSolicitacao_IdAndLidaFalse(String usuarioId, String solicitacaoId);
 
     int deleteByUsuario_Id(String usuarioId);
 

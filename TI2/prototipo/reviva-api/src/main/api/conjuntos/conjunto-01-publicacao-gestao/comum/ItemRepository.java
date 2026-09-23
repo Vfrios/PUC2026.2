@@ -10,6 +10,9 @@ public interface ItemRepository extends MongoRepository<Item, String> {
 
     List<Item> findByDoador(Usuario doador);
 
+    /** Preferir este método: DBRef por id é mais confiável que a entidade inteira. */
+    List<Item> findByDoador_Id(String doadorId);
+
     List<Item> findByStatus(Item.StatusItem status);
 
     List<Item> findByCategoriaAndStatus(Item.Categoria categoria, Item.StatusItem status);

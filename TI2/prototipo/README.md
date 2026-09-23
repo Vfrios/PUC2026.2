@@ -130,7 +130,7 @@ O frontend se comunica com a API por REST e recebe novas mensagens por WebSocket
 
 ## Como executar
 
-Pre-requisitos: JDK 21, Maven, Node.js, npm e uma instância MongoDB Atlas.
+Pre-requisitos: JDK 21, Maven, Node.js, pnpm e uma instância MongoDB Atlas.
 
 Configure a conexão antes de iniciar a API:
 
@@ -159,8 +159,8 @@ Os comandos de carga e limpeza carregam automaticamente as variáveis de
 `atlas-credentials.env` (`MONGODB_USERNAME`, `MONGODB_PASSWORD` e `MONGODB_URI`):
 
 ```powershell
-npm run seed:mongodb
-npm run clear:mongodb
+pnpm run seed:mongodb
+pnpm run clear:mongodb
 ```
 
 Os IDs do MongoDB devem usar `ObjectId` em todas as colecoes e referencias
@@ -168,14 +168,14 @@ Os IDs do MongoDB devem usar `ObjectId` em todas as colecoes e referencias
 com IDs string de 24 caracteres, faça um backup e execute primeiro a auditoria:
 
 ```powershell
-npm run migrate:mongodb-ids
+pnpm run migrate:mongodb-ids
 ```
 
 Somente depois de revisar a quantidade informada pelo comando, aplique a
 migracao:
 
 ```powershell
-npm run migrate:mongodb-ids:apply
+pnpm run migrate:mongodb-ids:apply
 ```
 
 O comando com `--apply` converte IDs string hexadecimais e seus `DBRef`,
@@ -223,12 +223,12 @@ Em outro terminal:
 
 ```powershell
 cd reviva-frontend
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
-Frontend: http://localhost:5173. Para iniciar pela raiz, use `npm install` e
-`npm run dev`; o comando usa `concurrently` para iniciar os dois aplicativos.
+Frontend: http://localhost:5173. Para iniciar pela raiz, use `pnpm install` e
+`pnpm run dev`; o comando usa `concurrently` para iniciar os dois aplicativos.
 
 Se a porta 8080 estiver ocupada:
 
@@ -320,7 +320,7 @@ O cliente conecta pelo endpoint SockJS `/ws` e atualiza o chat em tempo real.
 
 ```powershell
 cd reviva-frontend
-npm run build
+pnpm run build
 
 cd ..\reviva-api
 mvn test-compile -q

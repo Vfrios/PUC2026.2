@@ -42,6 +42,7 @@ export default function RevivaApp() {
   const [usuario, setUsuario] = useState(null);
   const [conteudoRolado, setConteudoRolado] = useState(false);
   const [onlineIds, setOnlineIds] = useState(() => new Set());
+  const [notifNaoLidas, setNotifNaoLidas] = useState(0);
   const scrollContainerRef = useRef(null);
   const usuarioRef = useRef(null);
   useEffect(() => { usuarioRef.current = usuario; }, [usuario]);
@@ -114,6 +115,34 @@ export default function RevivaApp() {
 
   const screen = nav.screen;
   const params = nav.params;
+
+  // Badge global do sino: atualiza a cada 10s e ao trocar de tela.
+  useEffect(() => {
+    if (!usuario?.id || !getToken()) {
+      setNotifNaoLidas(0);
+      return undefined;
+    }
+    let alive = true;
+    const carregar = () => {
+      api.notificacoes()
+        .then(lista => {
+          if (!alive) return;
+          setNotifNaoLidas((lista || []).filter(n => !n.lida).length);
+        })
+        .catch(() => {});
+    };
+    carregar();
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") carregar();
+    }, 10_000);
+    const onFocus = () => carregar();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [usuario?.id, screen]);
 
   const refreshUsuario = async () => {
     if (!getToken()) return;
@@ -237,7 +266,7 @@ export default function RevivaApp() {
     case "auth": ScreenView = <authScreens.Auth go={go} onLogin={handleLogin} onRegister={handleRegister} />; break;
     case "onboarding": ScreenView = <onboardingScreens.Onboarding go={go} />; break;
     case "chooseProfile": ScreenView = <onboardingScreens.ChooseProfile go={go} setRole={setRole} />; break;
-    case "homeDoador": ScreenView = <conjunto2Screens.HomeDoador go={go} usuario={usuario} compact={conteudoRolado} notify={notify} />; break;
+    case "homeDoador": ScreenView = <conjunto2Screens.HomeDoador go={go} usuario={usuario} compact={conteudoRolado} notify={notify} notifNaoLidas={notifNaoLidas} />; break;
     case "cadastroItem": ScreenView = <conjunto1Screens.CadastroItem go={go} notify={notify} params={params} usuario={usuario} />; break;
     case "gerenciarItens": ScreenView = <conjunto1Screens.GerenciarItens go={go} notify={notify} />; break;
     case "chatDoador": ScreenView = <conjunto3Screens.Chat go={go} role="doador" notify={notify} params={params} usuario={usuario} onlineIds={onlineIds} />; break;
@@ -246,7 +275,7 @@ export default function RevivaApp() {
     case "confirmDoacao": ScreenView = <conjunto3Screens.ConfirmDoacao go={go} notify={notify} params={params} usuario={usuario} refreshUsuario={refreshUsuario} />; break;
     case "avaliarReceptor": ScreenView = <conjunto3Screens.Avaliar go={go} notify={notify} params={params} />; break;
     case "dashboardImpacto": ScreenView = <conjunto3Screens.DashboardImpacto go={go} usuario={usuario} />; break;
-    case "homeReceptor": ScreenView = <conjunto2Screens.HomeReceptor go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} compact={conteudoRolado} notify={notify} />; break;
+    case "homeReceptor": ScreenView = <conjunto2Screens.HomeReceptor go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} compact={conteudoRolado} notify={notify} notifNaoLidas={notifNaoLidas} />; break;
     case "busca": ScreenView = <conjunto2Screens.Busca go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} />; break;
     case "listaItens": ScreenView = <conjunto2Screens.ListaItens go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={params} />; break;
     case "detalhesItem": ScreenView = <conjunto2Screens.DetalhesItem go={go} notify={notify} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} params={params} />; break;
@@ -261,7 +290,7 @@ export default function RevivaApp() {
     case "reputacao": ScreenView = <conjunto4Screens.Reputacao go={go} usuario={usuario} />; break;
     case "comunidades": ScreenView = <conjunto5Screens.Comunidades go={go} notify={notify} usuario={usuario} />; break;
     case "favoritos": ScreenView = <conjunto5Screens.Favoritos go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} onlineIds={onlineIds} />; break;
-    case "notificacoes": ScreenView = <conjunto6Screens.Notificacoes go={go} role={role} />; break;
+    case "notificacoes": ScreenView = <conjunto6Screens.Notificacoes go={go} role={role} usuario={usuario} />; break;
     case "moderacao": ScreenView = <conjunto4Screens.Moderacao go={go} notify={notify} params={params} />; break;
     default: ScreenView = <div />;
   }

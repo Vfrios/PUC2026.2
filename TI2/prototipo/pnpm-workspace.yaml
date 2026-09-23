@@ -1,0 +1,6 @@
+packages:
+  - reviva-frontend
+
+# Permite o postinstall do esbuild (necessário para o Vite).
+allowBuilds:
+  esbuild: true
