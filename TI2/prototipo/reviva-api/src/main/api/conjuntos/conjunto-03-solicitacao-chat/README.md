@@ -35,21 +35,19 @@ Controlar pedidos, conversas, presenca, agendamentos e confirmacao das trocas.
 
 O conjunto usa usuario, item e notificacoes compartilhados. Todos os estados sao persistidos no mesmo banco MongoDB.
 
-## O que falta implementar ou atualizar
+O Inbox suporta arquivar e desarquivar uma conversa por usuario e remove-la
+apenas da visao do usuario logado. O envio de uma nova mensagem preserva o
+estado de arquivamento da outra pessoa.
 
-### Solicitacao
+## Estado atual
 
-- formalizar transicoes de status e permissoes;
-- permitir cancelamento seguro;
-- validar item disponivel e solicitacao duplicada;
-- adicionar testes para solicitacoes enviadas e recebidas.
+Solicitacoes possuem controle de acesso, estados de troca, preview da ultima
+mensagem, arquivamento e ocultacao por usuario. Mensagens suportam texto,
+leitura, anexos de imagem e localizacao; o chat usa REST para persistencia e
+WebSocket/STOMP para atualizacao em tempo real.
 
-### Chat de negociacao
-
-- tratar reconexao e falha de WebSocket;
-- adicionar leitura, anexos e notificacoes quando necessario;
-- garantir autorizacao por solicitacao;
-- testar mensagens, presenca, localizacao e agendamento em conjunto.
+Reconexao, testes de integracao e refinamentos de anexos continuam como pontos
+de evolucao.
 
 ## Organizacao para envio
 
@@ -78,4 +76,4 @@ conjunto-03-solicitacao-chat/
 	└── AgendamentoRequest.java
 ```
 
-Na Sprint 1, enviar `solicitacao` e `comum`. Na Sprint 2, acrescentar `chat-negociacao`.
+Os tres subpacotes participam do mesmo fluxo e devem ser executados juntos.

@@ -1,39 +1,25 @@
-# Conjunto 1 - Publicacao e gestao
+# Conjunto 1 - Publicação e gestão
 
 ## Objetivo
+Este conjunto reúne o fluxo de publicação e o painel de manutenção dos anúncios do usuário.
 
-Responsavel por criar e administrar os itens disponibilizados na plataforma.
+## Arquivos do conjunto
+- `cadastroItem.jsx`: tela de cadastro e edição do item, com fotos, categoria, estado, endereço, salvamento de rascunho e publicação.
+- `gerenciarItens.jsx`: tela própria do painel de gestão, com listagem, edição, duplicação, exclusão e acompanhamento do status dos itens.
 
-## Telas
+## Quantidade de telas: 2
 
-- **Cadastro de item:** cria ou edita um item com fotos, categoria, descricao e localizacao.
-- **Gerenciar itens:** lista os itens do usuario e permite editar, restaurar, remover e acompanhar status.
+| Tela | Rota no `App.jsx` | Arquivo responsável | Função |
+| --- | --- | --- | --- |
+| Cadastro/edição de item | `cadastroItem` | `cadastroItem.jsx` | Criar, editar, duplicar e salvar rascunhos de anúncios. |
+| Gerenciar itens | `gerenciarItens` | `gerenciarItens.jsx` | Listar, editar, remover, restaurar e acompanhar anúncios do usuário. |
 
-## Arquivos
+## Separação recomendada
 
-- `index.jsx`: ponto de entrada do conjunto. Reexporta `CadastroItem` e `GerenciarItens` para o `App.jsx`.
-- `itemScreens.jsx`: implementacao das telas deste conjunto.
+Este é o conjunto mais simples para separar fisicamente: cada arquivo deve
+conter somente uma tela. A listagem pública e os detalhes aparecem em outros
+conjuntos no `App.jsx`, mesmo que parte da implementação legada ainda esteja
+no arquivo de cadastro.
 
-## Dependencias
-
-Utiliza `api.js`, componentes de `shared` e o usuario autenticado. Os dados sao persistidos na mesma API e no mesmo banco MongoDB usados pelo restante do sistema.
-
-## Integracao
-
-Os endpoints de itens devem continuar compativeis com busca, detalhes e solicitacoes. Nao alterar contratos sem atualizar os conjuntos dependentes.
-
-## O que falta implementar ou atualizar
-
-### Cadastro de item
-
-- validar campos obrigatorios;
-- permitir rascunho e edicao de fotos;
-- tratar loading, erro, sucesso e formulario vazio;
-- confirmar que o item salvo aparece no gerenciamento.
-
-### Gerenciar itens
-
-- melhorar filtros por status;
-- mostrar quantidade de solicitacoes por item;
-- deixar editar, remover, restaurar e marcar como doado mais claros;
-- atualizar a lista depois de cada acao.
+## Observações
+O conjunto ficou organizado em dois componentes de tela, sem `index.jsx` e sem reexportação de barrel entre pastas do módulo.

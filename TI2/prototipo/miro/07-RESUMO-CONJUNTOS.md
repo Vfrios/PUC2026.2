@@ -1,357 +1,121 @@
-# Resumo dos conjuntos de telas
+# Levantamento de melhorias — Reviva
 
-Este documento resume os 6 conjuntos funcionais do projeto. Onboarding e login ficam fora da contagem, pois sao telas de entrada do sistema.
-
-Cada conjunto possui 2 telas e deve funcionar de forma independente nas Sprints 1 e 2, continuando integrado ao sistema completo na Sprint 3.
+Análise feita em cima do código real de cada conjunto (não só dos nomes das telas), com foco especial nas telas de **Comunidades** e **Solicitação de item**.
 
 ---
 
-## Conjunto 1 - Publicacao e gestao
+## Conjunto 1 - Publicação e gestão
 
 ### Telas
-
-- Cadastro de item
-- Gerenciar itens
+Cadastro/edição de item (`cadastroItem.jsx`) e Gerenciar itens (`gerenciarItens.jsx`).
 
 ### O que faz
+Cria/edita anúncio (fotos, categoria, estado, endereço, rascunho automático) e depois lista/edita/duplica/remove/restaura os itens do usuário, com abas por status e respostas rápidas a solicitações recebidas.
 
-Permite cadastrar itens para doacao ou troca e administrar os itens publicados pelo usuario.
-
-### Tela de Cadastro de item
-
-#### O que precisa atualizar
-
-- melhorar a validacao dos campos obrigatorios;
-- organizar categoria, descricao, condicao e localizacao;
-- padronizar mensagens de sucesso e erro;
-- melhorar o preview e a ordem das fotos;
-- permitir editar o item depois de salva-lo.
+#### O que precisa atualizar/melhorar
+- Não existe contador de visualizações nem qualquer estatística do anúncio (quantas pessoas viram, quantas favoritaram) — o doador publica "no escuro".
+- O rascunho é salvo só no `localStorage`; se trocar de aparelho o rascunho some.
 
 #### O que falta implementar
-
-- salvar rascunho de item;
-- escolher fotos por arquivo ou galeria;
-- editar e remover fotos depois do cadastro;
-- validar duplicidade de itens;
-- informar regras de retirada ou entrega.
-
-### Tela de Gerenciar itens
-
-#### O que precisa atualizar
-
-- organizar filtros por status;
-- deixar editar, remover, restaurar e marcar como doado mais claros;
-- mostrar solicitacoes recebidas por item;
-- atualizar a lista depois de cada acao;
-- padronizar estados ativo, em negociacao, doado e removido.
-
-#### O que falta implementar
-
-- mostrar quantidade de interessados;
-- responder solicitacoes diretamente na tela;
-- criar acoes em lote;
-- concluir o fluxo de gerenciamento de todos os status.
+- "Impulsionar" ou destacar um item parado há muito tempo (nem que seja só reordenar na busca).
+- Campo de quantidade (para itens em lote, tipo "5 potes de vidro") — hoje é sempre 1 unidade implícita.
+- Vídeo curto ou mais de uma "capa" configurável para o anúncio.
 
 ---
 
 ## Conjunto 2 - Descoberta e detalhes
 
 ### Telas
-
-- Busca / descoberta de itens
-- Detalhes do item
+Home do doador, Home do receptor (`discoveryScreens.jsx`), Busca, Lista de itens, Detalhes do item (`itensDetalhes.jsx`).
 
 ### O que faz
+Vitrine de itens: atalhos na home, busca por texto/categoria/UF/cidade/geolocalização, lista com favoritos, e tela de detalhes com fotos, localização e botão de solicitar.
 
-Permite encontrar itens por termo, categoria e localizacao e consultar os detalhes antes de fazer uma solicitacao.
-
-### Tela de Busca / descoberta de itens
-
-#### O que precisa atualizar
-
-- melhorar os filtros por cidade, UF e categoria;
-- adicionar filtro de distancia usando a localizacao do usuario;
-- criar ordenacao por relevancia, proximidade e data;
-- melhorar os cards e a apresentacao dos resultados;
-- tratar estados vazios, carregamento e erro da API;
-- indicar claramente quando um item esta indisponivel.
+#### O que precisa atualizar/melhorar
+- Busca não tem ordenação (mais recentes, mais próximos, etc.) nem filtro por raio de distância — só liga/desliga "usar minha localização".
+- O filtro "Troca" já existe (`tipoFiltro === "TROCAR"`), mas nada na tela de detalhes ou na solicitação trata isso de forma diferente de uma doação simples.
 
 #### O que falta implementar
-
-- filtro por disponibilidade real do item;
-- busca por varios criterios combinados;
-- limpar todos os filtros com uma unica acao;
-- paginacao ou carregamento progressivo dos resultados;
-- sugestao de itens quando a busca nao encontrar resultados.
-
-### Tela de Detalhes do item
-
-#### O que precisa atualizar
-
-- melhorar a apresentacao das fotos, descricao e localizacao;
-- exibir a reputacao do anunciante de forma mais clara;
-- mostrar regras de retirada ou entrega;
-- atualizar o estado quando o item for removido, doado ou entrar em negociacao;
-- deixar os botoes de favoritar e solicitar mais visiveis;
-- tratar item inexistente ou erro ao carregar os dados.
-
-#### O que falta implementar
-
-- compartilhamento do item;
-- exibicao do impacto ambiental estimado;
-- tratamento especifico para item removido ou inexistente;
-- carregamento completo ao abrir diretamente por `itemId`;
-- indicador de item disponivel, reservado ou ja doado;
-- exibicao do historico de atualizacoes ou interesse no item.
+- Botão de "denunciar anúncio" direto na tela de Detalhes (hoje só existe denúncia depois que já tem chat/agendamento em andamento).
+- Paginação/scroll infinito de verdade na Lista de itens (hoje é `POR_PAGINA` fixo sem "carregar mais" visível em todo lugar — vale conferir).
+- Comparar dois itens lado a lado (nice-to-have, não essencial).
 
 ---
 
-## Conjunto 3 - Solicitacao e chat
+## Conjunto 3 - Solicitação e chat
 
 ### Telas
-
-- Solicitacao de item
-- Chat de negociacao
+Inbox, Chat (`tradeScreens.jsx`), Solicitação, Agendamento, Confirmação de doação/recebimento, Dashboard de impacto (`negociacaoScreens.jsx`).
 
 ### O que faz
+Todo o ciclo: pedir o item, conversar, marcar retirada, confirmar com código, e no fim mostrar o impacto (kg evitado, selo, pontos).
 
-Permite solicitar um item, conversar com o anunciante e combinar local, data e horario da troca.
+### Tela de Solicitação de item
 
-### Tela de Solicitacao de item
-
-#### O que precisa atualizar
-
-- exibir status em etapas: enviada, aceita, recusada, agendada e concluida;
-- melhorar confirmacoes de envio, aceite e cancelamento;
-- mostrar a resposta do anunciante;
-- tratar item indisponivel ou solicitacao duplicada;
-- permitir abrir a solicitacao diretamente por identificador.
+#### O que precisa atualizar/melhorar
+- **O maior gap real:** o app tem "Doar" **e** "Trocar" como tipo de publicação (isso já existe no cadastro e no filtro de busca), mas a tela de Solicitação trata os dois exatamente igual — não tem campo pra dizer "eu ofereço X em troca" quando o item é do tipo Troca. Hoje o receptor só manda uma mensagem de texto livre, então a intenção de troca se perde ou vira só um combinado no chat.
+- O textarea da mensagem não mostra contador de caracteres (`0/500`), diferente de outras telas do app (Mural da comunidade, por exemplo, mostra).
+- Quando o item já está "Em negociação" com outra pessoa, o app só mostra um aviso genérico — não dá pra "entrar na fila" nem ser avisado automaticamente se a negociação cair.
 
 #### O que falta implementar
-
-- cancelamento seguro de solicitacao;
-- validacao de permissoes por usuario;
-- notificacao de mudanca de status;
-- historico das solicitacoes do usuario;
-- fluxo completo de confirmacao da doacao e recebimento.
-
-### Tela de Chat de negociacao
-
-#### O que precisa atualizar
-
-- tratar conversa vazia e falha de conexao;
-- melhorar mensagens de evento e presenca online;
-- deixar agendamento e confirmacao mais claros;
-- exibir horarios e status de leitura;
-- melhorar a exibicao de localizacao compartilhada.
-
-#### O que falta implementar
-
-- notificacao de novas mensagens;
-- confirmacao de leitura;
-- envio de imagens ou anexos;
-- reconexao automatica do WebSocket;
-- respostas a mensagens e cancelamento de conversa.
+- Campo opcional de "horário/dia preferido para retirada" já na hora de solicitar (hoje isso só é definido depois, na tela de Agendamento, exigindo mais uma etapa e mais um vai-e-volta pelo chat).
+- Anexar uma foto na mensagem inicial da solicitação (o Chat já suporta imagem depois, mas a solicitação em si não).
+- Para quem tem várias solicitações pendentes num mesmo item, o doador não vê nada tipo "3 pessoas já pediram esse item" — só descobre abrindo Gerenciar itens.
 
 ---
 
-## Conjunto 4 - Perfil e reputacao
+## Conjunto 4 - Perfil e reputação
 
 ### Telas
-
-- Perfil do usuario
-- Reputacao
+Perfil, Perfil público, Reputação, Histórico (`accountScreens.jsx`), Avaliação (`avaliacao.jsx`), Moderação.
 
 ### O que faz
+Dados da conta, visão pública de reputação de outra pessoa, linha do tempo de atividades, avaliação pós-troca (estrelas + categorias), e formulário de denúncia.
 
-Apresenta os dados do usuario e mostra sua confiabilidade, pontuacao, selos e avaliacoes recebidas.
-
-### Tela de Perfil do usuario
-
-#### O que precisa atualizar
-
-- melhorar edicao dos dados pessoais e da foto;
-- separar informacoes pessoais, endereco e seguranca;
-- mostrar historico de trocas e contribuicoes;
-- tratar perfil incompleto e usuario sem avaliacao;
-- organizar melhor favoritos, notificacoes e preferencias.
+#### O que precisa atualizar/melhorar
+- Reputação mostra a média e os selos, mas não dá pra filtrar/ordenar as avaliações recebidas (mais recentes, piores, por categoria).
+- Não existe "bloquear usuário" em lugar nenhum — só denunciar. Se alguém for inconveniente, a única saída é arquivar o chat.
 
 #### O que falta implementar
-
-- perfil publico completo do anunciante;
-- resumo de impacto ambiental do usuario;
-- historico detalhado de acoes;
-- edicao de todos os dados permitidos;
-- atalhos para endereco, seguranca e termos.
-
-### Tela de Reputacao
-
-#### O que precisa atualizar
-
-- organizar melhor pontos, selos e avaliacoes;
-- explicar como a pontuacao e calculada;
-- mostrar confiabilidade de forma mais visual;
-- tratar usuario sem avaliacao;
-- atualizar os dados depois de uma nova avaliacao.
-
-#### O que falta implementar
-
-- avaliacao por categorias, como pontualidade e comunicacao;
-- historico detalhado de avaliacoes;
-- atualizacao automatica de pontos e selos;
-- controle contra avaliacao duplicada;
-- destaque de conquistas e contribuicoes positivas.
+- Resposta pública do avaliado a uma avaliação recebida (comum em apps de reputação, ajuda a contextualizar uma nota ruim).
+- Selo de verificação (e-mail/celular verificado) aparecendo no Perfil público, não só internamente no `usuario.emailVerificado`.
 
 ---
 
 ## Conjunto 5 - Comunidades e favoritos
 
 ### Telas
-
-- Comunidades
-- Favoritos
+Comunidades (`communityScreens.jsx`), Favoritos (`favoritos.jsx`).
 
 ### O que faz
-
-Permite participar de comunidades por interesse ou regiao e salvar itens para consultar depois.
+Comunidades: buscar, participar/sair, e postar num mural por comunidade (com "apoiar" post). Favoritos: lista com seleção múltipla, remoção em lote e ordenação.
 
 ### Tela de Comunidades
 
-#### O que precisa atualizar
-
-- melhorar entrada e saida de comunidades;
-- organizar comunidades por categoria e localizacao;
-- tratar lista vazia e comunidade indisponivel;
-- melhorar a exibicao de interesses e atividades;
-- padronizar feedback ao participar ou sair.
+#### O que precisa atualizar/melhorar
+- O mural (`MuralComunidade`) só tem "apoiar" (curtir) — não dá pra comentar num post, então cada publicação vira um mural de post soltos sem conversa.
+- Não tem como remover ou editar o próprio post depois de publicado (nem denunciar o post de outra pessoa).
+- Busca de comunidades é só por texto/categoria/cidade — não mostra nada tipo "comunidades ativas perto de você" ordenado por atividade recente.
 
 #### O que falta implementar
-
-- publicacoes ou atividades dentro das comunidades;
-- filtros por interesse;
-- busca de comunidades por regiao;
-- sistema de seguir ou deixar de seguir comunidade;
-- compartilhamento de atividades comunitarias.
-
-### Tela de Favoritos
-
-#### O que precisa atualizar
-
-- melhorar ordenacao dos favoritos;
-- indicar itens favoritados que ficaram indisponiveis;
-- sincronizar favoritos com busca e detalhes;
-- tratar lista vazia;
-- mostrar data em que o item foi salvo.
-
-#### O que falta implementar
-
-- persistencia de favoritos na API;
-- endpoints para adicionar, listar e remover favoritos;
-- remocao de varios favoritos de uma vez;
-- separacao por categoria;
-- atualizacao automatica quando o item for doado ou removido.
+- **Criar uma comunidade nova.** Isso é o gap mais chamativo: hoje só dá pra participar de comunidades que já existem — não existe nem botão no front nem endpoint no `api.js` (`comunidades()`, `participarComunidade()`, `sairComunidade()`, `postsComunidade()`, `publicarNaComunidade()`, `apoiarPost()` — nenhum de criar). Precisaria de back e front.
+- Notificação/indicador de "post novo" numa comunidade que você participa (hoje só aparece se você entrar e olhar).
+- Anexar foto num post do mural (por exemplo, foto do item que virou doação, resultado de uma troca).
 
 ---
 
-## Conjunto 6 - Endereco e seguranca
+## Conjunto 6 - Endereço e segurança
 
 ### Telas
-
-- Endereco salvo
-- Seguranca e termos
+Endereços salvos (`enderecos.jsx`), Segurança e privacidade, Termos, Privacidade, Notificações (`seguranca.jsx`).
 
 ### O que faz
+CRUD de endereços com busca automática por CEP, troca de senha, encerrar sessões, preferências de notificação (in-app e do navegador), documentos legais e central de notificações com abas.
 
-Permite guardar locais de retirada ou entrega e administrar seguranca, notificacoes, termos e preferencias da conta.
-
-### Tela de Endereco salvo
-
-#### O que precisa atualizar
-
-- criar a tela de endereco salvo;
-- validar CEP, cidade, bairro e numero;
-- mostrar endereco principal de forma clara;
-- tratar lista vazia e erro de consulta;
-- integrar o endereco ao agendamento.
+#### O que precisa atualizar/melhorar
+- Endereço só pega coordenadas via CEP (ViaCEP) — não dá pra ajustar o pino manualmente num mapa, mesmo o app já usando `react-leaflet` em outra tela (o Chat, pra mostrar localização de retirada). Seria reaproveitar uma lib que já está no projeto.
+- Segurança não tem lista de sessões ativas de verdade (só um botão "sair de todos os outros dispositivos" — não mostra quais dispositivos/quando).
 
 #### O que falta implementar
-
-- cadastro, edicao e exclusao de enderecos;
-- possibilidade de ter varios enderecos;
-- definicao de endereco padrao;
-- nome para cada endereco, como casa ou trabalho;
-- preenchimento automatico por CEP.
-
-### Tela de Seguranca e termos
-
-#### O que precisa atualizar
-
-- separar seguranca, notificacoes, termos e privacidade;
-- melhorar mensagens de alteracao de senha;
-- tratar notificacoes lidas, nao lidas e vazias;
-- organizar preferencias da conta;
-- mostrar confirmacao para operacoes sensiveis.
-
-#### O que falta implementar
-
-- endpoint de alteracao de senha;
-- preferencias de notificacao;
-- telas separadas para termos de uso e politica de privacidade;
-- autenticacao em duas etapas;
-- gerenciamento de sessoes e dispositivos conectados.
-
----
-
-## Resumo geral
-
-| Conjunto | Telas | Principal pendencia |
-|---|---|---|
-| 1 | Cadastro de item + Gerenciar itens | Completar gerenciamento e status dos itens |
-| 2 | Busca + Detalhes do item | Melhorar filtros, detalhes e disponibilidade |
-| 3 | Solicitacao + Chat | Completar negociacao, notificacoes e confirmacoes |
-| 4 | Perfil + Reputacao | Consolidar dados, avaliacoes e pontuacao |
-| 5 | Comunidades + Favoritos | Implementar persistencia e ampliar interacao |
-| 6 | Endereco + Seguranca e termos | Criar endereco salvo e configuracoes da conta |
-
-Total: **6 conjuntos e 12 telas funcionais**.
-
----
-
-## Status de implementacao (atualizado em 22/09/2026)
-
-### Conjunto 1 - Publicacao e gestao
-
-- Cadastro: validacao por campo (API e tela), rascunho automatico no navegador, ate 5 fotos pela galeria (toque no quadro) com reordenacao e escolha de capa, modo de entrega (retirada no local ou a combinar) e regras de retirada, bloqueio de anuncio duplicado (409), edicao e duplicacao de item.
-- Gerenciar: abas Ativos / Em negociacao / Doados / Arquivados com contadores, numero de interessados por item, resposta e recusa de solicitacao na propria tela, acoes em lote (`POST /api/itens/lote`), restaurar, marcar como doado e remover com confirmacao.
-
-### Conjunto 2 - Descoberta e detalhes
-
-- Busca: filtros combinados (termo, categoria, cidade/UF, tipo, condicao), resultados por relevancia quando ha termo e por data nos demais casos, apenas itens disponiveis, paginacao e sugestoes quando nao ha resultado.
-- Detalhes: carrossel de fotos, status (disponivel, reservado, doado, removido), regras de retirada, impacto ambiental, reputacao e selo do anunciante, compartilhar (`?item=<id>` abre direto o item), tela de item inexistente (404) e atividade/interessados.
-
-### Conjunto 3 - Solicitacao e chat
-
-- Solicitacao: etapas enviada/aceita/agendada/concluida/recusada/cancelada, `GET /api/solicitacoes/{id}` com checagem de permissao, cancelar e recusar com liberacao do item, notificacao de mudanca de status e bloqueio de solicitar item proprio ou indisponivel.
-- Chat: estado de conexao com reconexao automatica, conversa encerrada bloqueia envio, responder mensagem com citacao (arrastar para a direita no celular ou clique duplo no PC, como no WhatsApp), alerta do navegador para mensagens novas, cancelar troca (quando ha agendamento ativo). Leitura, presenca e imagens ja existiam.
-
-### Conjunto 4 - Perfil e reputacao
-
-- Perfil: foto salva na conta (`PUT /api/usuarios/me`), edicao de nome e celular, indicador de perfil incompleto, resumo de impacto, secoes Dados pessoais / Endereco / Atividade / Conta e seguranca, historico detalhado (`GET /api/usuarios/me/historico`) e perfil publico completo (`GET /api/usuarios/{id}/publico`, sem dados pessoais, compartilhavel por `?perfil=<id>`).
-- Reputacao: avaliacao por categoria (pontualidade, comunicacao, item conforme anunciado), medias e distribuicao de notas (`GET /api/usuarios/{id}/avaliacoes`), historico de avaliacoes, explicacao dos pontos, progresso ate o proximo selo, conquistas e bloqueio de avaliacao duplicada (409 + `GET /api/avaliacoes/agendamento/{id}/minha`).
-
-### Conjunto 5 - Comunidades e favoritos
-
-- Comunidades: categoria, cidade e UF, contagem real de membros, participar e sair com feedback, filtros (minhas, minha cidade, categoria, busca por nome/bairro), mural de publicacoes com apoios (`/api/comunidades/{id}/posts`), notificacao aos membros e compartilhamento.
-- Favoritos: persistidos na API (`GET/POST/DELETE /api/favoritos`, `POST /api/favoritos/remover`), migracao automatica dos favoritos antigos do navegador, ordenacao, filtro por categoria, data em que foi salvo, aviso de itens indisponiveis/removidos e remocao em lote.
-
-### Conjunto 6 - Endereco e seguranca
-
-- Enderecos: CRUD em `/api/enderecos`, varios enderecos com apelido, endereco padrao (sincroniza com o cadastro do usuario), preenchimento por CEP, validacao e integracao com cadastro de item e agendamento.
-- Seguranca e termos: alterar senha (`POST /api/usuarios/me/senha`), recuperar senha sem SMTP (`POST /api/auth/recuperar-senha` com e-mail + CPF/CNPJ), preferencias de notificacao respeitadas pelo backend (`/api/usuarios/me/preferencias`), sair de todos os outros dispositivos (`POST /api/usuarios/me/sessoes/encerrar`), notificacoes lidas/nao lidas (`GET /api/notificacoes?todas=true`) e telas separadas de Termos de uso e Politica de privacidade.
-
-### Ainda pendente
-
-- Autenticacao em duas etapas: aparece na tela como "ainda nao disponivel".
-- Verificacao de e-mail e celular.
-- Lista detalhada de cada dispositivo conectado (hoje e possivel encerrar todas as outras sessoes de uma vez).
-- Textos de Termos e Privacidade sao uma versao de prototipo e precisam de revisao da equipe.
+- Autenticação em duas etapas — já tem até o toggle desenhado na tela, mas desabilitado com aviso de "não disponível neste protótipo".
+- Exportar/baixar meus dados (a Política de Privacidade menciona LGPD e "entre em contato com a equipe" pra isso, mas não tem nada self-service no app).

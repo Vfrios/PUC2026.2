@@ -107,7 +107,8 @@ public class MensagemController {
         // Só o preview — evita regravar o documento inteiro (e os DBRefs) no Atlas.
         mongoTemplate.updateFirst(
                 Query.query(Criteria.where("_id").is(solicitacao.getId())),
-                new Update().set("mensagem", SolicitacaoResponse.previewTexto(req.texto())),
+                new Update()
+                        .set("mensagem", SolicitacaoResponse.previewTexto(req.texto())),
                 Solicitacao.class);
         DbRefCache.limpar();
 

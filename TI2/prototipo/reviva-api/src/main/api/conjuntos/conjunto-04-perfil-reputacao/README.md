@@ -24,21 +24,14 @@ Fornecer os dados do usuario e controlar avaliacoes e pontuacao.
 
 Perfil, detalhes do item e fluxo de troca podem consultar os mesmos usuarios e avaliacoes. Nao criar outra base de usuario.
 
-## O que falta implementar ou atualizar
+## Estado atual
 
-### Perfil do usuario
+O conjunto fornece perfil autenticado e publico, localizacao, foto, historico,
+avaliacoes, pontuacao, selos e impacto. Operacoes de alteracao exigem o usuario
+autenticado; a reputacao e calculada a partir das avaliacoes persistidas.
 
-- completar endpoints de edicao de dados e foto;
-- separar dados privados de dados publicos;
-- adicionar historico e impacto do usuario;
-- validar acesso apenas ao proprio perfil para alteracoes.
-
-### Reputacao
-
-- consolidar calculo de pontos e selo;
-- impedir avaliacao duplicada ou fora de troca concluida;
-- retornar historico detalhado de avaliacoes;
-- adicionar testes de avaliacao, pontuacao e permissao.
+O frontend tambem apresenta estados de perfil incompleto e de usuario sem
+avaliacoes. Exportacao de dados e fluxos administrativos sao evolucoes futuras.
 
 ## Organizacao para envio
 
@@ -60,4 +53,5 @@ conjunto-04-perfil-reputacao/
 	└── dependencias compartilhadas entre perfil e reputacao
 ```
 
-Na Sprint 1, enviar `perfil`. Na Sprint 2, acrescentar `reputacao`.
+Perfil e reputacao compartilham os mesmos usuarios e avaliacoes durante a
+execucao; nao devem criar bases ou contratos paralelos.

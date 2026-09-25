@@ -188,6 +188,12 @@ export const api = {
 
   recusarSolicitacao: (id) => request(`/api/solicitacoes/${id}/recusar`, { method: "POST" }),
 
+  arquivarConversa: (id) => request(`/api/solicitacoes/${id}/arquivar`, { method: "POST" }),
+
+  desarquivarConversa: (id) => request(`/api/solicitacoes/${id}/desarquivar`, { method: "POST" }),
+
+  excluirConversa: (id) => request(`/api/solicitacoes/${id}/inbox`, { method: "DELETE" }),
+
   /* ---------------- Chat (mensagens por solicitação) ---------------- */
   listarMensagens: (solicitacaoId) => request(`/api/solicitacoes/${solicitacaoId}/mensagens`),
 

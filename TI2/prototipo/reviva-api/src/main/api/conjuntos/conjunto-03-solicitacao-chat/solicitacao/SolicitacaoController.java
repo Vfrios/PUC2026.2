@@ -65,4 +65,19 @@ public class SolicitacaoController {
     public SolicitacaoResponse recusar(@PathVariable String id, @AuthenticationPrincipal Usuario doador) {
         return solicitacaoService.detalhe(solicitacaoService.recusar(id, doador));
     }
+
+    @PostMapping("/{id}/arquivar")
+    public SolicitacaoResponse arquivar(@PathVariable String id, @AuthenticationPrincipal Usuario usuario) {
+        return solicitacaoService.definirArquivada(id, usuario, true);
+    }
+
+    @PostMapping("/{id}/desarquivar")
+    public SolicitacaoResponse desarquivar(@PathVariable String id, @AuthenticationPrincipal Usuario usuario) {
+        return solicitacaoService.definirArquivada(id, usuario, false);
+    }
+
+    @DeleteMapping("/{id}/inbox")
+    public void excluirDoInbox(@PathVariable String id, @AuthenticationPrincipal Usuario usuario) {
+        solicitacaoService.ocultarDoInbox(id, usuario);
+    }
 }

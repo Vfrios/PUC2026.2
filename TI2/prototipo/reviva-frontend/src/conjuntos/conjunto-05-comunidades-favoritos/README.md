@@ -1,39 +1,24 @@
 # Conjunto 5 - Comunidades e favoritos
 
 ## Objetivo
+Este conjunto conecta engajamento social e itens salvos pelo usuário.
 
-Aumentar o engajamento do usuario por meio de comunidades e itens salvos.
+## Arquivos do conjunto
+- `communityScreens.jsx`: tela de comunidades e integração com a experiência social do app.
+- `favoritos.jsx`: lista de itens salvos pelo usuário.
 
-## Telas
+## Quantidade de telas: 2
 
-- **Comunidades:** lista comunidades, mostra interesses e permite participar.
-- **Favoritos:** lista os itens salvos pelo usuario e indica itens indisponiveis.
+| Tela | Rota no `App.jsx` | Arquivo responsável | Função |
+| --- | --- | --- | --- |
+| Comunidades | `comunidades` | `communityScreens.jsx` | Listar comunidades, participar e acompanhar conteúdo social. |
+| Favoritos | `favoritos` | `favoritos.jsx` | Listar, abrir e remover itens salvos. |
 
-## Arquivos
+## Separação recomendada
 
-- `index.jsx`: ponto de entrada do conjunto. Reexporta `Comunidades` e `Favoritos`.
-- `../conjunto-04-perfil-reputacao/accountScreens.jsx`: implementacao das duas telas.
+Este conjunto já possui a separação ideal: uma tela por arquivo. A implementação
+legada de comunidades e favoritos ainda compartilha componentes de conta, mas a
+entrada da navegação e a responsabilidade de cada tela estão separadas.
 
-## Dependencias
-
-Comunidades usa a API. Favoritos atualmente usa o estado local do frontend e pode receber persistencia na API em uma evolucao futura.
-
-## Integracao
-
-Favoritos deve sincronizar com busca e detalhes sem duplicar o estado. Comunidades deve continuar funcionando mesmo quando a lista estiver vazia.
-
-## O que falta implementar ou atualizar
-
-### Comunidades
-
-- melhorar entrada, saida e participacao;
-- separar comunidades por interesse ou regiao;
-- tratar lista vazia, erro e comunidade indisponivel;
-- definir conteudo que pode ser publicado ou compartilhado.
-
-### Favoritos
-
-- criar persistencia na API para complementar o `localStorage`;
-- sincronizar adicao e remocao com busca e detalhes;
-- indicar itens indisponiveis;
-- permitir ordenar ou remover favoritos em lote.
+## Observações
+O conjunto ficou com dois módulos funcionais reais, sem `index.jsx`, e cada tela é acessada diretamente pela navegação principal.

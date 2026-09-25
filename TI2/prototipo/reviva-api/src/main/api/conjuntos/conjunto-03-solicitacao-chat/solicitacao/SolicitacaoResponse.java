@@ -19,7 +19,8 @@ public record SolicitacaoResponse(
         UltimaMensagem ultimaMensagem,
         /** ENVIADA, ACEITA, AGENDADA, CONCLUIDA, RECUSADA ou CANCELADA. */
         String etapa,
-        AgendamentoResumo agendamento
+        AgendamentoResumo agendamento,
+        boolean arquivada
 ) {
     public record UltimaMensagem(String texto, Instant criadaEm) {}
 
@@ -41,6 +42,10 @@ public record SolicitacaoResponse(
     }
 
     public static SolicitacaoResponse from(Solicitacao s, Mensagem ultima, Agendamento agendamento, boolean doadorRespondeu) {
+        return from(s, ultima, agendamento, doadorRespondeu, false);
+    }
+
+    public static SolicitacaoResponse from(Solicitacao s, Mensagem ultima, Agendamento agendamento, boolean doadorRespondeu, boolean arquivada) {
         if (s == null) return null;
         String doadorId = s.getDoadorId();
         if ((doadorId == null || doadorId.isBlank()) && s.getItem() != null && s.getItem().getDoador() != null) {
@@ -56,7 +61,8 @@ public record SolicitacaoResponse(
                 s.getCriadaEm(),
                 ultima == null ? null : new UltimaMensagem(previewTexto(ultima.getTexto()), ultima.getCriadaEm()),
                 etapa(s, agendamento, doadorRespondeu),
-                AgendamentoResumo.from(agendamento)
+                AgendamentoResumo.from(agendamento),
+                arquivada
         );
     }
 

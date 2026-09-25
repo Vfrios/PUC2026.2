@@ -14,27 +14,27 @@ Centralizar notificacoes, preferencias de conta e os dados necessarios para ende
 
 ## Endereco
 
-A API ainda utiliza os arquivos de geolocalizacao do Conjunto 2 para CEP, cidade, UF e endereco. Um CRUD de endereco salvo pode ser adicionado neste conjunto sem criar outro banco.
+- `EnderecoController.java`: endpoints de listar, criar, remover e definir endereco principal.
+- `EnderecoService.java`: regras do usuario dono e do endereco principal.
+- `EnderecoRepository.java`: persistencia dos enderecos salvos.
+- `Endereco.java` e DTOs: modelo e contrato de endereco.
+
+Consultas de CEP, cidade e UF continuam no Conjunto 2; enderecos salvos ficam
+persistidos neste conjunto.
 
 ## Integracao
 
 Seguranca usa a pasta `shared/security`. Notificacoes, enderecos e preferencias devem utilizar o usuario autenticado e a mesma base MongoDB.
 
-## O que falta implementar ou atualizar
+## Estado atual
 
-### Endereco salvo
+Enderecos salvos suportam multiplos registros, endereco principal e remocao.
+Seguranca oferece alteracao de senha, preferencias de notificacao e encerramento
+de sessoes. Notificacoes podem ser listadas, marcadas como lidas e removidas
+individualmente por estado de expiracao.
 
-- criar model, repository, service, controller e DTO proprios;
-- permitir multiplos enderecos e endereco padrao;
-- validar CEP, cidade, bairro, numero e usuario dono;
-- integrar endereco ao cadastro de item e agendamento.
-
-### Seguranca e termos
-
-- criar endpoints para alteracao de senha e preferencias;
-- separar notificacoes de termos e politica de privacidade;
-- reforcar validacao e autorizacao das operacoes da conta;
-- adicionar testes para notificacoes lidas, nao lidas e vazias.
+Integracoes futuras podem usar enderecos salvos diretamente no cadastro de item
+e no agendamento.
 
 ## Organizacao para envio
 
@@ -52,4 +52,5 @@ conjunto-06-endereco-seguranca/
 	└── dependencias de seguranca e geolocalizacao
 ```
 
-Na Sprint 1, enviar `endereco-salvo` com as dependencias comuns necessarias. Na Sprint 2, acrescentar `seguranca-termos`.
+Os subpacotes `endereco-salvo` e `seguranca-termos` usam a mesma autenticacao e
+devem ser tratados como parte do mesmo conjunto.

@@ -1,40 +1,30 @@
 # Conjunto 2 - Descoberta e detalhes
 
 ## Objetivo
+Este conjunto concentra a navegação de descoberta, busca e avaliação rápida dos itens antes da solicitação.
 
-Permitir que o usuario encontre itens e consulte todas as informacoes antes de solicitar.
+## Arquivos do conjunto
+- `discoveryScreens.jsx`: Home do doador e Home do receptor.
+- `itensDetalhes.jsx`: Busca, lista de itens e detalhes do item, incluindo filtros, favoritos e navegação para a solicitação.
 
-## Telas
+## Quantidade de telas: 5 telas lógicas
 
-- **Busca / descoberta:** pesquisa itens por termo, categoria, cidade e UF.
-- **Detalhes do item:** mostra fotos, descricao, localizacao, anunciante, favoritos e acao de solicitacao.
+| Tela | Rota no `App.jsx` | Arquivo responsável | Observação |
+| --- | --- | --- | --- |
+| Home do doador | `homeDoador` | `discoveryScreens.jsx` | Atalhos, impacto e solicitações recentes. |
+| Home do receptor | `homeReceptor` | `discoveryScreens.jsx` | Itens recentes, categorias e acesso à busca. É uma variação da home. |
+| Busca | `busca` | `discoveryScreens.jsx` | Busca por texto, categoria, estado, cidade e localização. |
+| Lista de itens | `listaItens` | `itensDetalhes.jsx` | Resultados filtrados e favoritos. |
+| Detalhes do item | `detalhesItem` | `itensDetalhes.jsx` | Fotos, descrição, anunciante, localização e solicitação. |
 
-## Arquivos
+Se as variações de home forem contadas separadamente, o conjunto possui 5
+componentes de tela e 5 rotas, sendo 2 delas variações por perfil.
 
-- `index.jsx`: ponto de entrada do conjunto. Reexporta `Busca`, `ListaItens`, `HomeDoador`, `HomeReceptor` e `DetalhesItem`.
-- `discoveryScreens.jsx`: implementacao de home e busca.
-- `../conjunto-01-publicacao-gestao/itemScreens.jsx`: implementacao compartilhada de lista e detalhes.
+## Separação recomendada
 
-## Dependencias
+`discoveryScreens.jsx` pode ser dividido futuramente em `home.jsx` e
+`busca.jsx`. `itensDetalhes.jsx` pode ser dividido em `listaItens.jsx` e
+`detalhesItem.jsx`. A divisão atual já separa descoberta de aprofundamento.
 
-Usa `api.js`, `ItemCard`, estado de favoritos, usuario autenticado e componentes compartilhados.
-
-## Integracao
-
-A busca abre detalhes por `itemId`. A tela de detalhes deve funcionar tambem quando aberta diretamente, sem depender de a busca ter sido carregada antes.
-
-## O que falta implementar ou atualizar
-
-### Busca / descoberta
-
-- adicionar filtros por distancia, disponibilidade e categoria;
-- melhorar ordenacao, estados vazios e mensagens de erro;
-- permitir limpar filtros;
-- tratar API indisponivel sem quebrar a tela.
-
-### Detalhes do item
-
-- melhorar galeria de fotos e informacoes de retirada;
-- exibir reputacao do anunciante e impacto estimado;
-- tratar item inexistente, removido ou ja doado;
-- manter favoritar e solicitar funcionando ao abrir diretamente.
+## Observações
+Os dois arquivos são módulos funcionais distintos, sem `index.jsx` e com importação direta na navegação principal. A contagem acima considera tela de produto, não cada componente auxiliar.

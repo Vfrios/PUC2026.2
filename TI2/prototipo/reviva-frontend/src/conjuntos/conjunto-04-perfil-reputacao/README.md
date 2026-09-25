@@ -1,40 +1,36 @@
-# Conjunto 4 - Perfil e reputacao
+# Conjunto 4 - Perfil e reputação
 
 ## Objetivo
+Este conjunto reúne a identidade do usuário, os dados públicos e a confiabilidade construída nas trocas.
 
-Apresentar a identidade do usuario, seus dados publicos e a confiabilidade construida nas trocas.
+## Arquivos do conjunto
+- `accountScreens.jsx`: perfil, perfil público, reputação, histórico, comunidades, favoritos, notificações e moderação.
+- `avaliacao.jsx`: tela de avaliação do participante, usada após a conclusão da troca.
 
-## Telas
+## Quantidade de telas: 6 telas lógicas
 
-- **Perfil:** mostra e edita dados pessoais, foto, favoritos e acoes da conta.
-- **Reputacao:** mostra pontos, selo, avaliacoes e historico de confiabilidade.
+| Tela | Rota no `App.jsx` | Arquivo responsável | Função |
+| --- | --- | --- | --- |
+| Perfil | `perfil` | `accountScreens.jsx` | Dados pessoais, foto, impacto e ações da conta. |
+| Perfil público | `perfilPublico` | `accountScreens.jsx` | Dados públicos e reputação do anunciante. |
+| Reputação | `reputacao` | `accountScreens.jsx` | Nota, selos, pontos e avaliações recebidas. |
+| Histórico | `historico` | `accountScreens.jsx` | Linha do tempo de anúncios, solicitações e avaliações. |
+| Avaliação | `avaliarDoador`, `avaliarReceptor` | `avaliacao.jsx` | Avaliar a outra pessoa após a troca. As duas rotas usam a mesma tela. |
+| Moderação | `moderacao` | `accountScreens.jsx` | Enviar denúncia ou relatar um problema. |
 
-## Arquivos
+Notificações, comunidades e favoritos são telas próprias, mas pertencem aos
+Conjuntos 6 e 5 respectivamente; não entram na contagem deste conjunto.
 
-- `index.jsx`: ponto de entrada do conjunto. Reexporta perfil, perfil publico, reputacao, historico, moderacao e avaliacao.
-- `accountScreens.jsx`: implementacao de perfil, perfil publico, reputacao, historico e moderacao.
-- `../conjunto-03-solicitacao-chat/tradeScreens.jsx`: implementacao do formulario de avaliacao.
+## Separação recomendada
 
-## Dependencias
+Para uma separação tela por tela, `accountScreens.jsx` pode virar:
 
-Usa usuario autenticado, dados de avaliacoes, favoritos e navegacao compartilhada.
+- `perfil.jsx`: Perfil e Perfil público.
+- `reputacao.jsx`: Reputação e Histórico.
+- `moderacao.jsx`: Moderação.
 
-## Integracao
+`avaliacao.jsx` já está separado e deve continuar sendo o dono da avaliação.
 
-Perfil e reputacao devem poder abrir diretamente. A reputacao exibida nos detalhes de um item deve usar os mesmos dados deste conjunto.
-
-## O que falta implementar ou atualizar
-
-### Perfil do usuario
-
-- completar edicao de foto e dados pessoais;
-- separar informacoes pessoais, endereco, seguranca e preferencias;
-- mostrar impacto, historico e itens do usuario;
-- tratar perfil incompleto e usuario sem avaliacoes.
-
-### Reputacao
-
-- exibir avaliacao por categoria e historico detalhado;
-- atualizar pontos e selo depois de uma avaliacao;
-- mostrar estados sem avaliacoes e sem trocas concluidas;
-- garantir que detalhes do item e perfil usem a mesma pontuacao.
+## Observações
+O módulo foi organizado em um arquivo de conta e um arquivo de avaliação, sem
+`index.jsx`. A avaliação é encaminhada pelo `App.jsx` para `avaliacao.jsx`.

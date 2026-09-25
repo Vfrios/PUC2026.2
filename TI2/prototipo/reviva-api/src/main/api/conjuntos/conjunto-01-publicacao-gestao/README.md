@@ -17,21 +17,12 @@ Fornecer os endpoints para cadastrar e administrar itens publicados.
 
 Este conjunto compartilha `Usuario`, autenticacao e banco MongoDB com os demais. Os endpoints de item sao usados por descoberta, detalhes e solicitacao.
 
-## O que falta implementar ou atualizar
+## Estado atual
 
-### Cadastro de item
-
-- validar campos obrigatorios e regras de categoria;
-- suportar melhor fotos, rascunho e edicao;
-- padronizar respostas de sucesso e erro;
-- garantir que o item criado possa ser consultado imediatamente.
-
-### Gerenciar itens
-
-- consolidar filtros e status do item;
-- retornar solicitacoes relacionadas quando necessario;
-- separar melhor consulta publica e gerenciamento autenticado;
-- adicionar testes para remover, restaurar e marcar como doado.
+O conjunto atende cadastro, edicao, consulta publica, remocao, restauracao e
+marcacao de doacao. A validacao de campos, controle do proprietario e respostas
+de erro ficam concentrados no service e nos DTOs. Fotos sao recebidas como
+URLs/data URLs; o armazenamento dedicado de imagens ainda nao faz parte da API.
 
 ## Organizacao para envio
 
@@ -49,4 +40,5 @@ conjunto-01-publicacao-gestao/
 	└── ItemResponse.java
 ```
 
-Na Sprint 1, enviar `cadastro-item` junto com `comum`. Na Sprint 2, acrescentar `gerenciar-itens`.
+Os subpacotes atuais podem ser executados juntos; a separacao acima serve como
+organizacao de dominio e nao representa uma ordem obrigatoria de deploy.

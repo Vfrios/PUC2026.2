@@ -1,40 +1,35 @@
-# Conjunto 6 - Endereco e seguranca
+# Conjunto 6 - Endereço e segurança
 
 ## Objetivo
+Este conjunto reúne o cadastro de endereço, a gestão de conta e as telas de segurança, termos e privacidade.
 
-Concentrar os dados de localizacao e as preferencias de seguranca e comunicacao da conta.
+## Arquivos do conjunto
+- `enderecos.jsx`: gestão de endereços salvos e fluxo relacionado.
+- `seguranca.jsx`: segurança, privacidade, termos e notificações do usuário.
 
-## Telas
+## Quantidade de telas: 5 telas lógicas
 
-- **Endereco salvo:** cadastra, edita, remove e define endereco padrao.
-- **Seguranca e termos:** concentra seguranca, notificacoes, preferencias, termos e privacidade.
+| Tela | Rota no `App.jsx` | Arquivo responsável | Observação |
+| --- | --- | --- | --- |
+| Endereços salvos | `enderecos` | `enderecos.jsx` | Criar, editar, excluir e definir endereço principal. |
+| Segurança e privacidade | `seguranca` | `seguranca.jsx` | Senha, sessões e preferências de notificação. |
+| Termos de uso | `termos` | `seguranca.jsx` | Documento informativo acessado pela tela de segurança. |
+| Política de privacidade | `privacidade` | `seguranca.jsx` | Documento informativo sobre dados e LGPD. |
+| Notificações | `notificacoes` | `seguranca.jsx` | Lista, leitura e limpeza de notificações. |
 
-## Arquivos
+Termos, privacidade e notificações são telas distintas na navegação, embora
+compartilhem o mesmo arquivo por pertencerem ao fluxo de conta e segurança.
 
-- `index.jsx`: ponto de entrada do conjunto. Reexporta `Notificacoes`; o modulo de endereco sera integrado neste ponto quando a tela for criada.
-- `../conjunto-04-perfil-reputacao/accountScreens.jsx`: implementacao atual de notificacoes.
-- `../../api.js`: fornece as chamadas de geolocalizacao e notificacoes usadas pelo frontend.
+## Separação recomendada
 
-## Dependencias
+Se a regra passar a ser uma tela por arquivo, a divisão natural será:
 
-Usa usuario autenticado, dados de CEP/geolocalizacao e configuracoes compartilhadas.
+- `enderecos.jsx`: Endereços salvos.
+- `seguranca.jsx`: Segurança e privacidade.
+- `documentosConta.jsx`: Termos e Política de privacidade.
+- `notificacoes.jsx`: Notificações.
 
-## Integracao
-
-Endereco sera usado por cadastro de item, busca e agendamento. Seguranca e notificacoes devem abrir diretamente sem depender de outra tela.
-
-## O que falta implementar ou atualizar
-
-### Endereco salvo
-
-- criar o componente da tela, ainda nao implementado neste conjunto;
-- permitir cadastrar, editar, remover e definir endereco padrao;
-- validar CEP, cidade, bairro e numero;
-- integrar endereco ao cadastro de item e ao agendamento.
-
-### Seguranca e termos
-
-- criar tela de alteracao de senha e preferencias de notificacao;
-- separar termos de uso e politica de privacidade;
-- tratar notificacoes lidas, nao lidas e vazias;
-- incluir mensagens claras para operacoes de seguranca.
+## Observações
+Mantém dois módulos principais no conjunto, sem `index.jsx`. A tabela acima
+deixa explícito que o segundo arquivo concentra quatro telas relacionadas, o
+que pode ser separado futuramente se o projeto exigir um arquivo por tela.

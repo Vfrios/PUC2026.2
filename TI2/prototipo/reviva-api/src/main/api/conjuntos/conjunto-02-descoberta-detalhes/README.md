@@ -16,21 +16,14 @@ Permitir busca, filtros regionais e consulta dos dados necessarios para exibir i
 
 A consulta dos itens usa tambem `ItemController`, `ItemService`, `ItemRepository`, `Item` e `ItemResponse` do Conjunto 1. Os dados continuam na mesma API e no mesmo MongoDB.
 
-## O que falta implementar ou atualizar
+## Estado atual
 
-### Busca / descoberta
+O conjunto fornece estados, cidades, consulta de CEP e geolocalizacao reversa.
+A busca e os detalhes reutilizam os contratos de itens do Conjunto 1. O
+frontend combina esses dados com filtros de texto, categoria e regiao.
 
-- evoluir filtros por distancia, disponibilidade e categoria;
-- padronizar paginacao e ordenacao;
-- tratar consultas sem resultado e erros de servicos externos;
-- adicionar testes para termo, cidade e UF.
-
-### Detalhes do item
-
-- responder corretamente para item inexistente, removido ou doado;
-- incluir dados de reputacao e regras de retirada;
-- separar consulta publica de operacoes autenticadas;
-- manter o contrato compativel com solicitacao e favoritos.
+Evolucoes conhecidas: paginacao, ordenacao avancada e busca por distancia ainda
+podem ser adicionadas sem duplicar as entidades de item.
 
 ## Organizacao para envio
 
@@ -48,4 +41,4 @@ conjunto-02-descoberta-detalhes/
 	└── dependencias de item usadas pelo conjunto 1
 ```
 
-Na Sprint 1, enviar `busca-descoberta`. Na Sprint 2, acrescentar `detalhes-item`. Os detalhes reutilizam os contratos de item sem duplicar o banco.
+Os detalhes reutilizam os contratos de item sem duplicar o banco.

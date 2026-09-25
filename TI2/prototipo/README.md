@@ -1,4 +1,4 @@
-# Reviva — Doação e Troca de Objetos
+# Reviva - Doacao e Troca de Objetos
 
 Projeto completo com **backend Java 21 + Spring Boot 3** e **frontend React (Vite)**,
 conectados por REST e WebSocket, usando **MongoDB Atlas** como banco de dados.
@@ -19,6 +19,25 @@ reviva-frontend/  Interface React executada pelo Vite
 ```
 
 O frontend se comunica com a API por REST e recebe novas mensagens por WebSocket/STOMP.
+
+## Estrutura do projeto
+
+O frontend e o backend usam a mesma divisao funcional em seis conjuntos. No
+frontend, cada conjunto possui exatamente dois arquivos JSX funcionais e nao
+possui `index.jsx`:
+
+| Conjunto | Frontend | Backend |
+| --- | --- | --- |
+| 1. Publicacao e gestao | cadastro/edicao e gestao de itens | itens e regras de publicacao |
+| 2. Descoberta e detalhes | home, busca, lista e detalhes | geolocalizacao e consulta |
+| 3. Solicitacao e chat | solicitacao, Inbox, chat e troca | solicitacoes, mensagens e agendamento |
+| 4. Perfil e reputacao | perfil, historico, reputacao e avaliacao | usuarios, avaliacoes e pontuacao |
+| 5. Comunidades e favoritos | comunidades e favoritos | comunidades, posts e favoritos |
+| 6. Endereco e seguranca | enderecos, seguranca, termos e notificacoes | enderecos, seguranca e notificacoes |
+
+Cada pasta de conjunto possui um README proprio explicando seus arquivos e
+responsabilidades. Os READMEs da API ficam junto dos pacotes Java e os do
+frontend ficam em `reviva-frontend/src/conjuntos`.
 
 ## Funcionalidades
 
@@ -54,7 +73,7 @@ O frontend se comunica com a API por REST e recebe novas mensagens por WebSocket
 - Filtro por categoria, tipo de publicacao, termo, estado e cidade.
 - Lista de itens e tela de detalhes.
 - Exibicao de anunciante, reputacao, status online/offline, distancia e localizacao.
-- Favoritos salvos localmente no navegador.
+- Favoritos persistidos por usuario na API, com migracao unica dos favoritos antigos do navegador.
 - Preview rapido do item na Home com toque longo.
 - Gerenciamento dos proprios itens.
 - Edicao do anuncio, com renovacao do prazo de validade por 60 dias.
@@ -78,6 +97,8 @@ O frontend se comunica com a API por REST e recebe novas mensagens por WebSocket
 - Mensagem inicial pronta perguntando se o item ainda esta disponivel.
 - Nao existe etapa de match, aceite ou recusa para iniciar uma conversa.
 - Inbox com conversas iniciadas e recebidas pelo usuario.
+- Abas de conversas ativas e arquivadas.
+- Arquivamento, desarquivamento e exclusao da conversa apenas para o Inbox do usuario logado.
 - Conversa vinculada ao anuncio, com foto, titulo e status do item.
 - Mensagens de texto persistidas no banco.
 - Atualizacao em tempo real por WebSocket/STOMP.
@@ -272,6 +293,9 @@ dois usuarios em abas separadas, abra um anuncio e clique em Enviar mensagem.
 | Conversas | `GET /api/solicitacoes/conversas` | Listar Inbox |
 | Conversas | `GET /api/solicitacoes/recebidas` | Listar conversas recebidas |
 | Conversas | `GET /api/solicitacoes/enviadas` | Listar conversas iniciadas |
+| Conversas | `POST /api/solicitacoes/{id}/arquivar` | Arquivar conversa no Inbox |
+| Conversas | `POST /api/solicitacoes/{id}/desarquivar` | Desarquivar conversa |
+| Conversas | `DELETE /api/solicitacoes/{id}/inbox` | Remover conversa do Inbox |
 | Mensagens | `GET /api/solicitacoes/{id}/mensagens` | Listar mensagens |
 | Mensagens | `POST /api/solicitacoes/{id}/mensagens` | Enviar mensagem |
 | Agendamento | `POST /api/agendamentos` | Agendar retirada |
@@ -280,6 +304,13 @@ dois usuarios em abas separadas, abra um anuncio e clique em Enviar mensagem.
 | Agendamento | `POST /api/agendamentos/{id}/confirmar-qrcode?token=` | Confirmar por codigo |
 | Agendamento | `POST /api/agendamentos/{id}/reportar-problema` | Relatar problema |
 | Avaliacoes | `POST /api/avaliacoes` | Avaliar usuario |
+| Favoritos | `GET /api/favoritos` | Listar favoritos do usuario |
+| Favoritos | `POST /api/favoritos/{itemId}` | Adicionar favorito |
+| Favoritos | `DELETE /api/favoritos/{itemId}` | Remover favorito |
+| Enderecos | `GET /api/enderecos` | Listar enderecos salvos |
+| Enderecos | `POST /api/enderecos` | Criar endereco salvo |
+| Enderecos | `DELETE /api/enderecos/{id}` | Remover endereco salvo |
+| Enderecos | `POST /api/enderecos/{id}/principal` | Definir endereco principal |
 | Notificacoes | `GET /api/notificacoes` | Listar notificacoes |
 | Notificacoes | `POST /api/notificacoes/{id}/lida` | Marcar como lida |
 | Notificacoes | `DELETE /api/notificacoes` | Limpar todas |
@@ -309,7 +340,7 @@ O cliente conecta pelo endpoint SockJS `/ws` e atualiza o chat em tempo real.
 
 ## Limites atuais
 
-- Favoritos ficam somente no `localStorage` e nao sincronizam entre dispositivos.
+- A sincronizacao de favoritos depende da API; favoritos antigos do `localStorage` sao enviados apenas na primeira sessao autenticada.
 - Fotos aceitam URLs/data URLs; ainda nao existe storage dedicado.
 - Posts e desafios de comunidade ainda nao possuem modelo de backend.
 - Push notifications nativas ainda nao foram implementadas.
@@ -326,3 +357,7 @@ cd ..\reviva-api
 mvn test-compile -q
 mvn test -q
 ```
+
+As verificacoes minimas usadas durante o desenvolvimento sao `pnpm run build`
+no frontend e `mvn -q -DskipTests compile` na API. O build frontend pode emitir
+apenas um aviso de chunk grande; isso nao impede a compilacao.

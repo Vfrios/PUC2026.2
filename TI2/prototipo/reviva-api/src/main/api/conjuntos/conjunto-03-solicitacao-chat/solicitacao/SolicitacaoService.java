@@ -242,7 +242,41 @@ public class SolicitacaoService {
     }
 
     public List<SolicitacaoResponse> listarConversasComPreview(Usuario usuario) {
-        return comPreview(listarConversas(usuario));
+        List<Solicitacao> visiveis = listarConversas(usuario).stream()
+                .filter(s -> !s.estaOcultaPara(usuario.getId()))
+                .toList();
+        return comPreview(visiveis, usuario);
+    }
+
+    /** Arquiva ou desarquiva só para o usuário logado. */
+    @Transactional
+    public SolicitacaoResponse definirArquivada(String id, Usuario usuario, boolean arquivar) {
+        Solicitacao s = buscarComAcesso(id, usuario);
+        List<String> arquivados = idsMutaveis(s.getInboxArquivadoPor());
+        if (arquivar) {
+            if (!arquivados.contains(usuario.getId())) arquivados.add(usuario.getId());
+        } else {
+            arquivados.remove(usuario.getId());
+        }
+        s.setInboxArquivadoPor(arquivados);
+        return detalhe(solicitacaoRepository.save(s), usuario);
+    }
+
+    /** Some do Inbox deste usuário; a outra parte continua vendo a conversa. */
+    @Transactional
+    public void ocultarDoInbox(String id, Usuario usuario) {
+        Solicitacao s = buscarComAcesso(id, usuario);
+        List<String> ocultos = idsMutaveis(s.getInboxOcultoPor());
+        if (!ocultos.contains(usuario.getId())) ocultos.add(usuario.getId());
+        s.setInboxOcultoPor(ocultos);
+        List<String> arquivados = idsMutaveis(s.getInboxArquivadoPor());
+        arquivados.remove(usuario.getId());
+        s.setInboxArquivadoPor(arquivados);
+        solicitacaoRepository.save(s);
+    }
+
+    private List<String> idsMutaveis(List<String> atual) {
+        return atual == null ? new ArrayList<>() : new ArrayList<>(atual);
     }
 
     public List<Solicitacao> listarRecebidas(Usuario doador) {
@@ -302,11 +336,16 @@ public class SolicitacaoService {
      * para os agendamentos), em vez de três consultas por conversa.
      */
     private List<SolicitacaoResponse> comPreview(List<Solicitacao> solicitacoes) {
+        return comPreview(solicitacoes, null);
+    }
+
+    private List<SolicitacaoResponse> comPreview(List<Solicitacao> solicitacoes, Usuario usuario) {
         if (solicitacoes.isEmpty()) return List.of();
         List<Object> refIds = new ArrayList<>();
         solicitacoes.forEach(s -> refIds.addAll(idsParaQuery(s.getId())));
         Map<String, ResumoConversa> resumos = resumirConversas(refIds);
         Map<String, Agendamento> agendamentos = agendamentosPorSolicitacao(refIds);
+        String usuarioId = usuario != null ? usuario.getId() : null;
 
         record Par(Solicitacao s, ResumoConversa resumo) {
             Instant ordem() { return resumo != null && resumo.criadaEm() != null ? resumo.criadaEm() : s.getCriadaEm(); }
@@ -319,7 +358,8 @@ public class SolicitacaoService {
                     Mensagem ultima = r == null ? null : Mensagem.builder().texto(r.texto()).criadaEm(r.criadaEm()).build();
                     String doadorId = doadorIdDe(p.s());
                     boolean respondeu = r != null && doadorId != null && r.remetentes().contains(doadorId);
-                    return SolicitacaoResponse.from(p.s(), ultima, agendamentos.get(p.s().getId()), respondeu);
+                    return SolicitacaoResponse.from(p.s(), ultima, agendamentos.get(p.s().getId()), respondeu,
+                            p.s().estaArquivadaPara(usuarioId));
                 })
                 .toList();
     }
@@ -380,8 +420,13 @@ public class SolicitacaoService {
     }
 
     public SolicitacaoResponse detalhe(Solicitacao s) {
+        return detalhe(s, null);
+    }
+
+    public SolicitacaoResponse detalhe(Solicitacao s, Usuario usuario) {
         return SolicitacaoResponse.from(s, mensagemRepository.findFirstBySolicitacaoOrderByCriadaEmDesc(s),
-                agendamentoRepository.findBySolicitacaoId(s.getId()).orElse(null), doadorRespondeu(s));
+                agendamentoRepository.findBySolicitacaoId(s.getId()).orElse(null), doadorRespondeu(s),
+                usuario != null && s.estaArquivadaPara(usuario.getId()));
     }
 
     private boolean doadorRespondeu(Solicitacao s) {

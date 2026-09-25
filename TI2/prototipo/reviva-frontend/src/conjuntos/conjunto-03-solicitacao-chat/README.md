@@ -1,40 +1,34 @@
-# Conjunto 3 - Solicitacao e chat
+# Conjunto 3 - Solicitação e chat
 
 ## Objetivo
+Este conjunto cuida do ciclo de pedido, conversa e confirmação da doação.
 
-Controlar o contato entre as pessoas interessadas em um item, desde o pedido ate a negociacao.
+## Arquivos do conjunto
+- `tradeScreens.jsx`: Inbox e Chat, incluindo mensagens, anexos, localização, leitura e arquivamento.
+- `negociacaoScreens.jsx`: solicitação, agendamento, confirmações e dashboard de impacto.
 
-## Telas
+## Quantidade de telas: 7 telas lógicas
 
-- **Solicitacao:** envia, acompanha e cancela pedidos de itens.
-- **Chat de negociacao:** conversa, mensagens, presenca, localizacao e combinacao da retirada.
+| Tela | Rotas no `App.jsx` | Responsabilidade |
+| --- | --- | --- |
+| Solicitação | `solicitacao` | Iniciar o pedido relacionado ao item. |
+| Inbox | `inbox` | Listar conversas ativas e arquivadas. |
+| Chat | `chatDoador`, `chatReceptor` | Conversa, mensagens, anexos e localização. É a mesma tela com papel diferente. |
+| Agendamento | `agendamentoDoador`, `agendamentoReceptor` | Definir data, horário e local da retirada. É a mesma tela com papel diferente. |
+| Confirmação de doação | `confirmDoacao` | Confirmar a entrega pelo doador. |
+| Confirmação de recebimento | `confirmRecebimento` | Confirmar o recebimento pelo receptor. |
+| Dashboard de impacto | `dashboardImpacto` | Exibir doações, pontos e impacto ambiental. |
 
-## Arquivos
+Avaliação não entra nesta contagem: a tela `Avaliar` pertence ao Conjunto 4 e
+é usada pelas rotas `avaliarDoador` e `avaliarReceptor`.
 
-- `index.jsx`: ponto de entrada do conjunto. Reexporta `Solicitacao`, `Inbox`, `Chat`, `Agendamento`, `ConfirmDoacao`, `ConfirmRecebimento`, `Avaliar` e `DashboardImpacto`.
-- `../conjunto-01-publicacao-gestao/itemScreens.jsx`: implementacao de `Solicitacao`.
-- `tradeScreens.jsx`: implementacao de chat, inbox, agendamento, confirmacoes e avaliacao.
+## Separação adotada
 
-## Dependencias
+O conjunto agora possui dois arquivos funcionais por responsabilidade: conversa
+em `tradeScreens.jsx` e fluxo da troca em `negociacaoScreens.jsx`. Eles compartilham
+as APIs e componentes visuais, mas a navegação importa cada grupo pelo arquivo
+correspondente.
 
-Usa usuario autenticado, `solicitacaoId`, WebSocket/STOMP, `api.js` e estado de presenca online.
-
-## Integracao
-
-O chat pode ser aberto com um `solicitacaoId` existente. Com dados ausentes, deve exibir estado vazio sem quebrar. Agendamento e confirmacoes usam a mesma solicitacao e a mesma base de dados.
-
-## O que falta implementar ou atualizar
-
-### Solicitacao
-
-- exibir status em etapas: enviada, aceita, recusada, agendada e concluida;
-- permitir cancelar solicitacao com confirmacao;
-- tratar item indisponivel e usuario nao autenticado;
-- atualizar o status apos resposta do anunciante.
-
-### Chat de negociacao
-
-- melhorar mensagens de evento, leitura e notificacoes;
-- tratar conversa vazia, reconexao e falha do WebSocket;
-- permitir anexos ou imagens quando a API suportar;
-- deixar agendamento, localizacao e confirmacao visiveis.
+## Observações
+A implementação e a navegação permanecem concentradas diretamente em
+`tradeScreens.jsx`. Não há arquivo intermediário ou `index.jsx` neste conjunto.

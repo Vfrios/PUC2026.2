@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { api, getToken, setToken, ApiError, wsUrl } from "../../api.js";
 import { Client as StompClient } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, RotateCcw, X, CornerUpLeft } from "lucide-react";
+import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, RotateCcw, X, CornerUpLeft, Archive, ArchiveRestore } from "lucide-react";
 import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox, ETAPA_LABEL } from "../../shared/shared.jsx";
 
 const dataAtual = new Date();
@@ -310,20 +310,54 @@ function mesclarComPendentes(servidor, atual) {
   return next;
 }
 
-function Inbox({ go, usuario }) {
+function Inbox({ go, usuario, notify }) {
   const { loading, error, data: conversas, reload } = useApiData(() => api.conversas(), [usuario?.id]);
+  const [aba, setAba] = useState("ativas");
+  const [busyId, setBusyId] = useState(null);
   // Não exige item/receptor completos — conversas antigas com DBRef quebrado ainda devem aparecer.
-  const visiveis = (conversas || []).filter(s => s?.id);
+  const todas = (conversas || []).filter(s => s?.id);
+  const ativas = todas.filter(s => !s.arquivada);
+  const arquivadas = todas.filter(s => s.arquivada);
+  const visiveis = aba === "arquivadas" ? arquivadas : ativas;
 
   usePolling(() => reload({ silent: true }), !!usuario?.id);
+
+  const agir = async (e, s, acao) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (busyId) return;
+    setBusyId(s.id);
+    try {
+      if (acao === "excluir") await api.excluirConversa(s.id);
+      else if (acao === "arquivar") await api.arquivarConversa(s.id);
+      else await api.desarquivarConversa(s.id);
+      await reload({ silent: true });
+    } catch (err) {
+      notify?.(err.message || "Não foi possível atualizar a conversa.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const botaoAcao = (label, Icon, onClick, color = "var(--role-primary-dark)") => (
+    <button type="button" onClick={onClick} disabled={!!busyId} aria-label={label} title={label} style={{ ...iconBtn, width: 28, height: 28, opacity: busyId ? .5 : 1 }}>
+      <Icon size={13} color={color} />
+    </button>
+  );
 
   return (
     <div>
       <TopBar title="Inbox" onBack={() => go(-1)} right={<button type="button" onClick={() => reload()} style={{ ...iconBtn, width: 30, height: 30 }} aria-label="Atualizar conversas" title="Atualizar"><RotateCcw size={14} color="var(--role-primary-dark)" /></button>} />
+      <div style={{ padding: "0 20px 10px", display: "flex", gap: 8 }}>
+        <Chip active={aba === "ativas"} onClick={() => setAba("ativas")}>Conversas{ativas.length ? ` · ${ativas.length}` : ""}</Chip>
+        <Chip active={aba === "arquivadas"} onClick={() => setAba("arquivadas")}>Arquivadas{arquivadas.length ? ` · ${arquivadas.length}` : ""}</Chip>
+      </div>
       <div style={{ padding: "0 20px" }}>
         {loading && <Loading label="Carregando conversas..." />}
         {error && <ErrorBox message={error} onRetry={reload} />}
-        {!loading && !error && visiveis.length === 0 && <EmptyState Icon={MessageCircle} text="Nenhuma conversa por aqui." />}
+        {!loading && !error && visiveis.length === 0 && (
+          <EmptyState Icon={aba === "arquivadas" ? Archive : MessageCircle} text={aba === "arquivadas" ? "Nenhuma conversa arquivada." : "Nenhuma conversa por aqui."} />
+        )}
         {visiveis.map(s => {
           const naoLidas = s.mensagensNaoLidas || s.unreadCount || 0;
           const souDoador = s.item?.doador?.id === usuario?.id || s.doadorId === usuario?.id;
@@ -331,6 +365,7 @@ function Inbox({ go, usuario }) {
           const outroId = souDoador ? s.receptor?.id : s.item?.doador?.id;
           const preview = previewMensagemInbox(s);
           const horario = s.ultimaMensagem?.criadaEm || s.criadaEm;
+          const arquivada = !!s.arquivada;
           return <div key={s.id} onClick={() => go(souDoador ? "chatDoador" : "chatReceptor", { solicitacaoId: s.id, otherId: outroId, otherName: outroNome, itemTitulo: s.item?.titulo, itemId: s.item?.id })} style={{ display: "flex", alignItems: "center", gap: 10, padding: 12, marginBottom: 8, background: "#fff", border: "1px solid #EDEBE1", borderRadius: 14, cursor: "pointer" }}>
             <Avatar label={outroNome} size={40} />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -341,7 +376,15 @@ function Inbox({ go, usuario }) {
               <div style={{ fontSize: 11, color: INK_SOFT, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.item?.titulo || "Item"}{s.etapa && <span style={{ color: ["CANCELADA", "RECUSADA"].includes(s.etapa) ? "#9C4327" : "var(--role-primary-dark)", fontWeight: 700 }}> · {ETAPA_LABEL[s.etapa]}</span>}</div>
               <div style={{ fontSize: 11.5, color: INK_SOFT, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</div>
             </div>
-            {naoLidas > 0 && <span style={{ minWidth: 20, height: 20, borderRadius: 10, padding: "0 6px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--role-primary)", color: "#fff", fontSize: 10, fontWeight: 700 }}>{naoLidas}</span>}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+              {naoLidas > 0 && <span style={{ minWidth: 20, height: 20, borderRadius: 10, padding: "0 6px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--role-primary)", color: "#fff", fontSize: 10, fontWeight: 700 }}>{naoLidas}</span>}
+              <div style={{ display: "flex", gap: 4 }}>
+                {arquivada
+                  ? botaoAcao("Desarquivar", ArchiveRestore, e => agir(e, s, "desarquivar"))
+                  : botaoAcao("Arquivar", Archive, e => agir(e, s, "arquivar"))}
+                {botaoAcao("Excluir", Trash2, e => agir(e, s, "excluir"), "#9C4327")}
+              </div>
+            </div>
           </div>;
         })}
       </div>
@@ -699,341 +742,4 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
   );
 }
 
-/* ---- AGENDAMENTO ---- */
-function Agendamento({ go, role, notify, params, usuario }) {
-  const { solicitacaoId, otherName, itemTitulo, itemId } = params || {};
-  const { data: item } = useApiData(() => api.itemPorId(itemId), [itemId], { skip: !itemId });
-  const papelAtual = item?.doador?.id === usuario?.id ? "doador" : "receptor";
-  const [data, setData] = useState(dataLocalAtual);
-  const [hora, setHora] = useState(horaLocalAtual);
-  const [local, setLocal] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [erro, setErro] = useState("");
-  const { data: enderecos, loading: carregandoEnderecos } = useApiData(() => api.enderecos(), [usuario?.id], { skip: !usuario?.id });
-  const formatarEndereco = (e) => [
-    [e.logradouro, e.numero].filter(Boolean).join(", "),
-    e.complemento, e.bairro, e.cidade,
-  ].filter(Boolean).join(" · ");
-
-  useEffect(() => {
-    if (local || !enderecos) return;
-    const principal = enderecos.find(e => e.principal) || enderecos[0];
-    if (principal) setLocal(formatarEndereco(principal));
-  }, [enderecos]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const confirmar = async () => {
-    if (!solicitacaoId) { setErro("Solicitação não identificada — volte pelo chat."); return; }
-    if (!data) { setErro("Escolha uma data."); return; }
-    if (new Date(`${data}T${hora || "10:00"}:00`) < new Date(Date.now() - 60_000)) { setErro("Escolha uma data e horário no futuro."); return; }
-    if (local.trim().length < 5) { setErro("Informe o local de encontro."); return; }
-    setErro("");
-    setLoading(true);
-    try {
-      const iso = new Date(`${data}T${hora || "10:00"}:00`).toISOString();
-      const agendamento = await api.agendar(solicitacaoId, iso, local);
-      notify(`Retirada agendada para ${fmtDateTime(iso)}`);
-      go(papelAtual === "doador" ? "chatDoador" : "chatReceptor", { ...params, agendamento, otherName, itemTitulo, itemId });
-    } catch (e) {
-      setErro(e.message || "Não foi possível agendar.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div>
-      <TopBar title="Agendar retirada" onBack={() => go(-1)} />
-      <div style={{ padding: "0 20px" }}>
-        <SectionTitle>Data</SectionTitle>
-        <div style={fieldBox}><Calendar size={16} color={INK_SOFT} /><input type="date" value={data} onChange={e => setData(e.target.value)} style={fieldInput} /></div>
-        <SectionTitle>Horário</SectionTitle>
-        <div style={fieldBox}><Clock size={16} color={INK_SOFT} /><input type="time" value={hora} onChange={e => setHora(e.target.value)} style={fieldInput} /></div>
-        <SectionTitle>Local de encontro</SectionTitle>
-        {(enderecos || []).length > 0 && (
-          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
-            {enderecos.map(e => <Chip key={e.id} active={local === formatarEndereco(e)} onClick={() => setLocal(formatarEndereco(e))}>{e.apelido || e.bairro}{e.principal ? " ★" : ""}</Chip>)}
-          </div>
-        )}
-        <div style={fieldBox}><MapPin size={16} color={INK_SOFT} /><input value={local} onChange={e => setLocal(e.target.value)} placeholder="Ex: portaria do prédio, praça, estação..." style={fieldInput} /></div>
-        {!carregandoEnderecos && (enderecos || []).length === 0 && (
-          <div style={{ fontSize: 11.5, color: INK_SOFT, marginTop: 6 }}>
-            Dica: <span onClick={() => go("enderecos")} style={{ ...linkText, fontSize: 11.5 }}>salve seus endereços</span> para preencher o local com um toque.
-          </div>
-        )}
-        <div style={{ background: "var(--role-soft)", borderRadius: 14, padding: 12, marginTop: 14, fontSize: 11.5, color: "var(--role-primary-dark)", display: "flex", gap: 8 }}>
-          <QrCode size={16} /> Ao confirmar, um código de retirada é gerado automaticamente para fechar a doação com 1 toque.
-        </div>
-        {erro && <div style={{ marginTop: 12, fontSize: 12, color: "#9C4327", background: "#FBE8E0", padding: "8px 10px", borderRadius: 10 }}>{erro}</div>}
-        <div style={{ marginTop: 18 }}>
-          <Button full loading={loading} onClick={confirmar}>Confirmar agendamento</Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ---- CONFIRMAÇÃO (compartilhada — doador mostra o código, receptor digita) ---- */
-function ConfirmDoacao({ go, notify, params, refreshUsuario }) {
-  const { agendamento, otherName } = params || {};
-  const [loading, setLoading] = useState(false);
-  const [agendamentoAtual, setAgendamentoAtual] = useState(agendamento);
-  const [gerandoCodigo, setGerandoCodigo] = useState(false);
-  useEffect(() => {
-    if (!agendamento?.id) return;
-    setGerandoCodigo(true);
-    api.gerarCodigoRetirada(agendamento.id)
-      .then(setAgendamentoAtual)
-      .catch(e => notify(e.message || "Não foi possível gerar o código."))
-      .finally(() => setGerandoCodigo(false));
-  }, [agendamento?.id]);
-  if (!agendamento) return <div><TopBar title="Confirmação" onBack={() => go(-1)} /><EmptyState Icon={QrCode} text="Nenhum agendamento em andamento." /></div>;
-
-  const token = agendamentoAtual?.codigoRetirada || agendamentoAtual?.solicitacao?.item?.qrCodeToken;
-
-  const confirmar = async () => {
-    setLoading(true);
-    try {
-      await api.confirmarPorDoador(agendamento.id);
-      await refreshUsuario();
-      notify("Doação confirmada! Obrigado por reduzir o desperdício 🌱");
-      go("avaliarReceptor", {
-        agendamentoId: agendamento.id,
-        avaliadoId: agendamento.solicitacao?.receptor?.id,
-        quem: agendamento.solicitacao?.receptor?.nome || otherName,
-        next: "dashboardImpacto",
-      });
-    } catch (e) {
-      notify(e.message || "Não foi possível confirmar.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div>
-      <TopBar title="Confirmação" onBack={() => go(-1)} />
-      <div style={{ height: "100%", display: "flex", flexDirection: "column", padding: "30px 24px", alignItems: "center", textAlign: "center" }}>
-      <div style={{ width: 90, height: 90, borderRadius: "50%", background: "var(--role-soft)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
-        <QrCode size={40} color="var(--role-primary-dark)" />
-      </div>
-      <div style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: INK }}>Hoje é dia de retirada!</div>
-      <div style={{ fontSize: 13, color: INK_SOFT, marginTop: 6, maxWidth: 260 }}>Mostre este código para {otherName || "o receptor"} digitar no app dele e confirmar automaticamente.</div>
-      {gerandoCodigo && <div style={{ marginTop: 16, fontSize: 12, color: INK_SOFT }}>Gerando código...</div>}
-      {token && (
-        <div style={{ marginTop: 16, background: "#F1EFE6", borderRadius: 12, padding: "12px 18px", fontFamily: "monospace", fontSize: 12, color: INK, wordBreak: "break-all" }}>{token}</div>
-      )}
-      {!token && !gerandoCodigo && <div style={{ marginTop: 16, fontSize: 12, color: "#9C4327" }}>O código ainda não foi gerado.</div>}
-      <div style={{ marginTop: 26, width: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
-        <Button full loading={loading} disabled={!token || gerandoCodigo} onClick={confirmar}>Confirmar retirada manualmente</Button>
-        <Button full variant="ghost" icon={AlertTriangle} onClick={async () => { try { await api.reportarProblema(agendamento.id); } catch {} go("moderacao", params); }}>Relatar um problema</Button>
-      </div>
-      </div>
-    </div>
-  );
-}
-
-function ConfirmRecebimento({ go, notify, params, refreshUsuario }) {
-  const { agendamento, otherName } = params || {};
-  const [codigo, setCodigo] = useState("");
-  const [loading, setLoading] = useState(false);
-  if (!agendamento) return <div><TopBar title="Confirmação" onBack={() => go(-1)} /><EmptyState Icon={QrCode} text="Nenhum agendamento em andamento." /></div>;
-
-  const irParaAvaliacao = async () => {
-    await refreshUsuario();
-    go("avaliarDoador", {
-      agendamentoId: agendamento.id,
-      avaliadoId: agendamento.solicitacao?.item?.doador?.id,
-      quem: agendamento.solicitacao?.item?.doador?.nome || otherName,
-      next: "historico",
-    });
-  };
-
-  const confirmarComCodigo = async () => {
-    if (!codigo.trim()) { notify("Digite o código mostrado pelo doador."); return; }
-    setLoading(true);
-    try {
-      await api.confirmarPorQrCode(agendamento.id, codigo.trim());
-      notify("Recebimento confirmado ✔");
-      await irParaAvaliacao();
-    } catch (e) {
-      notify(e.message || "Código inválido.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div>
-      <TopBar title="Confirmação" onBack={() => go(-1)} />
-      <div style={{ height: "100%", display: "flex", flexDirection: "column", padding: "30px 24px", alignItems: "center", textAlign: "center" }}>
-      <div style={{ width: 90, height: 90, borderRadius: "50%", background: "var(--role-soft)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
-        <QrCode size={40} color="var(--role-primary-dark)" />
-      </div>
-      <div style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: INK }}>Digite o código de retirada</div>
-      <div style={{ fontSize: 13, color: INK_SOFT, marginTop: 6, maxWidth: 260 }}>Peça para {otherName || "o doador"} mostrar o código dele assim que você receber o item.</div>
-      <div style={{ ...fieldBox, width: "100%", marginTop: 18 }}>
-        <input value={codigo} onChange={e => setCodigo(e.target.value)} placeholder="Cole o código aqui" style={{ ...fieldInput, fontFamily: "monospace" }} />
-      </div>
-      <div style={{ marginTop: 20, width: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
-        <Button full icon={Camera} loading={loading} onClick={confirmarComCodigo}>Confirmar com código</Button>
-        <Button full variant="ghost" icon={AlertTriangle} onClick={async () => { try { await api.reportarProblema(agendamento.id); } catch {} go("moderacao", params); }}>Relatar um problema</Button>
-      </div>
-      </div>
-    </div>
-  );
-}
-
-/* ---- AVALIAÇÃO (compartilhado) ---- */
-const CATEGORIAS_AVALIACAO = [
-  { key: "pontualidade", label: "Pontualidade" },
-  { key: "comunicacao", label: "Comunicação" },
-  { key: "estadoItem", label: "Item conforme anunciado" },
-];
-
-function EstrelasInput({ value, onChange, size = 30, label }) {
-  return (
-    <div role="radiogroup" aria-label={label} style={{ display: "flex", gap: 4 }}>
-      {[1, 2, 3, 4, 5].map(i => (
-        <Star key={i} role="radio" aria-checked={i === value} aria-label={`${i} estrela(s)`} size={size} onClick={() => onChange(i)} fill={i <= value ? GOLD : "none"} color={i <= value ? GOLD : "#D6D6D0"} style={{ cursor: "pointer" }} />
-      ))}
-    </div>
-  );
-}
-
-function Avaliar({ go, notify, params }) {
-  const { quem, avaliadoId, agendamentoId, next } = params || {};
-  const [nota, setNota] = useState(5);
-  const [categorias, setCategorias] = useState({ pontualidade: 5, comunicacao: 5, estadoItem: 5 });
-  const [comentario, setComentario] = useState("");
-  const [loading, setLoading] = useState(false);
-  const { data: jaAvaliada, loading: verificando } = useApiData(() => api.jaAvaliei(agendamentoId), [agendamentoId], { skip: !agendamentoId });
-
-  const enviar = async () => {
-    if (!agendamentoId || !avaliadoId) { go(next || "homeDoador"); return; }
-    setLoading(true);
-    try {
-      await api.avaliar(agendamentoId, avaliadoId, nota, comentario.trim(), categorias);
-      notify("Avaliação enviada — obrigado! A reputação foi atualizada.");
-      go(next || "homeDoador");
-    } catch (e) {
-      notify(e.message || "Não foi possível enviar a avaliação.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (verificando) return <div><TopBar title="Avaliação" onBack={() => go(-1)} /><Loading /></div>;
-  if (jaAvaliada) {
-    return (
-      <div>
-        <TopBar title="Avaliação" onBack={() => go(-1)} />
-        <div style={{ padding: "30px 24px", textAlign: "center" }}>
-          <CheckCircle2 size={40} color="var(--role-primary)" />
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 600, color: INK, marginTop: 12 }}>Você já avaliou esta troca</div>
-          <div style={{ fontSize: 13, color: INK_SOFT, marginTop: 6 }}>Sua nota foi {jaAvaliada.nota} estrela(s). Cada troca pode ser avaliada uma única vez.</div>
-          <Button full style={{ marginTop: 20 }} onClick={() => go(next || "homeDoador")}>Continuar</Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <TopBar title="Avaliação" onBack={() => go(-1)} />
-      <div style={{ padding: "24px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-      <Avatar label={quem || "Usuário"} size={64} tone="var(--role-primary)" />
-      <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 600, color: INK, marginTop: 14 }}>Como foi com {quem || "essa pessoa"}?</div>
-      <div style={{ margin: "14px 0 6px" }}><EstrelasInput value={nota} onChange={setNota} label="Nota geral" /></div>
-      <div style={{ fontSize: 11.5, color: INK_SOFT }}>Nota geral</div>
-      <div style={{ width: "100%", background: "#fff", border: "1px solid #EDEBE1", borderRadius: 16, padding: 12, marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-        {CATEGORIAS_AVALIACAO.map(c => (
-          <div key={c.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: INK, textAlign: "left" }}>{c.label}</span>
-            <EstrelasInput value={categorias[c.key]} onChange={v => setCategorias(x => ({ ...x, [c.key]: v }))} size={20} label={c.label} />
-          </div>
-        ))}
-      </div>
-      <div style={{ ...fieldBox, width: "100%", alignItems: "flex-start", marginTop: 12 }}>
-        <textarea rows={3} maxLength={400} value={comentario} onChange={e => setComentario(e.target.value)} placeholder="Deixe um comentário (opcional)" style={{ ...fieldInput, resize: "none" }} />
-      </div>
-      <div style={{ marginTop: 20, width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
-        <Button full loading={loading} onClick={enviar}>Enviar avaliação</Button>
-        <Button full variant="ghost" onClick={() => go(next || "homeDoador")}>Avaliar depois</Button>
-      </div>
-      </div>
-    </div>
-  );
-}
-
-/* ---- DASHBOARD DE IMPACTO ---- */
-function DashboardImpacto({ go, usuario }) {
-  const kg = usuario?.kgResiduoEvitado || 0;
-  const itens = usuario?.itensDoados || 0;
-  const pontos = usuario?.pontos || 0;
-  const idx = badgeIndex(usuario?.seloAtual);
-  const proximo = BADGES[idx + 1];
-  const metaKg = 100;
-  const pct = Math.min(1, kg / metaKg);
-  const kgLabel = Number.isInteger(kg) ? String(kg) : kg.toFixed(1).replace(".", ",");
-  return (
-    <div>
-      <TopBar title="Meu impacto" onBack={() => go(-1)} />
-      <div style={{ padding: "0 20px 24px" }}>
-        <div style={{
-          borderRadius: 22, padding: "18px 18px 16px", color: "#fff", overflow: "hidden", position: "relative",
-          background: "linear-gradient(145deg, #1F6E43 0%, #164F31 55%, #123F27 100%)",
-        }}>
-          <div style={{ position: "absolute", right: -20, top: -28, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,.06)" }} />
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 6, fontSize: 10.5, fontWeight: 700,
-            letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(255,255,255,.9)",
-            background: "rgba(255,255,255,.12)", borderRadius: 999, padding: "5px 10px",
-          }}>
-            <Recycle size={13} strokeWidth={2.4} /> ODS 12
-          </div>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 16, marginTop: 14 }}>
-            <ImpactRing pct={pct} size={96} value={kgLabel} label="kg" tone="light" />
-            <div style={{ flex: 1, paddingBottom: 4 }}>
-              <div style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 600, lineHeight: 1.25 }}>
-                Material fora do descarte
-              </div>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,.7)", marginTop: 5, lineHeight: 1.4 }}>
-                Cada quilo é algo que ganhou outro uso.
-              </div>
-              <div style={{ marginTop: 10, fontSize: 11, fontWeight: 600, color: "#F6D48A" }}>
-                Meta {metaKg} kg · {Math.round(pct * 100)}%
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 12 }}>
-          <StatBox value={itens} label={itens === 1 ? "item doado" : "itens doados"} Icon={Gift} />
-          <StatBox value={pontos} label="pontos" Icon={Award} />
-          <StatBox value={(usuario?.reputacaoScore || 0).toFixed(1)} label="nota média" Icon={Star} />
-        </div>
-
-        <SectionTitle>Selo de impacto</SectionTitle>
-        <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6 }}>
-          {BADGES.map((b, i) => (
-            <div key={b.tier} style={{ minWidth: 78, textAlign: "center", opacity: i <= idx ? 1 : 0.35 }}>
-              <div style={{ width: 50, height: 50, borderRadius: "50%", background: b.color + "18", border: `1.5px solid ${b.color}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
-                <Award size={20} color={b.color} />
-              </div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: INK, marginTop: 6 }}>{b.label}</div>
-            </div>
-          ))}
-        </div>
-        {proximo && (
-          <div style={{ marginTop: 12, fontSize: 12, color: INK_SOFT, lineHeight: 1.45 }}>
-            Faltam <b style={{ color: INK }}>{Math.max(0, proximo.min - pontos)} pontos</b> para o selo {proximo.label}.
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export { Inbox, Chat, Agendamento, ConfirmDoacao, ConfirmRecebimento, Avaliar, DashboardImpacto };
-
-/* ---- HOME RECEPTOR ---- */
+export { Inbox, Chat };

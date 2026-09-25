@@ -12,27 +12,21 @@ Fornecer participacao em comunidades e organizar itens salvos.
 
 ## Favoritos
 
-Ainda nao existem arquivos Java exclusivos de favoritos. A funcionalidade atual e mantida no estado local do frontend. Uma evolucao pode adicionar controller, service, repository, model e DTO proprios.
+Favoritos possuem controller, service, repository, entidade e DTO proprios. A
+API lista, adiciona e remove favoritos por usuario autenticado.
 
 ## Integracao
 
 Comunidades usa a mesma autenticacao e o mesmo banco MongoDB. Favoritos deve futuramente persistir usando o identificador do usuario e do item.
 
-## O que falta implementar ou atualizar
+## Estado atual
 
-### Comunidades
+Comunidades permitem listar, criar, participar, sair, listar posts e apoiar
+posts. Favoritos sao persistidos no MongoDB e sincronizados pelo frontend com
+busca, detalhes e perfil.
 
-- completar participacao, saida e filtros por interesse ou regiao;
-- definir endpoints para atividade ou publicacoes;
-- validar usuario autenticado nas alteracoes;
-- tratar comunidade vazia ou inexistente.
-
-### Favoritos
-
-- criar persistencia no MongoDB;
-- adicionar controller, service, repository, model e DTO;
-- criar endpoints para listar, adicionar e remover favorito;
-- garantir status atualizado para item removido ou doado.
+Moderacao de posts, filtros mais ricos e ordenacao de favoritos continuam como
+evolucoes possiveis.
 
 ## Organizacao para envio
 
@@ -48,4 +42,5 @@ conjunto-05-comunidades-favoritos/
 	└── dependencias compartilhadas do conjunto
 ```
 
-Na Sprint 1, enviar `comunidades`. Na Sprint 2, acrescentar `favoritos` e seus endpoints de persistencia.
+Comunidades e favoritos usam a autenticacao existente e podem ser publicados
+juntos com o restante da API.

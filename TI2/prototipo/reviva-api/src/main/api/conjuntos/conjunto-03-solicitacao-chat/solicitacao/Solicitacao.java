@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Conversa iniciada por um usuário interessado em um item publicado.
@@ -52,5 +54,21 @@ public class Solicitacao {
     @Builder.Default
     private Instant criadaEm = Instant.now();
 
+    /** Usuários que arquivaram a conversa só no próprio Inbox. */
+    @Builder.Default
+    private List<String> inboxArquivadoPor = new ArrayList<>();
+
+    /** Usuários que excluiram a conversa do próprio Inbox (a troca segue existindo). */
+    @Builder.Default
+    private List<String> inboxOcultoPor = new ArrayList<>();
+
     public enum StatusSolicitacao { AGUARDANDO, ACEITA, RECUSADA, CANCELADA }
+
+    public boolean estaArquivadaPara(String usuarioId) {
+        return usuarioId != null && inboxArquivadoPor != null && inboxArquivadoPor.contains(usuarioId);
+    }
+
+    public boolean estaOcultaPara(String usuarioId) {
+        return usuarioId != null && inboxOcultoPor != null && inboxOcultoPor.contains(usuarioId);
+    }
 }
