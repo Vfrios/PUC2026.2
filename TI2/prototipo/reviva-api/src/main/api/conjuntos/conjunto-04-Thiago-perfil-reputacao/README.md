@@ -1,4 +1,4 @@
-# Conjunto 4 - Perfil e reputacao
+# Conjunto 4 - Thiago - Perfil e reputacao
 
 ## Objetivo
 
@@ -36,7 +36,7 @@ avaliacoes. Exportacao de dados e fluxos administrativos sao evolucoes futuras.
 ## Organizacao para envio
 
 ```text
-conjunto-04-perfil-reputacao/
+conjunto-04-Thiago-perfil-reputacao/
 ├── perfil/
 │   ├── UsuarioController.java
 │   ├── UsuarioRepository.java
@@ -50,7 +50,7 @@ conjunto-04-perfil-reputacao/
 │   ├── AvaliacaoRequest.java
 │   └── PontuacaoService.java
 └── comum/
-	└── dependencias compartilhadas entre perfil e reputacao
+    └── dependencias compartilhadas entre perfil e reputacao
 ```
 
 Perfil e reputacao compartilham os mesmos usuarios e avaliacoes durante a

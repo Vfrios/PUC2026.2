@@ -1,4 +1,4 @@
-# Conjunto 1 - Publicacao e gestao
+# Conjunto 1 - Gustavo - Publicacao e gestao
 
 ## Objetivo
 
@@ -27,17 +27,18 @@ URLs/data URLs; o armazenamento dedicado de imagens ainda nao faz parte da API.
 ## Organizacao para envio
 
 ```text
-conjunto-01-publicacao-gestao/
+conjunto-01-Gustavo-publicacao-gestao/
 ├── cadastro-item/
 │   ├── ItemController.java
 │   ├── ItemService.java
 │   └── ItemRequest.java
 ├── gerenciar-itens/
 │   └── arquivos da gestao que forem criados
-└── comum/
-	├── Item.java
-	├── ItemRepository.java
-	└── ItemResponse.java
+├── comum/
+    ├── Item.java
+    ├── ItemRepository.java
+    └── ItemResponse.java
+
 ```
 
 Os subpacotes atuais podem ser executados juntos; a separacao acima serve como

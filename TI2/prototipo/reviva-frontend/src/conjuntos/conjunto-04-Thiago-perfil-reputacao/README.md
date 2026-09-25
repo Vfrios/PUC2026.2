@@ -1,9 +1,11 @@
-# Conjunto 4 - Perfil e reputação
+# Conjunto 4 - Thiago - Perfil e reputação
 
 ## Objetivo
+
 Este conjunto reúne a identidade do usuário, os dados públicos e a confiabilidade construída nas trocas.
 
 ## Arquivos do conjunto
+
 - `accountScreens.jsx`: perfil, perfil público, reputação, histórico, comunidades, favoritos, notificações e moderação.
 - `avaliacao.jsx`: tela de avaliação do participante, usada após a conclusão da troca.
 
@@ -32,5 +34,6 @@ Para uma separação tela por tela, `accountScreens.jsx` pode virar:
 `avaliacao.jsx` já está separado e deve continuar sendo o dono da avaliação.
 
 ## Observações
+
 O módulo foi organizado em um arquivo de conta e um arquivo de avaliação, sem
 `index.jsx`. A avaliação é encaminhada pelo `App.jsx` para `avaliacao.jsx`.

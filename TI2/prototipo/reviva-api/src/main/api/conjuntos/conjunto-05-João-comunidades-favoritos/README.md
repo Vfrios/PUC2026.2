@@ -1,4 +1,4 @@
-# Conjunto 5 - Comunidades e favoritos
+# Conjunto 5 - João - Comunidades e favoritos
 
 ## Objetivo
 
@@ -31,7 +31,7 @@ evolucoes possiveis.
 ## Organizacao para envio
 
 ```text
-conjunto-05-comunidades-favoritos/
+conjunto-05-João-comunidades-favoritos/
 ├── comunidades/
 │   ├── ComunidadeController.java
 │   ├── ComunidadeRepository.java
@@ -39,7 +39,7 @@ conjunto-05-comunidades-favoritos/
 ├── favoritos/
 │   └── arquivos da API de favoritos quando implementados
 └── comum/
-	└── dependencias compartilhadas do conjunto
+    └── dependencias compartilhadas do conjunto
 ```
 
 Comunidades e favoritos usam a autenticacao existente e podem ser publicados

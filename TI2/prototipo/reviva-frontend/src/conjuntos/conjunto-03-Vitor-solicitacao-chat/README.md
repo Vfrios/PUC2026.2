@@ -1,9 +1,11 @@
-# Conjunto 3 - Solicitação e chat
+# Conjunto 3 - Vitor - Solicitação e chat
 
 ## Objetivo
+
 Este conjunto cuida do ciclo de pedido, conversa e confirmação da doação.
 
 ## Arquivos do conjunto
+
 - `tradeScreens.jsx`: Inbox e Chat, incluindo mensagens, anexos, localização, leitura e arquivamento.
 - `negociacaoScreens.jsx`: solicitação, agendamento, confirmações e dashboard de impacto.
 
@@ -30,5 +32,6 @@ as APIs e componentes visuais, mas a navegação importa cada grupo pelo arquivo
 correspondente.
 
 ## Observações
+
 A implementação e a navegação permanecem concentradas diretamente em
 `tradeScreens.jsx`. Não há arquivo intermediário ou `index.jsx` neste conjunto.

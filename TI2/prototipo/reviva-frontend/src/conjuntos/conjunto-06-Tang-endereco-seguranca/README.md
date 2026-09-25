@@ -1,9 +1,11 @@
-# Conjunto 6 - Endereço e segurança
+# Conjunto 6 - Tang - Endereço e segurança
 
 ## Objetivo
+
 Este conjunto reúne o cadastro de endereço, a gestão de conta e as telas de segurança, termos e privacidade.
 
 ## Arquivos do conjunto
+
 - `enderecos.jsx`: gestão de endereços salvos e fluxo relacionado.
 - `seguranca.jsx`: segurança, privacidade, termos e notificações do usuário.
 
@@ -30,6 +32,7 @@ Se a regra passar a ser uma tela por arquivo, a divisão natural será:
 - `notificacoes.jsx`: Notificações.
 
 ## Observações
+
 Mantém dois módulos principais no conjunto, sem `index.jsx`. A tabela acima
 deixa explícito que o segundo arquivo concentra quatro telas relacionadas, o
 que pode ser separado futuramente se o projeto exigir um arquivo por tela.

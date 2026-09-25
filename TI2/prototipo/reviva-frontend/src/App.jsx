@@ -6,18 +6,18 @@ import SockJS from "sockjs-client";
 import { ROLE_COLORS, StatusBar, Toast, BottomNav } from "./shared/shared.jsx";
 import * as onboardingScreens from "./auth/authScreens.jsx";
 import * as authScreens from "./auth/authScreens.jsx";
-import * as conjunto1Screens from "./conjuntos/conjunto-01-publicacao-gestao/cadastroItem.jsx";
-import * as conjunto1Gestao from "./conjuntos/conjunto-01-publicacao-gestao/gerenciarItens.jsx";
-import * as conjunto2Screens from "./conjuntos/conjunto-02-descoberta-detalhes/discoveryScreens.jsx";
-import * as conjunto2Detalhes from "./conjuntos/conjunto-02-descoberta-detalhes/itensDetalhes.jsx";
-import * as conjunto3Screens from "./conjuntos/conjunto-03-solicitacao-chat/tradeScreens.jsx";
-import * as conjunto3Negociacao from "./conjuntos/conjunto-03-solicitacao-chat/negociacaoScreens.jsx";
-import * as conjunto4Screens from "./conjuntos/conjunto-04-perfil-reputacao/accountScreens.jsx";
-import * as conjunto4Avaliacao from "./conjuntos/conjunto-04-perfil-reputacao/avaliacao.jsx";
-import * as conjunto5Screens from "./conjuntos/conjunto-05-comunidades-favoritos/communityScreens.jsx";
-import * as conjunto5Favoritos from "./conjuntos/conjunto-05-comunidades-favoritos/favoritos.jsx";
-import * as conjunto6Screens from "./conjuntos/conjunto-06-endereco-seguranca/enderecos.jsx";
-import * as conjunto6Seguranca from "./conjuntos/conjunto-06-endereco-seguranca/seguranca.jsx";
+import * as conjunto1Screens from "./conjuntos/conjunto-01-Gustavo-publicacao-gestao/cadastroItem.jsx";
+import * as conjunto1Gestao from "./conjuntos/conjunto-01-Gustavo-publicacao-gestao/gerenciarItens.jsx";
+import * as conjunto2Screens from "./conjuntos/conjunto-02-Brayan-descoberta-detalhes/discoveryScreens.jsx";
+import * as conjunto2Detalhes from "./conjuntos/conjunto-02-Brayan-descoberta-detalhes/itensDetalhes.jsx";
+import * as conjunto3Screens from "./conjuntos/conjunto-03-Vitor-solicitacao-chat/tradeScreens.jsx";
+import * as conjunto3Negociacao from "./conjuntos/conjunto-03-Vitor-solicitacao-chat/negociacaoScreens.jsx";
+import * as conjunto4Screens from "./conjuntos/conjunto-04-Thiago-perfil-reputacao/accountScreens.jsx";
+import * as conjunto4Avaliacao from "./conjuntos/conjunto-04-Thiago-perfil-reputacao/avaliacao.jsx";
+import * as conjunto5Screens from "./conjuntos/conjunto-05-João-comunidades-favoritos/communityScreens.jsx";
+import * as conjunto5Favoritos from "./conjuntos/conjunto-05-João-comunidades-favoritos/favoritos.jsx";
+import * as conjunto6Screens from "./conjuntos/conjunto-06-Tang-endereco-seguranca/enderecos.jsx";
+import * as conjunto6Seguranca from "./conjuntos/conjunto-06-Tang-endereco-seguranca/seguranca.jsx";
 
 /* ============================================================
    APP SHELL

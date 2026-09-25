@@ -1,4 +1,4 @@
-# Conjunto 6 - Endereco e seguranca
+# Conjunto 6 - Tang - Endereco e seguranca
 
 ## Objetivo
 
@@ -39,7 +39,7 @@ e no agendamento.
 ## Organizacao para envio
 
 ```text
-conjunto-06-endereco-seguranca/
+conjunto-06-Tang-endereco-seguranca/
 ├── endereco-salvo/
 │   └── arquivos de endereco a implementar
 ├── seguranca-termos/
@@ -49,7 +49,7 @@ conjunto-06-endereco-seguranca/
 │   ├── Notificacao.java
 │   └── NotificacaoResponse.java
 └── comum/
-	└── dependencias de seguranca e geolocalizacao
+    └── dependencias de seguranca e geolocalizacao
 ```
 
 Os subpacotes `endereco-salvo` e `seguranca-termos` usam a mesma autenticacao e

@@ -1,4 +1,4 @@
-# Conjunto 3 - Solicitacao e chat
+# Conjunto 3 - Vitor - Solicitacao e chat
 
 ## Objetivo
 
@@ -52,7 +52,7 @@ de evolucao.
 ## Organizacao para envio
 
 ```text
-conjunto-03-solicitacao-chat/
+conjunto-03-Vitor-solicitacao-chat/
 ├── solicitacao/
 │   ├── SolicitacaoController.java
 │   ├── SolicitacaoService.java
@@ -69,11 +69,11 @@ conjunto-03-solicitacao-chat/
 │   ├── PresencaController.java
 │   └── PresencaEvent.java
 └── comum/
-	├── AgendamentoController.java
-	├── AgendamentoService.java
-	├── AgendamentoRepository.java
-	├── Agendamento.java
-	└── AgendamentoRequest.java
+    ├── AgendamentoController.java
+    ├── AgendamentoService.java
+    ├── AgendamentoRepository.java
+    ├── Agendamento.java
+    └── AgendamentoRequest.java
 ```
 
 Os tres subpacotes participam do mesmo fluxo e devem ser executados juntos.

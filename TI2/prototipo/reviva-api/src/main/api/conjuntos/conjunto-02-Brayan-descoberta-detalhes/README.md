@@ -1,4 +1,4 @@
-# Conjunto 2 - Descoberta e detalhes
+# Conjunto 2 - Brayan - Descoberta e detalhes
 
 ## Objetivo
 
@@ -28,7 +28,7 @@ podem ser adicionadas sem duplicar as entidades de item.
 ## Organizacao para envio
 
 ```text
-conjunto-02-descoberta-detalhes/
+conjunto-02-Brayan-descoberta-detalhes/
 ├── busca-descoberta/
 │   ├── GeoController.java
 │   ├── GeoService.java
@@ -38,7 +38,7 @@ conjunto-02-descoberta-detalhes/
 ├── detalhes-item/
 │   └── arquivos especificos que forem criados
 └── comum/
-	└── dependencias de item usadas pelo conjunto 1
+    └── dependencias de item usadas pelo conjunto 1
 ```
 
 Os detalhes reutilizam os contratos de item sem duplicar o banco.

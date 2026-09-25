@@ -1,9 +1,11 @@
-# Conjunto 2 - Descoberta e detalhes
+# Conjunto 2 - Brayan - Descoberta e detalhes
 
 ## Objetivo
+
 Este conjunto concentra a navegação de descoberta, busca e avaliação rápida dos itens antes da solicitação.
 
 ## Arquivos do conjunto
+
 - `discoveryScreens.jsx`: Home do doador e Home do receptor.
 - `itensDetalhes.jsx`: Busca, lista de itens e detalhes do item, incluindo filtros, favoritos e navegação para a solicitação.
 
@@ -27,4 +29,5 @@ componentes de tela e 5 rotas, sendo 2 delas variações por perfil.
 `detalhesItem.jsx`. A divisão atual já separa descoberta de aprofundamento.
 
 ## Observações
+
 Os dois arquivos são módulos funcionais distintos, sem `index.jsx` e com importação direta na navegação principal. A contagem acima considera tela de produto, não cada componente auxiliar.
