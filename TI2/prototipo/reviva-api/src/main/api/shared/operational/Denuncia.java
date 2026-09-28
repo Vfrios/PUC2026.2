@@ -30,6 +30,12 @@ public class Denuncia {
     @DBRef(lazy = false)
     private Agendamento agendamento;
 
+    @DBRef(lazy = false)
+    private Item item;
+
+    @DBRef(lazy = false)
+    private Solicitacao solicitacao;
+
     private Motivo motivo;
 
     private String detalhes;

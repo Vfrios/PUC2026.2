@@ -526,7 +526,7 @@ function TopBar({ title, onBack, right, compact = false }) {
         </button>
       ) : <div style={{ width: 34 }} />}
       <div style={{ flex: 1, textAlign: "center", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: compact ? 15 : 16.5, color: INK, transition: "font-size .2s" }}>{title}</div>
-      <div style={{ width: 34, display: "flex", justifyContent: "flex-end" }}>{right}</div>
+      <div style={{ minWidth: 34, display: "flex", justifyContent: "flex-end" }}>{right}</div>
     </div>
   );
 }
@@ -735,5 +735,26 @@ function linkDoPerfil(usuarioId) {
 }
 
 export { FotoPerfil, Toggle, linkDoPerfil };
+function ActionSheet({ open, title, actions = [], onClose }) {
+  if (!open) return null;
+  return (
+    <div onClick={e => { e.stopPropagation(); onClose(); }} style={{ position: "absolute", inset: 0, zIndex: 70, display: "flex", alignItems: "flex-end", background: "rgba(13, 25, 18, .42)" }}>
+      <div role="dialog" aria-modal="true" aria-label={title} onClick={e => e.stopPropagation()} style={{ width: "100%", background: "#FBFAF4", borderRadius: "20px 20px 0 0", padding: "12px 18px max(18px, env(safe-area-inset-bottom))", boxShadow: "0 -12px 32px rgba(22,40,31,.18)" }}>
+        <div style={{ width: 34, height: 4, borderRadius: 4, background: "#C7C9C1", margin: "0 auto 14px" }} />
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 600, color: INK, marginBottom: 8 }}>{title}</div>
+        {actions.map(({ label, Icon, danger, detail, onClick }) => (
+          <button key={label} type="button" onClick={e => { e.stopPropagation(); onClose(); onClick?.(); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", border: 0, borderTop: "1px solid #EDEBE1", background: "transparent", padding: "13px 2px", color: danger ? "#9C4327" : INK, cursor: "pointer", fontFamily: "var(--font-ui)" }}>
+            {Icon && <Icon size={18} color={danger ? "#9C4327" : "var(--role-primary)"} />}
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{label}{detail && <span style={{ display: "block", marginTop: 2, color: INK_SOFT, fontSize: 11, fontWeight: 400 }}>{detail}</span>}</span>
+            <ChevronRight size={15} color={INK_SOFT} />
+          </button>
+        ))}
+        <button type="button" onClick={e => { e.stopPropagation(); onClose(); }} style={{ width: "100%", marginTop: 10, padding: "12px", border: 0, borderRadius: 12, background: "#EDEBE1", color: INK, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-ui)" }}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
+export { ActionSheet };
 
 export { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCnpj, formatDocumento, formatCep, formatCelular, cpfValido, cnpjValido, documentoValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ImpactoResumo, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox, STATUS_ITEM, statusDoItem, StatusBadge, MODOS_ENTREGA, ETAPAS_SOLICITACAO, ETAPA_LABEL, EtapasSolicitacao, compartilhar, linkDoItem, FieldError, Checkbox };

@@ -5,8 +5,8 @@ import "leaflet/dist/leaflet.css";
 import { api, getToken, setToken, ApiError, wsUrl } from "../../api.js";
 import { Client as StompClient } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, RotateCcw, X, CornerUpLeft, Archive, ArchiveRestore } from "lucide-react";
-import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox, ETAPA_LABEL } from "../../shared/shared.jsx";
+import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, RotateCcw, X, CornerUpLeft, Archive, ArchiveRestore, MoreVertical, Ban } from "lucide-react";
+import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox, ETAPA_LABEL, ActionSheet } from "../../shared/shared.jsx";
 
 const dataAtual = new Date();
 const doisDigitos = valor => String(valor).padStart(2, "0");
@@ -314,6 +314,7 @@ function Inbox({ go, usuario, notify }) {
   const { loading, error, data: conversas, reload } = useApiData(() => api.conversas(), [usuario?.id]);
   const [aba, setAba] = useState("ativas");
   const [busyId, setBusyId] = useState(null);
+  const [menuConversa, setMenuConversa] = useState(null);
   // Não exige item/receptor completos — conversas antigas com DBRef quebrado ainda devem aparecer.
   const todas = (conversas || []).filter(s => s?.id);
   const ativas = todas.filter(s => !s.arquivada);
@@ -344,6 +345,21 @@ function Inbox({ go, usuario, notify }) {
       <Icon size={13} color={color} />
     </button>
   );
+
+  const bloquearDaConversa = async (conversa, outroId) => {
+    if (!outroId || !window.confirm("Bloquear esta pessoa? Ela não poderá encontrar seus anúncios nem iniciar novas interações.")) return;
+    setBusyId(conversa.id);
+    try {
+      await api.bloquearUsuario(outroId);
+      if (!conversa.arquivada) await api.arquivarConversa(conversa.id);
+      await reload({ silent: true });
+      notify("Usuário bloqueado.");
+    } catch (e) {
+      notify(e.message || "Não foi possível bloquear o usuário.");
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <div>
@@ -383,10 +399,19 @@ function Inbox({ go, usuario, notify }) {
                   ? botaoAcao("Desarquivar", ArchiveRestore, e => agir(e, s, "desarquivar"))
                   : botaoAcao("Arquivar", Archive, e => agir(e, s, "arquivar"))}
                 {botaoAcao("Excluir", Trash2, e => agir(e, s, "excluir"), "#9C4327")}
+                {botaoAcao("Mais opções", MoreVertical, e => { e.stopPropagation(); setMenuConversa({ conversa: s, outroId, outroNome }); })}
               </div>
             </div>
           </div>;
         })}
+        <ActionSheet open={!!menuConversa} title={menuConversa?.outroNome || "Conversa"} onClose={() => setMenuConversa(null)} actions={menuConversa ? [
+          { label: "Acessar perfil", Icon: User, onClick: () => go("perfilPublico", { usuarioId: menuConversa.outroId }) },
+          ...(menuConversa.conversa.item?.id ? [{ label: "Acessar anúncio", Icon: Gift, onClick: () => go("detalhesItem", { itemId: menuConversa.conversa.item.id }) }] : []),
+          { label: "Denunciar usuário", Icon: Flag, onClick: () => go("moderacao", { usuarioDenunciadoId: menuConversa.outroId, otherName: menuConversa.outroNome, itemId: menuConversa.conversa.item?.id, itemTitulo: menuConversa.conversa.item?.titulo, solicitacaoId: menuConversa.conversa.id, bloquearAposDenuncia: true }) },
+          { label: "Bloquear usuário", Icon: Ban, danger: true, onClick: () => bloquearDaConversa(menuConversa.conversa, menuConversa.outroId) },
+          { label: menuConversa.conversa.arquivada ? "Desarquivar conversa" : "Arquivar conversa", Icon: menuConversa.conversa.arquivada ? ArchiveRestore : Archive, onClick: () => agir({ stopPropagation() {}, preventDefault() {} }, menuConversa.conversa, menuConversa.conversa.arquivada ? "desarquivar" : "arquivar") },
+          { label: "Excluir conversa", Icon: Trash2, danger: true, onClick: () => { if (window.confirm("Excluir esta conversa do seu Inbox?")) agir({ stopPropagation() {}, preventDefault() {} }, menuConversa.conversa, "excluir"); } },
+        ] : []} />
       </div>
     </div>
   );
@@ -404,6 +429,7 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
   const [erro, setErro] = useState("");
   const [sending, setSending] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [menuSegurancaAberto, setMenuSegurancaAberto] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [conexao, setConexao] = useState("conectando");
   const [respondendo, setRespondendo] = useState(null);
@@ -595,6 +621,29 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
     }
   };
 
+  const bloquearContato = async () => {
+    if (!otherId || !window.confirm(`Bloquear ${otherName || "esta pessoa"}? Ela não poderá encontrar seus anúncios nem iniciar novas interações.`)) return;
+    try {
+      await api.bloquearUsuario(otherId);
+      await api.arquivarConversa(solicitacaoId);
+      notify("Usuário bloqueado e conversa arquivada.");
+      go("inbox");
+    } catch (e) {
+      notify(e.message || "Não foi possível bloquear o usuário.");
+    }
+  };
+
+  const excluirConversa = async () => {
+    if (!window.confirm("Excluir esta conversa do seu Inbox?")) return;
+    try {
+      await api.excluirConversa(solicitacaoId);
+      notify("Conversa excluída do Inbox.");
+      go("inbox");
+    } catch (e) {
+      notify(e.message || "Não foi possível excluir a conversa.");
+    }
+  };
+
   const compartilharLocalizacao = () => {
     setMenuAberto(false);
     if (!("geolocation" in navigator)) { notify("Seu navegador não oferece localização automática."); return; }
@@ -641,7 +690,14 @@ function Chat({ go, role, notify, params, usuario, onlineIds = new Set() }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      <TopBar title={<div><div>{otherName || "Conversa"}</div><div style={{ fontSize: 10.5, fontWeight: 500, color: otherId && onlineIds.has(otherId) ? "#2D8A57" : INK_SOFT }}>{otherId && onlineIds.has(otherId) ? "online" : "offline"}</div></div>} onBack={() => go(-1)} right={<button type="button" onClick={() => go("inbox")} style={{ ...iconBtn, width: 30, height: 30 }} aria-label="Abrir inbox" title="Abrir inbox"><MessageCircle size={15} color="var(--role-primary-dark)" /></button>} />
+        <TopBar title={<div><div>{otherName || "Conversa"}</div><div style={{ fontSize: 10.5, fontWeight: 500, color: otherId && onlineIds.has(otherId) ? "#2D8A57" : INK_SOFT }}>{otherId && onlineIds.has(otherId) ? "online" : "offline"}</div></div>} onBack={() => go(-1)} right={<div style={{ display: "flex", gap: 5 }}><button type="button" onClick={() => setMenuSegurancaAberto(true)} style={{ ...iconBtn, width: 30, height: 30 }} aria-label="Mais opções da conversa" title="Mais opções"><MoreVertical size={17} color="var(--role-primary-dark)" /></button><button type="button" onClick={() => go("inbox")} style={{ ...iconBtn, width: 30, height: 30 }} aria-label="Abrir inbox" title="Abrir inbox"><MessageCircle size={15} color="var(--role-primary-dark)" /></button></div>} />
+            <ActionSheet open={menuSegurancaAberto} title={otherName || "Conversa"} onClose={() => setMenuSegurancaAberto(false)} actions={[
+              { label: "Acessar perfil", Icon: User, onClick: () => otherId && go("perfilPublico", { usuarioId: otherId }) },
+              ...(itemId ? [{ label: "Acessar anúncio", Icon: Gift, onClick: () => go("detalhesItem", { itemId }) }] : []),
+              { label: "Denunciar usuário", Icon: Flag, onClick: () => go("moderacao", { usuarioDenunciadoId: otherId, otherName, itemId, itemTitulo, solicitacaoId, bloquearAposDenuncia: true }) },
+              { label: "Bloquear usuário", Icon: Ban, danger: true, onClick: bloquearContato },
+              { label: "Excluir conversa", Icon: Trash2, danger: true, onClick: excluirConversa },
+            ]} />
       <div onClick={() => itemId && go("detalhesItem", { itemId })} style={{ margin: "0 16px 8px", padding: 8, display: "flex", alignItems: "center", gap: 8, border: "1px solid #EDEBE1", borderRadius: 12, background: "#fff", cursor: itemId ? "pointer" : "default", flexShrink: 0 }}>
         {itemFoto ? <img src={itemFoto} alt="" style={{ width: 38, height: 38, objectFit: "cover", borderRadius: 8 }} /> : <Avatar label={otherName} size={38} />}
         <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 12.5, fontWeight: 700, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item?.titulo || itemTitulo || "Item da conversa"}</div><div style={{ fontSize: 10.5, color: itemStatus === "Disponível" ? "var(--role-primary)" : "#9C4327" }}>{itemStatus}{solicitacao?.etapa ? ` · ${ETAPA_LABEL[solicitacao.etapa]}` : ""}</div></div>

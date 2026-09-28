@@ -7,6 +7,7 @@ import com.reviva.api.model.Solicitacao;
 import com.reviva.api.model.Usuario;
 import com.reviva.api.repository.ItemRepository;
 import com.reviva.api.repository.UsuarioRepository;
+import com.reviva.api.service.BloqueioService;
 import lombok.RequiredArgsConstructor;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -34,6 +35,7 @@ public class ItemService {
     private final ItemRepository itemRepository;
     private final UsuarioRepository usuarioRepository;
     private final PontuacaoService pontuacaoService;
+    private final BloqueioService bloqueioService;
     private final MongoTemplate mongoTemplate;
     private final CarregadorEmLote carregadorEmLote;
 
@@ -59,8 +61,10 @@ public class ItemService {
         if (categoria != null) filtro.append("categoria", categoria.name());
         if (tipo != null) filtro.append("tipoPublicacao", tipo.name());
         List<Item> base = carregadorEmLote.buscar(filtro, Item.class);
+        var ocultos = usuario == null ? java.util.Set.<String>of() : bloqueioService.usuariosOcultosPara(usuario);
         return ItemRepository.filtrar(base, categoria, tipo, termo, cidade, uf, usuario == null ? null : usuario.getId())
                 .stream()
+            .filter(item -> item.getDoador() == null || !ocultos.contains(item.getDoador().getId()))
                 .filter(item -> item.getExpiraEm() == null || item.getExpiraEm().isAfter(agora))
                 .toList();
     }
@@ -70,8 +74,17 @@ public class ItemService {
     }
 
     public Item buscarPorId(String id) {
-        return itemRepository.findById(id)
+        return buscarPorId(id, null);
+    }
+
+    public Item buscarPorId(String id, Usuario usuario) {
+        Item item = itemRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item não encontrado ou removido."));
+        if (usuario != null && item.getDoador() != null
+            && bloqueioService.existeBloqueio(usuario.getId(), item.getDoador().getId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item não encontrado ou removido.");
+        }
+        return item;
     }
 
     /** Edita os dados do anúncio (só o próprio doador pode editar) e renova o

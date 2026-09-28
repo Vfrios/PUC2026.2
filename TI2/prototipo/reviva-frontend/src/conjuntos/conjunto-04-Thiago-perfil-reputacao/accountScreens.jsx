@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { api } from "../../api.js";
-import { User, Bell, Heart, Star, Users, Camera, Send, Award, Leaf, ChevronRight, Recycle, Gift, Share2, Flag, Clock, ShieldCheck, LogOut, Trash2, Pencil, CheckCircle2, X, FileText, MapPin, Plus, Lock, Search, Calendar, Package, Trophy, AlertTriangle, Settings } from "lucide-react";
-import { INK, INK_SOFT, CATS, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, timeAgo, badgeIndex, onlyDigits, formatCelular, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Loading, ErrorBox, TopBar, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox, StatusBadge, statusDoItem, ETAPA_LABEL, compartilhar, FieldError, Checkbox, FotoPerfil, linkDoPerfil } from "../../shared/shared.jsx";
+import { User, Bell, Heart, Star, Users, Camera, Send, Award, Leaf, ChevronRight, Recycle, Gift, Share2, Flag, Clock, ShieldCheck, LogOut, Trash2, Pencil, CheckCircle2, X, FileText, MapPin, Plus, Lock, Search, Calendar, Package, Trophy, AlertTriangle, Settings, MoreVertical, Ban } from "lucide-react";
+import { INK, INK_SOFT, CATS, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, timeAgo, badgeIndex, onlyDigits, formatCelular, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ItemCard, Loading, ErrorBox, TopBar, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox, StatusBadge, statusDoItem, ETAPA_LABEL, compartilhar, FieldError, Checkbox, FotoPerfil, linkDoPerfil, ActionSheet, iconBtn } from "../../shared/shared.jsx";
 
 const card = { background: "#fff", border: "1px solid #EDEBE1", borderRadius: 16, padding: 14 };
 
@@ -330,6 +330,7 @@ function PerfilPublico({ go, usuario, onlineIds, favorites, toggleFav, params, n
   const reputacao = useApiData(() => api.avaliacoesDe(id), [id], { skip: !id });
   const itens = useApiData(() => api.itensDeUsuario(id), [id], { skip: !id });
   const [todasAvaliacoes, setTodasAvaliacoes] = useState(false);
+  const [menuSegurancaAberto, setMenuSegurancaAberto] = useState(false);
 
   if (!id || perfil.errorStatus === 404) {
     return <div><TopBar title="Perfil" onBack={() => go(-1)} /><EmptyState Icon={User} text="Este perfil não existe ou foi removido." /></div>;
@@ -341,10 +342,25 @@ function PerfilPublico({ go, usuario, onlineIds, favorites, toggleFav, params, n
   const avaliacoes = reputacao.data?.avaliacoes || [];
   const disponiveis = (itens.data || []).filter(i => statusDoItem(i) === "ATIVO");
   const badge = BADGES[badgeIndex(p?.seloAtual)];
+  const bloquearPerfil = async () => {
+    if (!window.confirm(`Bloquear ${p?.nome || "esta pessoa"}? Ela não poderá encontrar seus anúncios nem iniciar novas interações.`)) return;
+    try {
+      await api.bloquearUsuario(id);
+      notify("Usuário bloqueado.");
+      go(-1);
+    } catch (e) {
+      notify(e.message || "Não foi possível bloquear o usuário.");
+    }
+  };
 
   return (
     <div>
       <TopBar title={souEu ? "Meu perfil público" : "Perfil do anunciante"} onBack={() => go(-1)} right={p && <Share2 size={18} color={INK} style={{ cursor: "pointer" }} onClick={() => compartilhar({ titulo: `${p.nome} no Reviva`, texto: `Veja os itens de ${p.nome} no Reviva`, url: linkDoPerfil(id) }, notify)} />} />
+            <TopBar title={souEu ? "Meu perfil público" : "Perfil do anunciante"} onBack={() => go(-1)} right={p && <div style={{ display: "flex", gap: 5 }}><button type="button" onClick={() => compartilhar({ titulo: `${p.nome} no Reviva`, texto: `Veja os itens de ${p.nome} no Reviva`, url: linkDoPerfil(id) }, notify)} aria-label="Compartilhar perfil" title="Compartilhar perfil" style={{ ...iconBtn, width: 30, height: 30 }}><Share2 size={16} color={INK} /></button>{!souEu && <button type="button" onClick={() => setMenuSegurancaAberto(true)} aria-label="Mais opções do perfil" title="Mais opções" style={{ ...iconBtn, width: 30, height: 30 }}><MoreVertical size={17} color={INK} /></button>}</div>} />
+            {!souEu && <ActionSheet open={menuSegurancaAberto} title={p?.nome || "Perfil"} onClose={() => setMenuSegurancaAberto(false)} actions={[
+              { label: "Denunciar usuário", Icon: Flag, onClick: () => go("moderacao", { usuarioDenunciadoId: id, otherName: p?.nome }) },
+              { label: "Bloquear usuário", Icon: Ban, danger: true, onClick: bloquearPerfil },
+            ]} />}
       <div style={{ padding: "0 20px 24px" }}>
         {perfil.loading && !p && <Loading />}
         {perfil.error && perfil.errorStatus !== 404 && <ErrorBox message={perfil.error} onRetry={perfil.reload} />}
@@ -530,28 +546,47 @@ function Reputacao({ go, usuario, refreshUsuario }) {
 
 /* ---- MODERAÇÃO ---- */
 function Moderacao({ go, notify, params }) {
-  const [motivo, setMotivo] = useState(MOTIVOS_DENUNCIA[0].value);
+  const [motivo, setMotivo] = useState(params?.motivoInicial || MOTIVOS_DENUNCIA[0].value);
   const [detalhes, setDetalhes] = useState("");
   const [loading, setLoading] = useState(false);
 
   const enviar = async () => {
     setLoading(true);
     try {
-      await api.denunciar(motivo, detalhes);
-      notify("Denúncia enviada. Obrigado por ajudar a manter a comunidade segura.");
-      go(-1);
+      await api.denunciar({
+        usuarioDenunciadoId: params?.usuarioDenunciadoId || params?.otherId || params?.agendamento?.solicitacao?.receptor?.id || params?.agendamento?.solicitacao?.item?.doador?.id,
+        motivo,
+        detalhes,
+        itemId: params?.itemId || params?.agendamento?.solicitacao?.item?.id,
+        solicitacaoId: params?.solicitacaoId || params?.agendamento?.solicitacao?.id,
+        agendamentoId: params?.agendamentoId || params?.agendamento?.id,
+      });
     } catch (e) {
       notify(e.message || "Não foi possível enviar a denúncia.");
-    } finally {
       setLoading(false);
+      return;
     }
+    if (params?.bloquearAposDenuncia && (params?.usuarioDenunciadoId || params?.otherId)) {
+      try {
+        await api.bloquearUsuario(params.usuarioDenunciadoId || params.otherId);
+        if (params?.solicitacaoId) await api.arquivarConversa(params.solicitacaoId);
+        notify("Denúncia enviada. Usuário bloqueado e conversa arquivada.");
+      } catch (e) {
+        notify(`Denúncia enviada, mas não foi possível concluir o bloqueio: ${e.message || "tente novamente"}`);
+      }
+      go("inbox");
+    } else {
+      notify("Denúncia enviada. Obrigado por ajudar a manter a comunidade segura.");
+      go(-1);
+    }
+    setLoading(false);
   };
 
   return (
     <div>
-      <TopBar title="Reportar problema" onBack={() => go(-1)} />
+      <TopBar title={params?.motivoInicial ? "Denunciar anúncio" : params?.usuarioDenunciadoId || params?.otherId ? "Denunciar usuário" : "Reportar problema"} onBack={() => go(-1)} />
       <div style={{ padding: "0 20px" }}>
-        {params?.otherName && <div style={{ fontSize: 12, color: INK_SOFT, marginBottom: 10 }}>Sobre o combinado com <b>{params.otherName}</b>{params.itemTitulo ? ` — "${params.itemTitulo}"` : ""}</div>}
+        {params?.otherName && <div style={{ fontSize: 12, color: INK_SOFT, marginBottom: 10 }}>{params?.solicitacaoId || params?.agendamento ? "Sobre o combinado com" : params?.itemId ? "Sobre o anúncio de" : "Sobre"} <b>{params.otherName}</b>{params.itemTitulo ? ` — "${params.itemTitulo}"` : ""}</div>}
         <div style={{ fontSize: 13, color: INK_SOFT, marginBottom: 10 }}>Selecione o motivo da denúncia. Nossa equipe revisa em até 24h.</div>
         {MOTIVOS_DENUNCIA.map(m => (
           <div key={m.value} onClick={() => setMotivo(m.value)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 4px", borderBottom: "1px solid #F0EEE4", cursor: "pointer" }}>
@@ -564,9 +599,9 @@ function Moderacao({ go, notify, params }) {
         <div style={{ ...fieldBox, alignItems: "flex-start", marginTop: 12 }}>
           <textarea rows={3} value={detalhes} onChange={e => setDetalhes(e.target.value)} placeholder="Descreva o que aconteceu (opcional)" style={{ ...fieldInput, resize: "none" }} />
         </div>
-        <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 10 }}>
-          <Button full variant="danger" icon={Flag} loading={loading} onClick={enviar}>Enviar denúncia</Button>
-          <Button full variant="ghost" onClick={() => go(-1)}>Cancelar</Button>
+        <div style={{ marginTop: 18, display: "flex", gap: 10 }}>
+          <Button variant="ghost" style={{ flex: 1 }} disabled={loading} onClick={() => go(-1)}>Cancelar</Button>
+          <Button variant="danger" icon={Flag} loading={loading} style={{ flex: 1 }} onClick={enviar}>Enviar denúncia</Button>
         </div>
       </div>
     </div>

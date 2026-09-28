@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { api } from "../../api.js";
-import { AlertTriangle, Archive, ChevronLeft, ChevronRight, Clock, Heart, Leaf, MapPin, MessageCircle, Pencil, Search, Send, Share2, Truck, Users } from "lucide-react";
-import { Avatar, BADGES, Button, CATS, Chip, compartilhar, CO2_ESTIMADO, ESTADOS, EmptyState, ErrorBox, ItemCard, INK, INK_SOFT, Loading, linkDoItem, MODOS_ENTREGA, SectionTitle, statusDoItem, StatusBadge, Stars, TopBar, useApiData, badgeIndex, capitalize, fmtDateTime, distanciaKm } from "../../shared/shared.jsx";
+import { AlertTriangle, Archive, ChevronLeft, ChevronRight, Clock, Heart, Leaf, MapPin, MessageCircle, Pencil, Search, Send, Share2, Truck, Users, MoreVertical, Ban, Flag } from "lucide-react";
+import { ActionSheet, Avatar, BADGES, Button, CATS, Chip, compartilhar, CO2_ESTIMADO, ESTADOS, EmptyState, ErrorBox, ItemCard, INK, INK_SOFT, Loading, linkDoItem, MODOS_ENTREGA, SectionTitle, statusDoItem, StatusBadge, Stars, TopBar, useApiData, badgeIndex, capitalize, fmtDateTime, distanciaKm } from "../../shared/shared.jsx";
 const POR_PAGINA = 8;
 
 function pontuarRelevancia(item, termo) {
@@ -106,6 +106,7 @@ function DetalhesItem({ go, notify, favorites, toggleFav, usuario, onlineIds, pa
   const { loading, error, errorStatus, data: item, reload } = useApiData(() => api.itemPorId(itemId), [itemId], { skip: !itemId });
   const { data: enviadas } = useApiData(() => api.solicitacoesEnviadas(), [usuario?.id, itemId], { skip: !usuario?.id || !itemId });
   const [fotoAtiva, setFotoAtiva] = useState(0);
+  const [menuSegurancaAberto, setMenuSegurancaAberto] = useState(false);
 
   useEffect(() => {
     if (!itemId) return undefined;
@@ -151,10 +152,24 @@ function DetalhesItem({ go, notify, favorites, toggleFav, usuario, onlineIds, pa
   }, notify);
 
   const navFoto = (delta) => setFotoAtiva(i => (i + delta + fotos.length) % fotos.length);
+  const bloquearAnunciante = async () => {
+    if (!item.doador?.id || !window.confirm(`Bloquear ${item.doador.nome || "este anunciante"}?`)) return;
+    try {
+      await api.bloquearUsuario(item.doador.id);
+      notify("Usuário bloqueado.");
+      go("busca");
+    } catch (e) {
+      notify(e.message || "Não foi possível bloquear o usuário.");
+    }
+  };
 
   return (
     <div style={{ paddingBottom: 16 }}>
-      <TopBar title="Detalhes" onBack={voltar} right={<button type="button" onClick={compartilharItem} aria-label="Compartilhar item" title="Compartilhar item" style={{ width: 34, height: 34, borderRadius: 12, background: "#F1EFE6", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Share2 size={17} color={INK} /></button>} />
+      <TopBar title="Detalhes" onBack={voltar} right={<div style={{ display: "flex", gap: 5 }}><button type="button" onClick={compartilharItem} aria-label="Compartilhar item" title="Compartilhar item" style={{ width: 30, height: 30, borderRadius: 12, background: "#F1EFE6", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Share2 size={16} color={INK} /></button>{!souEuOItem && <button type="button" onClick={() => setMenuSegurancaAberto(true)} aria-label="Mais opções do anúncio" title="Mais opções" style={{ width: 30, height: 30, borderRadius: 12, background: "#F1EFE6", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><MoreVertical size={17} color={INK} /></button>}</div>} />
+      {!souEuOItem && <ActionSheet open={menuSegurancaAberto} title={item.titulo} onClose={() => setMenuSegurancaAberto(false)} actions={[
+        { label: "Denunciar anúncio", Icon: Flag, onClick: () => go("moderacao", { usuarioDenunciadoId: item.doador?.id, otherName: item.doador?.nome, itemId: item.id, itemTitulo: item.titulo, motivoInicial: "ITEM_DIVERGENTE" }) },
+        { label: "Bloquear usuário", Icon: Ban, danger: true, onClick: bloquearAnunciante },
+      ]} />}
       <div style={{ padding: "0 20px" }}>
         <div style={{ height: 220, borderRadius: 20, background: "var(--role-soft)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
           {fotos.length > 0

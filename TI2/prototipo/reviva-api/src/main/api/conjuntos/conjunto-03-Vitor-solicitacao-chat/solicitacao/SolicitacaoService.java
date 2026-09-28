@@ -47,6 +47,7 @@ public class SolicitacaoService {
     private final MongoTemplate mongoTemplate;
     private final AgendamentoRepository agendamentoRepository;
     private final AgendamentoService agendamentoService;
+    private final BloqueioService bloqueioService;
     private final CarregadorEmLote carregadorEmLote;
 
     @Transactional
@@ -54,6 +55,9 @@ public class SolicitacaoService {
         String doadorId = item.getDoador() != null ? item.getDoador().getId() : null;
         if (receptor.getId().equals(doadorId)) {
             throw new IllegalArgumentException("Você não pode solicitar o seu próprio item.");
+        }
+        if (doadorId != null && bloqueioService.existeBloqueio(receptor.getId(), doadorId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esta interação não está disponível.");
         }
 
         Solicitacao existente = solicitacaoRepository.findByItem(item).stream()

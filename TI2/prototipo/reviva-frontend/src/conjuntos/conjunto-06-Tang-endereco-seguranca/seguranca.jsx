@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { api, setToken } from "../../api.js";
 import { Bell, ChevronRight, CheckCircle2, Eye, EyeOff, FileText, KeyRound, Lock, LogOut, Settings, ShieldCheck, Smartphone } from "lucide-react";
-import { Button, Chip, EmptyState, ErrorBox, fieldBox, fieldInput, fieldLabel, FieldError, INK, INK_SOFT, Loading, NOTIF_ICONS, SectionTitle, timeAgo, Toggle, TopBar, useApiData } from "../../shared/shared.jsx";
+import { Avatar, Button, Chip, EmptyState, ErrorBox, fieldBox, fieldInput, fieldLabel, FieldError, INK, INK_SOFT, Loading, NOTIF_ICONS, SectionTitle, timeAgo, Toggle, TopBar, useApiData } from "../../shared/shared.jsx";
 
 const card = { background: "#fff", border: "1px solid #EDEBE1", borderRadius: 16, padding: 14 };
 /* ---- SEGURANÇA ---- */
@@ -107,9 +107,11 @@ function AlterarSenha({ notify }) {
 
 function Seguranca({ go, notify, usuario }) {
   const prefs = useApiData(() => api.preferencias(), [usuario?.id]);
+  const bloqueios = useApiData(() => api.usuariosBloqueados(), [usuario?.id]);
   const [preferencias, setPreferencias] = useState(null);
   const [permissaoNavegador, setPermissaoNavegador] = useState(() => (typeof Notification !== "undefined" ? Notification.permission : "unsupported"));
   const [encerrando, setEncerrando] = useState(false);
+  const [desbloqueandoId, setDesbloqueandoId] = useState(null);
   useEffect(() => { if (prefs.data) setPreferencias(prefs.data); }, [prefs.data]);
 
   const alterarPreferencia = async (key, valor) => {
@@ -136,6 +138,19 @@ function Seguranca({ go, notify, usuario }) {
       notify("Outros dispositivos foram desconectados.");
     } catch (e) { notify(e.message || "Não foi possível encerrar as sessões."); }
     finally { setEncerrando(false); }
+  };
+
+  const desbloquear = async (bloqueado) => {
+    setDesbloqueandoId(bloqueado.id);
+    try {
+      await api.desbloquearUsuario(bloqueado.id);
+      await bloqueios.reload({ silent: true });
+      notify(`${bloqueado.nome} foi desbloqueado(a).`);
+    } catch (e) {
+      notify(e.message || "Não foi possível desbloquear este usuário.");
+    } finally {
+      setDesbloqueandoId(null);
+    }
   };
 
   return (
@@ -208,6 +223,19 @@ function Seguranca({ go, notify, usuario }) {
         )}
 
         <SectionTitle>Termos e privacidade</SectionTitle>
+                <SectionTitle>Usuários bloqueados</SectionTitle>
+                {bloqueios.loading && <Loading label="Carregando bloqueios..." />}
+                {bloqueios.error && <ErrorBox message={bloqueios.error} onRetry={bloqueios.reload} />}
+                {!bloqueios.loading && !bloqueios.error && (bloqueios.data || []).length === 0 && <EmptyState Icon={ShieldCheck} text="Você ainda não bloqueou ninguém." />}
+                {(bloqueios.data || []).map(pessoa => (
+                  <div key={pessoa.id} style={{ ...card, display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    {pessoa.fotoUrl ? <img src={pessoa.fotoUrl} alt="" style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover" }} /> : <Avatar label={pessoa.nome} size={38} />}
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: INK, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pessoa.nome}</div>
+                    <Button small variant="ghost" loading={desbloqueandoId === pessoa.id} onClick={() => desbloquear(pessoa)}>Desbloquear</Button>
+                  </div>
+                ))}
+
+                <SectionTitle>Termos e privacidade</SectionTitle>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {[{ label: "Termos de uso", to: "termos" }, { label: "Política de privacidade", to: "privacidade" }].map(l => (
             <div key={l.to} onClick={() => go(l.to)} style={{ ...card, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>

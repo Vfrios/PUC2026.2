@@ -14,6 +14,7 @@ import com.reviva.api.model.Usuario;
 import com.reviva.api.repository.MensagemRepository;
 import com.reviva.api.repository.SolicitacaoRepository;
 import com.reviva.api.service.NotificacaoService;
+import com.reviva.api.service.BloqueioService;
 import com.reviva.api.service.PresencaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,7 @@ public class MensagemController {
     private final SolicitacaoRepository solicitacaoRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificacaoService notificacaoService;
+    private final BloqueioService bloqueioService;
     private final PresencaService presencaService;
     private final MongoTemplate mongoTemplate;
     private final CarregadorEmLote carregadorEmLote;
@@ -92,6 +94,9 @@ public class MensagemController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta conversa foi encerrada e não aceita novas mensagens.");
         }
         Usuario destinatario = destinatarioDa(solicitacao, usuario);
+                if (destinatario != null && bloqueioService.existeBloqueio(usuario.getId(), destinatario.getId())) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esta interação não está disponível.");
+                }
         // Destinatário online já recebe no aparelho (2 checks cinza); offline fica
         // em 1 check até ele conectar (ver PresencaService).
         boolean destinatarioOnline = destinatario != null && presencaService.estaOnline(destinatario.getId());

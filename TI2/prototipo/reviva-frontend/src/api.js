@@ -115,13 +115,19 @@ export const api = {
 
   avaliacoesDe: (usuarioId) => request(`/api/usuarios/${usuarioId}/avaliacoes`, { auth: false }),
 
-  itensDeUsuario: (usuarioId) => request(`/api/usuarios/${usuarioId}/itens`, { auth: false }),
+  itensDeUsuario: (usuarioId) => request(`/api/usuarios/${usuarioId}/itens`),
 
   /* ---------------- Segurança e preferências ---------------- */
   alterarSenha: (senhaAtual, novaSenha) =>
     request("/api/usuarios/me/senha", { method: "POST", body: { senhaAtual, novaSenha } }),
 
   preferencias: () => request("/api/usuarios/me/preferencias"),
+
+  usuariosBloqueados: () => request("/api/usuarios/me/bloqueados"),
+
+  bloquearUsuario: (usuarioId) => request(`/api/usuarios/me/bloqueados/${usuarioId}`, { method: "POST" }),
+
+  desbloquearUsuario: (usuarioId) => request(`/api/usuarios/me/bloqueados/${usuarioId}`, { method: "DELETE" }),
 
   salvarPreferencias: (payload) => request("/api/usuarios/me/preferencias", { method: "PUT", body: payload }),
 
@@ -156,7 +162,7 @@ export const api = {
   listarItens: ({ categoria, tipo, termo, cidade, uf, disponiveis } = {}) =>
     request("/api/itens", { params: { categoria, tipo, termo, cidade: cidade?.trim(), uf: uf?.trim().toUpperCase(), disponiveis } }),
 
-  itemPorId: (id) => request(`/api/itens/${id}`, { auth: false }),
+  itemPorId: (id) => request(`/api/itens/${id}`),
 
   acaoItensEmLote: (ids, acao) => request("/api/itens/lote", { method: "POST", body: { ids, acao } }),
 
@@ -267,8 +273,7 @@ export const api = {
   removerFavoritosLote: (itemIds) => request("/api/favoritos/remover", { method: "POST", body: { itemIds } }),
 
   /* ---------------- Denúncias ---------------- */
-  denunciar: (motivo, detalhes) =>
-    request("/api/denuncias", { method: "POST", body: { motivo, detalhes } }),
+  denunciar: (payload) => request("/api/denuncias", { method: "POST", body: payload }),
 };
 
 export { ApiError };

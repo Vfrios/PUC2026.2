@@ -12,6 +12,7 @@ import com.reviva.api.model.Usuario;
 import com.reviva.api.repository.ItemRepository;
 import com.reviva.api.repository.UsuarioRepository;
 import com.reviva.api.service.AvaliacaoService;
+import com.reviva.api.service.BloqueioService;
 import com.reviva.api.service.SolicitacaoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,14 +40,16 @@ public class UsuarioController {
     private final ItemRepository itemRepository;
     private final AvaliacaoService avaliacaoService;
     private final SolicitacaoService solicitacaoService;
+    private final BloqueioService bloqueioService;
 
     public record EventoHistorico(String tipo, String titulo, String descricao, Instant data, String itemId, String solicitacaoId) {}
 
     public record ReputacaoDetalhe(AvaliacaoService.Resumo resumo, List<AvaliacaoResponse> avaliacoes) {}
 
     @GetMapping("/{id}/itens")
-    public List<ItemResponse> itensPublicos(@PathVariable String id) {
+    public List<ItemResponse> itensPublicos(@PathVariable String id, @AuthenticationPrincipal Usuario visitante) {
         buscarUsuario(id);
+        if (visitante != null && bloqueioService.existeBloqueio(visitante.getId(), id)) return List.of();
         return ItemResponse.from(itemRepository.findPublicadosByDoadorId(id));
     }
 

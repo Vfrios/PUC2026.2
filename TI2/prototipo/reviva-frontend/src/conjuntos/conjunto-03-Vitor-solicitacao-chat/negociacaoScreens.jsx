@@ -266,7 +266,7 @@ function ConfirmDoacao({ go, notify, params, refreshUsuario }) {
       {!token && !gerandoCodigo && <div style={{ marginTop: 16, fontSize: 12, color: "#9C4327" }}>O código ainda não foi gerado.</div>}
       <div style={{ marginTop: 26, width: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
         <Button full loading={loading} disabled={!token || gerandoCodigo} onClick={confirmar}>Confirmar retirada manualmente</Button>
-        <Button full variant="ghost" icon={AlertTriangle} onClick={async () => { try { await api.reportarProblema(agendamento.id); } catch {} go("moderacao", params); }}>Relatar um problema</Button>
+        <Button full variant="ghost" icon={AlertTriangle} onClick={async () => { try { await api.reportarProblema(agendamento.id); } catch {} go("moderacao", { ...params, usuarioDenunciadoId: params?.otherId || agendamento.solicitacao?.receptor?.id, itemId: params?.itemId || agendamento.solicitacao?.item?.id, itemTitulo: params?.itemTitulo || agendamento.solicitacao?.item?.titulo, solicitacaoId: params?.solicitacaoId || agendamento.solicitacao?.id, agendamentoId: agendamento.id, otherName: params?.otherName || agendamento.solicitacao?.receptor?.nome, bloquearAposDenuncia: true }); }}>Relatar um problema</Button>
       </div>
       </div>
     </div>
@@ -317,7 +317,7 @@ function ConfirmRecebimento({ go, notify, params, refreshUsuario }) {
       </div>
       <div style={{ marginTop: 20, width: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
         <Button full icon={Camera} loading={loading} onClick={confirmarComCodigo}>Confirmar com código</Button>
-        <Button full variant="ghost" icon={AlertTriangle} onClick={async () => { try { await api.reportarProblema(agendamento.id); } catch {} go("moderacao", params); }}>Relatar um problema</Button>
+        <Button full variant="ghost" icon={AlertTriangle} onClick={async () => { try { await api.reportarProblema(agendamento.id); } catch {} go("moderacao", { ...params, usuarioDenunciadoId: params?.otherId || agendamento.solicitacao?.item?.doador?.id, itemId: params?.itemId || agendamento.solicitacao?.item?.id, itemTitulo: params?.itemTitulo || agendamento.solicitacao?.item?.titulo, solicitacaoId: params?.solicitacaoId || agendamento.solicitacao?.id, agendamentoId: agendamento.id, otherName: params?.otherName || agendamento.solicitacao?.item?.doador?.nome, bloquearAposDenuncia: true }); }}>Relatar um problema</Button>
       </div>
       </div>
     </div>

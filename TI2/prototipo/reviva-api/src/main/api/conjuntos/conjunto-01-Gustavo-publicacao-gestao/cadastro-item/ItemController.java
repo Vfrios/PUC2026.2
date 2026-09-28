@@ -78,8 +78,8 @@ public class ItemController {
 
     /** Cobre a tela de Detalhes do Item. */
     @GetMapping("/{id}")
-    public ItemResponse buscarPorId(@PathVariable String id) {
-        Item item = itemService.buscarPorId(id);
+    public ItemResponse buscarPorId(@PathVariable String id, @AuthenticationPrincipal Usuario usuario) {
+        Item item = itemService.buscarPorId(id, usuario);
         return ItemResponse.from(item, itemService.contarInteressados(item));
     }
 

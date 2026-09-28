@@ -1,12 +1,16 @@
 package com.reviva.api.controller;
 
+import com.reviva.api.dto.DenunciaRequest;
 import com.reviva.api.model.Denuncia;
 import com.reviva.api.model.Usuario;
 import com.reviva.api.service.DenunciaService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 /** Cobre a tela de Moderação (denúncia/reporte). */
 @RestController
@@ -18,8 +22,8 @@ public class DenunciaController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Denuncia denunciar(@RequestBody Denuncia denuncia, @AuthenticationPrincipal Usuario denunciante) {
-        denuncia.setDenunciante(denunciante);
-        return denunciaService.registrar(denuncia);
+    public Map<String, String> denunciar(@RequestBody @Valid DenunciaRequest request, @AuthenticationPrincipal Usuario denunciante) {
+        Denuncia denuncia = denunciaService.registrar(request, denunciante);
+        return Map.of("id", denuncia.getId(), "status", denuncia.getStatus().name());
     }
 }
