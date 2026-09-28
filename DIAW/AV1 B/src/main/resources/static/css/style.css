@@ -1,0 +1,213 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f2f2f2;
+    color: #222;
+}
+
+.topo {
+    background: #5b2a86;
+    color: #fff;
+    padding: 20px 24px;
+}
+
+.topo h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.topo .subtitulo {
+    margin: 4px 0 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* ---------- Layout de duas colunas ---------- */
+.layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0 16px;
+    align-items: start;
+}
+
+@media (max-width: 800px) {
+    .layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------- Painel de filtros ---------- */
+.painel-filtros {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.grupo-filtro {
+    border: none;
+    margin: 0 0 16px;
+    padding: 0;
+}
+
+.grupo-filtro legend,
+.grupo-filtro > label:first-child {
+    font-weight: bold;
+    color: #5b2a86;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.opcao-radio {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 0.9rem;
+}
+
+.grupo-filtro select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    margin-top: 4px;
+}
+
+.faixa-etaria {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.faixa-etaria input {
+    width: 0;
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+}
+
+.botoes-filtro {
+    display: flex;
+    gap: 8px;
+}
+
+.botoes-filtro button,
+.botoes-filtro .limpar {
+    flex: 1;
+    text-align: center;
+    padding: 9px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.botoes-filtro button {
+    background: #5b2a86;
+    color: #fff;
+    border: 1px solid #5b2a86;
+}
+
+.botoes-filtro .limpar {
+    background: #fff;
+    color: #333;
+    border: 1px solid #bbb;
+}
+
+/* ---------- Conteúdo / lista de candidatos ---------- */
+.contagem,
+.vazio {
+    font-size: 0.9rem;
+    margin: 0 0 14px;
+}
+
+.lista-candidatos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+}
+
+.card-candidato {
+    display: flex;
+    gap: 12px;
+    background: #fff;
+    border-radius: 8px;
+    border-left: 4px solid #5b2a86;
+    padding: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.foto-candidato {
+    width: 90px;
+    aspect-ratio: 161 / 225;
+    object-fit: cover;
+    border-radius: 4px;
+    background: #ddd;
+    flex-shrink: 0;
+}
+
+.sem-foto {
+    display: none;
+    width: 90px;
+    aspect-ratio: 161 / 225;
+    align-items: center;
+    justify-content: center;
+    background: #ddd;
+    color: #666;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.info-candidato {
+    font-size: 0.82rem;
+    min-width: 0;
+}
+
+.info-candidato h2 {
+    margin: 0 0 4px;
+    font-size: 0.95rem;
+    color: #5b2a86;
+}
+
+.info-candidato p {
+    margin: 3px 0;
+}
+
+.etiquetas {
+    display: flex;
+    gap: 6px;
+    margin: 6px 0;
+}
+
+.etiqueta {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: bold;
+}
+
+.etiqueta-idade {
+    background: #eee;
+    color: #444;
+}
+
+.etiqueta-f {
+    background-color: #f7e1f0;
+    color: #a0226f;
+}
+
+.etiqueta-m {
+    background-color: #e1ecf7;
+    color: #1f5c99;
+}
