@@ -1,4 +1,4 @@
-# Conjunto 2 - Brayan - Descoberta e detalhes
+# Brayan - Descoberta e detalhes
 
 ## Objetivo
 
@@ -28,7 +28,7 @@ podem ser adicionadas sem duplicar as entidades de item.
 ## Organizacao para envio
 
 ```text
-conjunto-02-Brayan-descoberta-detalhes/
+Brayan-descoberta-detalhes/
 ├── busca-descoberta/
 │   ├── GeoController.java
 │   ├── GeoService.java

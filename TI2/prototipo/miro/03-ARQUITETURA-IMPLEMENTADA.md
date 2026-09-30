@@ -1,61 +1,65 @@
-# Reviva - Arquitetura inicial proposta, dados e API
+# Reviva - Arquitetura final implementada, dados e API
 
-
+> **Etapa representada:** estado implementado ao final do desenvolvimento, conforme o código e os contratos documentados. Para a proposta conceitual que representa o início do planejamento, consulte [03-ARQUITETURA.md](03-ARQUITETURA.md).
 
 ## 1. Visão arquitetural
 
-Como referência inicial, o Reviva poderia ser organizado em camadas desacopladas: uma interface web, uma API responsável por regras de negócio e autorização, uma camada de persistência e integrações externas opcionais. Essa separação permitiria desenvolver e testar cada responsabilidade sem amarrar a solução a uma tecnologia antes de validar os requisitos.
+O Reviva é organizado como dois aplicativos coordenados:
 
 ```text
 Navegador
   |
-  | HTTPS e contrato HTTP a definir
+  | REST/JSON com Bearer JWT
   v
-Interface web responsiva
+Frontend React + Vite
   |
-  | API para consultas e comandos
-  | Canal em tempo real opcional
+  | HTTP para comandos e consultas
+  | WebSocket/STOMP para mensagens e eventos do chat
   v
-API da aplicação
+Backend Spring Boot
   |
-  +-- autenticação e autorização
-  +-- casos de uso e regras de domínio
-  +-- adaptador de persistência
-  +-- provedor de mensagens/notificações, se necessário
-  +-- integrações geográficas selecionadas após avaliação
+  +-- Controllers REST
+  +-- Services e regras transacionais
+  +-- Repositories Spring Data JPA
+  +-- MongoDB Atlas
+  +-- APIs externas: ViaCEP, IBGE, Nominatim/OpenStreetMap
 ```
 
-Como decisão de implantação, a equipe deverá comparar desenvolvimento e publicação no mesmo domínio ou em serviços separados. Portas, domínios e estratégia de hospedagem ainda seriam definidos no planejamento técnico.
+O frontend fica em `reviva-frontend` e o backend em `reviva-api`. Em desenvolvimento, o backend escuta na porta 8080 e o Vite na porta 5173. Em publicação same-origin, o frontend usa URLs relativas e a API pode servir a aplicação pelo mesmo domínio.
 
-## 2. Tecnologias candidatas
+## 2. Stack tecnológica
 
-As alternativas abaixo são opções para avaliação, não escolhas já aprovadas. A seleção deve considerar experiência da equipe, custo, requisitos de segurança, manutenção e ambiente de publicação.
-
-| Camada | Alternativas a avaliar | Critérios de decisão |
+| Camada | Tecnologia | Responsabilidade |
 | --- | --- | --- |
-| Frontend | React com Vite, Vue ou alternativa equivalente | Conhecimento da equipe, acessibilidade e suporte a navegação responsiva |
-| API | Java com Spring Boot, Node.js com framework web ou alternativa compatível | Regras de domínio, autenticação, validação e facilidade de testes |
-| Persistência | Banco relacional ou documental gerenciado | Relações entre usuários, itens, solicitações, mensagens e consistência transacional |
-| Autenticação | Sessão segura ou tokens de curta duração | Proteção de rotas, logout, recuperação de credencial e mitigação de exposição de tokens |
-| Mensagens | WebSocket, serviço gerenciado de tempo real ou atualização periódica como etapa inicial | Necessidade de atualização imediata, escala e custo operacional |
-| Fotos | Armazenamento de objetos com URLs controladas | Limites de tamanho, privacidade, custo e ciclo de vida dos arquivos |
-| Localização | Provedor de CEP, dados geográficos públicos e biblioteca de mapas | Cobertura, termos de uso, privacidade e alternativa manual |
-| Documentação de API | OpenAPI ou especificação equivalente | Geração e validação de contratos entre frontend e backend |
+| Linguagem backend | Java 21 | Implementação da API e regras de negócio |
+| Framework backend | Spring Boot 3.3.2 | Inicialização, MVC, configuração e ciclo da aplicação |
+| Web | Spring Web | Controllers REST e serialização JSON |
+| Persistência | Spring Data MongoDB | Mapeamento de documentos e referências |
+| Banco | MongoDB Atlas | Persistência gerenciada, índices e escala horizontal |
+| Segurança | Spring Security, JWT e JJWT 0.12.5 | Autenticação stateless e proteção de endpoints |
+| Validação | Jakarta Bean Validation | Validação de requisições |
+| Tempo real | Spring WebSocket, STOMP e SockJS | Eventos de chat e agendamento |
+| Documentação | Springdoc OpenAPI 2.6.0 | Swagger UI em `/swagger-ui.html` |
+| Frontend | React 18 e Vite | Interface e composição de telas |
+| Estilo | Tailwind CSS e estilos inline/tokens | Layout, estados e design responsivo |
+| Ícones | Lucide React | Ícones consistentes e acessíveis |
+| Mapas | Leaflet, react-leaflet e OpenStreetMap | Visualização de localização compartilhada |
+| Integração frontend | Fetch, STOMP.js e SockJS | REST, autenticação e chat |
 
-## 3. Organização lógica proposta
+## 3. Organização do backend
 
-- **Interface:** telas, acessibilidade, navegação e estados de carregamento, vazio e erro.
-- **API/aplicação:** validação de entrada, autorização e coordenação dos casos de uso.
-- **Domínio:** regras para publicação, solicitação, agendamento, conclusão, reputação e impacto.
-- **Persistência:** consultas e gravações desacopladas do mecanismo de banco escolhido.
-- **Integrações:** adaptadores para geografia, notificações, mensagens em tempo real e armazenamento de imagens.
-- **Observabilidade:** registro de eventos técnicos sem credenciais ou dados pessoais desnecessários.
+- `controller`: expõe rotas HTTP e delega a casos de uso.
+- `dto`: records de entrada e saída; evita expor entidades JPA diretamente.
+- `model`: entidades e enums persistidos.
+- `repository`: consultas e acesso às coleções MongoDB.
+- `service`: regras de domínio, transações, notificações e pontuação.
+- `security`: filtro JWT, serviço de token e configuração de segurança.
+- `config`: CORS, WebSocket, OpenAPI e configurações da aplicação.
+- `exception`: tratamento de erros de domínio e resposta HTTP.
 
-Uma opção de organização seria agrupar a interface e os serviços por contexto funcional — autenticação, descoberta, itens, conta e trocas — e manter contratos explícitos entre a interface e a API. A estrutura concreta de pastas deverá ser definida quando a tecnologia for escolhida.
+O frontend centraliza as chamadas em `src/api.js`, mantendo base URL, token, parâmetros, conversão de erro e URL de WebSocket em um único ponto. As telas ficam agrupadas por contexto: autenticação, descoberta, itens, conta e trocas.
 
-## 4. Modelo conceitual de dados
-
-As entidades a seguir representam conceitos exigidos pelos requisitos. Não determinam banco, formato de documento nem mapeamento físico.
+## 4. Modelagem de dados
 
 ### Usuario
 
@@ -76,7 +80,7 @@ As entidades a seguir representam conceitos exigidos pelos requisitos. Não dete
 | kgResiduoEvitado | decimal | Impacto acumulado |
 | seloAtual | enum | Bronze, Prata, Ouro ou Esmeralda |
 
-### Item
+### Payload de item
 
 Campos de identificação e conteúdo: `id`, `titulo`, `descricao`, `categoria`, `estadoConservacao`, `tipoPublicacao`, `fotosUrls`.
 
@@ -95,11 +99,11 @@ Enums principais:
 
 Relaciona um `Item` a um `Usuario` receptor e representa a conversa inicial. Contém `mensagem`, `status` e `criadaEm`. O status pode ser `AGUARDANDO`, `ACEITA`, `RECUSADA` ou `CANCELADA`; no fluxo atual a criação já habilita a conversa com status `ACEITA`.
 
-### Mensagem
+### Payload de mensagem
 
 Relaciona uma solicitação ao remetente, texto e instante de envio. Mensagens comuns são texto; eventos de localização, agendamento e retirada são serializados como JSON controlado para renderização específica no chat.
 
-### Agendamento
+### Payload de agendamento
 
 Relaciona-se a uma solicitação e guarda `dataHora`, `localEncontro`, `status`, confirmação do receptor, confirmação do doador, confirmação do receptor na retirada e timestamps correspondentes. Status principais: `CONFIRMADO`, `CONCLUIDO`, `CANCELADO` e `PROBLEMA_REPORTADO`.
 
@@ -130,9 +134,7 @@ Usuario N ---- N Comunidade
 Usuario 1 ---- N Denuncia
 ```
 
-## 6. Contratos de API candidatos
-
-As rotas abaixo são uma possível organização REST para discussão e prototipação. Métodos, autenticação, códigos de resposta e formatos devem ser confirmados em uma especificação de contrato antes da implementação.
+## 6. API REST
 
 ### Autenticação e usuário
 
@@ -206,23 +208,26 @@ As rotas abaixo são uma possível organização REST para discussão e prototip
 | GET | `/api/comunidades` | Não | Lista comunidades |
 | POST | `/api/comunidades/{id}/participar` | Sim | Participa da comunidade |
 
-## 7. Comunicação de mensagens em tempo real
+## 7. WebSocket e eventos
 
-- Se a atualização imediata for necessária, avaliar WebSocket com autorização por conversa ou solicitação.
-- A autenticação e a autorização devem ser verificadas também no canal em tempo real, não somente na API HTTP.
-- Eventos propostos podem representar mensagem recebida, agendamento criado/confirmado e retirada confirmada.
-- Uma alternativa inicial é consultar atualizações periodicamente, desde que o impacto em experiência e carga seja avaliado.
+- Endpoint de transporte: `/ws` via SockJS.
+- O cliente envia o JWT na conexão usando o parâmetro `token`.
+- O cliente assina `/topic/solicitacoes/{solicitacaoId}`.
+- Mensagens comuns carregam texto; eventos usam `tipo`.
+- Eventos conhecidos: `AGENDAMENTO_CRIADO`, `AGENDAMENTO_CONFIRMADO` e `RETIRADA_CONFIRMADA`.
+- Ao receber evento, o frontend atualiza mensagens e reconsulta o agendamento quando necessário.
 
-## 8. Configuração e execução a definir
+## 8. Configuração e execução
 
-- Definir ambientes separados para desenvolvimento, testes e produção.
-- Manter segredos, URLs, credenciais e configuração de banco fora do código-fonte.
-- Documentar comandos de execução e requisitos de ambiente após a seleção da stack.
-- Definir estratégia de migração e backup conforme a tecnologia de persistência escolhida.
+- Perfil padrão: `dev`.
+- Porta: `8080`, sobrescrita por `PORT`.
+- Banco: MongoDB Atlas, configurado por `MONGODB_URI` e `MONGODB_DATABASE`.
+- JWT: segredo por `JWT_SECRET` e validade padrão de 1440 minutos.
+- Notificações: expiração padrão de 30 dias.
+- Swagger: `http://localhost:8080/swagger-ui.html`.
+- Frontend: `pnpm install` e `pnpm run dev` dentro de `reviva-frontend`.
 
-## 9. Exemplos de payloads para discussão
-
-Os exemplos abaixo ilustram informações necessárias aos fluxos. São rascunhos de contrato e podem mudar após validação dos requisitos e da tecnologia.
+## 9. Contratos de requisição principais
 
 ### Registro
 
@@ -239,9 +244,9 @@ Os exemplos abaixo ilustram informações necessárias aos fluxos. São rascunho
 }
 ```
 
-Como regra proposta, o serviço de cadastro deverá normalizar os campos, validar unicidade e nunca devolver a senha. O mecanismo de sessão e autenticação deverá ser definido após análise de segurança.
+O backend remove máscara de CPF e CEP, valida unicidade e nunca devolve a senha. A resposta de autenticação contém o token necessário para as chamadas seguintes.
 
-### Exemplo de payload de anúncio
+### Item
 
 ```json
 {
@@ -264,9 +269,9 @@ Como regra proposta, o serviço de cadastro deverá normalizar os campos, valida
 }
 ```
 
-Uma resposta de anúncio deverá expor somente os dados públicos necessários, sem serializar a conta completa do anunciante. A política de expiração deverá ser definida nos requisitos de negócio.
+O retorno é `ItemResponse`, contendo resumo do doador e não a entidade `Usuario` inteira. O prazo `expiraEm` é calculado no backend.
 
-### Exemplo de payload de mensagem
+### Mensagem
 
 ```json
 {
@@ -274,9 +279,9 @@ Uma resposta de anúncio deverá expor somente os dados públicos necessários, 
 }
 ```
 
-Se a solução incluir mensagens de localização ou eventos, o formato e os tipos permitidos deverão ser especificados no contrato da API.
+Mensagens de localização e eventos são JSON serializado no campo `texto`, com tipos controlados como `LOCALIZACAO`, `AGENDAMENTO_CRIADO`, `AGENDAMENTO_CONFIRMADO` e `RETIRADA_CONFIRMADA`.
 
-### Exemplo de payload de agendamento
+### Agendamento
 
 ```json
 {
@@ -286,9 +291,9 @@ Se a solução incluir mensagens de localização ou eventos, o formato e os tip
 }
 ```
 
-Como regra proposta, a API deverá validar a participação do usuário, o estado da solicitação e a inexistência de outro agendamento ativo incompatível.
+O backend valida participante, solicitação cancelada e existência de outro agendamento ativo para o item.
 
-## 10. Tratamento de erros proposto
+## 10. Modelo de erros
 
 | Situação | Status esperado | Tratamento do frontend |
 | --- | --- | --- |
@@ -299,52 +304,54 @@ Como regra proposta, a API deverá validar a participação do usuário, o estad
 | E-mail ou CPF duplicado | 409 | Manter formulário e solicitar outro valor |
 | Erro inesperado | 500 | Mensagem genérica, log correlacionável no backend |
 
-O contrato deverá padronizar o corpo de erro e preservar o status HTTP para que a interface diferencie validação, sessão expirada, falta de permissão e recurso indisponível.
+O cliente lê preferencialmente `erro` ou `message` e encapsula o resultado em `ApiError`, mantendo o status HTTP para decisões como tratar `404` de agendamento inexistente como estado vazio.
 
-## 11. Fluxo lógico candidato de uma requisição
+## 11. Camadas e fluxo de uma requisição
 
 ```text
 Request HTTP
-  -> autenticação e contexto de segurança
-  -> validação da entrada
-  -> caso de uso com autorização e regra de domínio
-  -> interface de persistência
-  -> mecanismo de armazenamento a escolher
-  -> resultado convertido em resposta pública
+  -> filtro JWT e contexto de segurança
+  -> controller e Bean Validation
+  -> service com autorização e regra de domínio
+  -> repository MongoDB
+  -> banco
+  -> entidade convertida em DTO
   -> resposta JSON
 ```
 
-As responsabilidades devem manter separação entre transporte, regras de domínio e persistência. A autorização contextual, as transições de estado e as atualizações relacionadas à conclusão devem ser executadas de forma consistente no servidor.
+Controllers não devem construir respostas com entidades JPA completas. Services são responsáveis por autorização contextual, transações, mudanças de estado, notificações, publicação de eventos e pontuação.
 
-## 12. Persistência e implantação a decidir
+## 12. Persistência e implantação
 
-### Critérios de persistência
+### MongoDB Atlas
 
-- Avaliar banco relacional e documental considerando consultas, relações, consistência das transações e experiência da equipe.
-- Se for adotado banco gerenciado, definir controles de acesso, criptografia, backup, retenção e ambiente de testes.
-- Manter credenciais e strings de conexão fora do código e dos documentos públicos.
-- Definir identificadores e índices a partir dos padrões de consulta esperados.
-- Avaliar armazenamento de objetos para fotos, com limites de tamanho e política de acesso, em vez de assumir arquivos no banco principal.
+- `MONGODB_URI` contém a connection string do cluster; nunca versionar esse segredo.
+- `MONGODB_DATABASE` define o banco lógico, normalmente `reviva`.
+- O backend usa `@Document` e `@DBRef`; os IDs legados continuam como strings para preservar URLs e relações.
+- MongoDB Atlas fornece persistência, backup, controle de acesso, índices e escalabilidade.
+- O cluster deve usar TLS, usuário com privilégio mínimo e lista de IPs restrita.
+- Criar índices para e-mail, CPF, status/expiração de item, item da solicitação e usuário de notificação.
+- Fotos base64 permanecem compatíveis, mas devem migrar futuramente para armazenamento de objetos.
 
-### Implantação e dados
+### Operação do banco
 
-- Escolher estratégia de hospedagem para interface, API e persistência após comparar custo, manutenção e disponibilidade.
-- Planejar carga de dados de demonstração e migrações reversíveis antes de operar dados reais.
-- Definir rotinas de backup e validação de restauração antes da publicação.
+- O seed usa upsert idempotente por ID nas coleções do MongoDB.
+- Fotos são armazenadas no campo `fotosUrls` e membros como referências em `membros`.
+- Fazer backup e validar as coleções do MongoDB antes de alterações estruturais.
 
-## 13. Integrações externas candidatas
+## 13. Integrações externas
 
 | Serviço | Uso | Falha esperada | Degradação |
 | --- | --- | --- | --- |
-| Serviço de CEP a selecionar | Sugerir endereço a partir do CEP | CEP inválido ou indisponibilidade | Permitir preenchimento manual |
-| Fonte geográfica pública a avaliar | Listar estados e municípios | Timeout, resposta inválida ou mudança de contrato | Permitir nova tentativa e entrada manual |
-| Provedor de mapas/geocodificação a avaliar | Exibir região ou localização compartilhada | Limite de uso, indisponibilidade ou restrição de licença | Informar bairro/cidade em texto e não bloquear a tarefa |
-| Serviço de notificações a definir | Avisar mudanças relevantes | Falha de entrega | Manter notificações dentro da aplicação quando possível |
+| ViaCEP | Preencher endereço a partir do CEP | CEP inválido ou indisponibilidade | Permitir bairro/cidade manualmente |
+| IBGE | Listar estados e cidades | Timeout ou resposta inválida | Manter campos de região e permitir nova tentativa |
+| Nominatim/OpenStreetMap | Geocodificação reversa e mapa | Limite de uso ou indisponibilidade | Exibir coordenada/região já disponível sem bloquear o chat |
+| Google Maps | Abrir localização compartilhada | Serviço externo indisponível | Manter mapa Leaflet e texto de localização |
 
-## 14. Requisitos operacionais propostos
+## 14. Requisitos operacionais
 
-- Definir verificações de saúde para a aplicação e para dependências críticas.
-- Registrar falhas e métricas sem expor credenciais, dados pessoais, mensagens privadas ou coordenadas precisas.
-- Monitorar disponibilidade, latência, erros e consumo dos serviços escolhidos.
-- Planejar alertas, retenção de logs e recuperação de falhas antes da publicação.
-- Garantir encerramento controlado e consistência das operações em andamento.
+- Health check deve verificar processo, conexão com banco e configuração mínima de JWT.
+- Logs devem conter timestamp, nível, classe e contexto da operação sem dados pessoais.
+- Monitorar taxa de 4xx, 5xx, tempo de resposta, falhas de WebSocket e crescimento das coleções MongoDB.
+- Alertar quando o volume estiver próximo do limite ou quando backups falharem.
+- Desligamento deve permitir concluir transações em andamento antes de encerrar.

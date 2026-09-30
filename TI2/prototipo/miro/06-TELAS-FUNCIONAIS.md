@@ -20,12 +20,12 @@ prototipo/
 │       ├── auth/
 │       ├── shared/
 │       └── conjuntos/
-│           ├── conjunto-01-publicacao-gestao/
-│           ├── conjunto-02-descoberta-detalhes/
-│           ├── conjunto-03-solicitacao-chat/
-│           ├── conjunto-04-perfil-reputacao/
-│           ├── conjunto-05-comunidades-favoritos/
-│           └── conjunto-06-endereco-seguranca/
+│           ├── Gustavo-publicacao-gestao/
+│           ├── Brayan-descoberta-detalhes/
+│           ├── Vitor-solicitacao-chat/
+│           ├── Thiago-perfil-reputacao/
+│           ├── João-comunidades-favoritos/
+│           └── Tang-endereco-seguranca/
 │
 └── reviva-api/
     └── src/
@@ -35,12 +35,12 @@ prototipo/
                 ├── shared/
                 ├── auth/
                 └── conjuntos/
-                    ├── conjunto-01-publicacao-gestao/
-                    ├── conjunto-02-descoberta-detalhes/
-                    ├── conjunto-03-solicitacao-chat/
-                    ├── conjunto-04-perfil-reputacao/
-                    ├── conjunto-05-comunidades-favoritos/
-                    └── conjunto-06-endereco-seguranca/
+                    ├── Gustavo-publicacao-gestao/
+                    ├── Brayan-descoberta-detalhes/
+                    ├── Vitor-solicitacao-chat/
+                    ├── Thiago-perfil-reputacao/
+                    ├── João-comunidades-favoritos/
+                    └── Tang-endereco-seguranca/
 ```
 
 ---
@@ -83,7 +83,7 @@ Essas pastas ficam fora dos 6 conjuntos, mas são utilizadas por todas as telas 
 
 ---
 
-# Conjunto 1 - Publicação e gestão
+# Publicação e gestão
 
 ## Tela 1: Cadastro de item
 
@@ -92,7 +92,7 @@ Permite cadastrar um item, adicionar fotos, informar categoria, descrição, con
 ### Frontend
 
 ```text
-reviva-frontend/src/conjuntos/conjunto-01-publicacao-gestao/cadastro-item/
+reviva-frontend/src/conjuntos/Gustavo-publicacao-gestao/cadastro-item/
 ├── CadastroItem.jsx
 ├── cadastroItemService.js
 └── cadastroItem.css
@@ -101,7 +101,7 @@ reviva-frontend/src/conjuntos/conjunto-01-publicacao-gestao/cadastro-item/
 ### API
 
 ```text
-reviva-api/src/main/api/conjuntos/conjunto-01-publicacao-gestao/publicacao/
+reviva-api/src/main/api/conjuntos/Gustavo-publicacao-gestao/publicacao/
 ├── controller/
 │   └── ItemPublicacaoController.java
 ├── service/
@@ -119,7 +119,7 @@ Permite listar, editar, remover, restaurar e acompanhar o status dos itens publi
 ### Frontend
 
 ```text
-reviva-frontend/src/conjuntos/conjunto-01-publicacao-gestao/gerenciar-itens/
+reviva-frontend/src/conjuntos/Gustavo-publicacao-gestao/gerenciar-itens/
 ├── GerenciarItens.jsx
 ├── gerenciarItensService.js
 └── gerenciarItens.css
@@ -128,7 +128,7 @@ reviva-frontend/src/conjuntos/conjunto-01-publicacao-gestao/gerenciar-itens/
 ### API
 
 ```text
-reviva-api/src/main/api/conjuntos/conjunto-01-publicacao-gestao/gestao/
+reviva-api/src/main/api/conjuntos/Gustavo-publicacao-gestao/gestao/
 ├── controller/
 │   └── ItemGestaoController.java
 ├── service/
@@ -141,7 +141,7 @@ reviva-api/src/main/api/conjuntos/conjunto-01-publicacao-gestao/gestao/
 
 ---
 
-# Conjunto 2 - Descoberta e detalhes
+# Descoberta e detalhes
 
 ## Tela 3: Busca / descoberta de itens
 
@@ -150,7 +150,7 @@ Permite pesquisar itens por termo, categoria, cidade, UF e disponibilidade.
 ### Frontend
 
 ```text
-reviva-frontend/src/conjuntos/conjunto-02-descoberta-detalhes/busca/
+reviva-frontend/src/conjuntos/Brayan-descoberta-detalhes/busca/
 ├── Busca.jsx
 ├── ListaItens.jsx
 ├── buscaService.js
@@ -160,7 +160,7 @@ reviva-frontend/src/conjuntos/conjunto-02-descoberta-detalhes/busca/
 ### API
 
 ```text
-reviva-api/src/main/api/conjuntos/conjunto-02-descoberta-detalhes/descoberta/
+reviva-api/src/main/api/conjuntos/Brayan-descoberta-detalhes/descoberta/
 ├── controller/
 │   └── DescobertaController.java
 ├── service/
@@ -176,7 +176,7 @@ Exibe fotos, descrição, localização, anunciante, reputação, favoritos e a�
 ### Frontend
 
 ```text
-reviva-frontend/src/conjuntos/conjunto-02-descoberta-detalhes/detalhes-item/
+reviva-frontend/src/conjuntos/Brayan-descoberta-detalhes/detalhes-item/
 ├── DetalhesItem.jsx
 ├── detalhesItemService.js
 └── detalhesItem.css
@@ -185,7 +185,7 @@ reviva-frontend/src/conjuntos/conjunto-02-descoberta-detalhes/detalhes-item/
 ### API
 
 ```text
-reviva-api/src/main/api/conjuntos/conjunto-02-descoberta-detalhes/detalhes/
+reviva-api/src/main/api/conjuntos/Brayan-descoberta-detalhes/detalhes/
 ├── controller/
 │   └── DetalhesItemController.java
 ├── service/
@@ -196,7 +196,7 @@ reviva-api/src/main/api/conjuntos/conjunto-02-descoberta-detalhes/detalhes/
 
 ---
 
-# Conjunto 3 - Solicitação e chat
+# Solicitação e chat
 
 ## Tela 5: Solicitação de item
 
@@ -205,7 +205,7 @@ Permite enviar, cancelar e acompanhar uma solicitação nos estados enviada, ace
 ### Frontend
 
 ```text
-reviva-frontend/src/conjuntos/conjunto-03-solicitacao-chat/solicitacao/
+reviva-frontend/src/conjuntos/Vitor-solicitacao-chat/solicitacao/
 ├── Solicitacao.jsx
 ├── solicitacaoService.js
 └── solicitacao.css
@@ -214,7 +214,7 @@ reviva-frontend/src/conjuntos/conjunto-03-solicitacao-chat/solicitacao/
 ### API
 
 ```text
-reviva-api/src/main/api/conjuntos/conjunto-03-solicitacao-chat/solicitacao/
+reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/solicitacao/
 ├── controller/
 │   └── SolicitacaoController.java
 ├── service/
@@ -235,7 +235,7 @@ Permite conversar, trocar mensagens, combinar o local e acompanhar a negociaçã
 ### Frontend
 
 ```text
-reviva-frontend/src/conjuntos/conjunto-03-solicitacao-chat/chat/
+reviva-frontend/src/conjuntos/Vitor-solicitacao-chat/chat/
 ├── Chat.jsx
 ├── Inbox.jsx
 ├── chatService.js
@@ -245,7 +245,7 @@ reviva-frontend/src/conjuntos/conjunto-03-solicitacao-chat/chat/
 ### API
 
 ```text
-reviva-api/src/main/api/conjuntos/conjunto-03-solicitacao-chat/chat/
+reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/chat/
 ├── controller/
 │   ├── MensagemController.java
 │   └── PresencaController.java
@@ -264,7 +264,7 @@ O agendamento e a confirmação da troca ficam como apoio deste conjunto, pois d
 
 ---
 
-# Conjunto 4 - Perfil e reputação
+# Perfil e reputação
 
 ## Tela 7: Perfil do usuário
 
@@ -273,7 +273,7 @@ Permite visualizar e editar dados pessoais, foto, informações públicas e pref
 ### Frontend
 
 ```text
-reviva-frontend/src/conjuntos/conjunto-04-perfil-reputacao/perfil/
+reviva-frontend/src/conjuntos/Thiago-perfil-reputacao/perfil/
 ├── Perfil.jsx
 ├── PerfilPublico.jsx
 ├── perfilService.js
@@ -283,7 +283,7 @@ reviva-frontend/src/conjuntos/conjunto-04-perfil-reputacao/perfil/
 ### API
 
 ```text
-reviva-api/src/main/api/conjuntos/conjunto-04-perfil-reputacao/perfil/
+reviva-api/src/main/api/conjuntos/Thiago-perfil-reputacao/perfil/
 ├── controller/
 │   └── PerfilController.java
 ├── service/
@@ -299,7 +299,7 @@ Exibe avaliações, pontuação, selos e histórico de confiabilidade do usuári
 ### Frontend
 
 ```text
-reviva-frontend/src/conjuntos/conjunto-04-perfil-reputacao/reputacao/
+reviva-frontend/src/conjuntos/Thiago-perfil-reputacao/reputacao/
 ├── Reputacao.jsx
 ├── Avaliar.jsx
 ├── reputacaoService.js
@@ -309,7 +309,7 @@ reviva-frontend/src/conjuntos/conjunto-04-perfil-reputacao/reputacao/
 ### API
 
 ```text
-reviva-api/src/main/api/conjuntos/conjunto-04-perfil-reputacao/reputacao/
+reviva-api/src/main/api/conjuntos/Thiago-perfil-reputacao/reputacao/
 ├── controller/
 │   └── ReputacaoController.java
 ├── service/
@@ -326,7 +326,7 @@ reviva-api/src/main/api/conjuntos/conjunto-04-perfil-reputacao/reputacao/
 
 ---
 
-# Conjunto 5 - Comunidades e favoritos
+# Comunidades e favoritos
 
 ## Tela 9: Comunidades
 
@@ -335,7 +335,7 @@ Permite visualizar comunidades, participar de grupos e acompanhar atividades por
 ### Frontend
 
 ```text
-reviva-frontend/src/conjuntos/conjunto-05-comunidades-favoritos/comunidades/
+reviva-frontend/src/conjuntos/João-comunidades-favoritos/comunidades/
 ├── Comunidades.jsx
 ├── comunidadesService.js
 └── comunidades.css
@@ -344,7 +344,7 @@ reviva-frontend/src/conjuntos/conjunto-05-comunidades-favoritos/comunidades/
 ### API
 
 ```text
-reviva-api/src/main/api/conjuntos/conjunto-05-comunidades-favoritos/comunidades/
+reviva-api/src/main/api/conjuntos/João-comunidades-favoritos/comunidades/
 ├── controller/
 │   └── ComunidadeController.java
 ├── service/
@@ -364,7 +364,7 @@ Permite salvar itens, consultar a lista de favoritos e identificar itens que fic
 ### Frontend
 
 ```text
-reviva-frontend/src/conjuntos/conjunto-05-comunidades-favoritos/favoritos/
+reviva-frontend/src/conjuntos/João-comunidades-favoritos/favoritos/
 ├── Favoritos.jsx
 ├── favoritosService.js
 └── favoritos.css
@@ -373,7 +373,7 @@ reviva-frontend/src/conjuntos/conjunto-05-comunidades-favoritos/favoritos/
 ### API
 
 ```text
-reviva-api/src/main/api/conjuntos/conjunto-05-comunidades-favoritos/favoritos/
+reviva-api/src/main/api/conjuntos/João-comunidades-favoritos/favoritos/
 ├── controller/
 │   └── FavoritosController.java
 ├── service/
@@ -386,7 +386,7 @@ Favoritos pode continuar usando armazenamento local na primeira entrega e recebe
 
 ---
 
-# Conjunto 6 - Endereço e segurança
+# Endereço e segurança
 
 ## Tela 11: Endereço salvo
 
@@ -395,7 +395,7 @@ Permite cadastrar, editar, excluir e definir endereço padrão para retirada ou 
 ### Frontend
 
 ```text
-reviva-frontend/src/conjuntos/conjunto-06-endereco-seguranca/endereco/
+reviva-frontend/src/conjuntos/Tang-endereco-seguranca/endereco/
 ├── EnderecoSalvo.jsx
 ├── enderecoService.js
 └── endereco.css
@@ -404,7 +404,7 @@ reviva-frontend/src/conjuntos/conjunto-06-endereco-seguranca/endereco/
 ### API
 
 ```text
-reviva-api/src/main/api/conjuntos/conjunto-06-endereco-seguranca/endereco/
+reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/endereco/
 ├── controller/
 │   └── EnderecoController.java
 ├── service/
@@ -424,7 +424,7 @@ Reúne senha, autenticação, preferências de notificação, termos de uso e po
 ### Frontend
 
 ```text
-reviva-frontend/src/conjuntos/conjunto-06-endereco-seguranca/seguranca/
+reviva-frontend/src/conjuntos/Tang-endereco-seguranca/seguranca/
 ├── SegurancaTermos.jsx
 ├── Notificacoes.jsx
 ├── segurancaService.js
@@ -434,7 +434,7 @@ reviva-frontend/src/conjuntos/conjunto-06-endereco-seguranca/seguranca/
 ### API
 
 ```text
-reviva-api/src/main/api/conjuntos/conjunto-06-endereco-seguranca/seguranca/
+reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/seguranca/
 ├── controller/
 │   ├── SegurancaController.java
 │   └── NotificacaoController.java
@@ -509,12 +509,12 @@ Essa camada é compartilhada. Ela não pertence a um aluno específico e não de
 
 | Conjunto | Tela da Sprint 1 |
 |---|---|
-| Conjunto 1 | Cadastro de item |
-| Conjunto 2 | Busca / descoberta de itens |
-| Conjunto 3 | Solicitação de item |
-| Conjunto 4 | Perfil do usuário |
-| Conjunto 5 | Comunidades |
-| Conjunto 6 | Endereço salvo |
+| Publicação e gestão | Cadastro de item |
+| Descoberta e detalhes | Busca / descoberta de itens |
+| Solicitação e chat | Solicitação de item |
+| Perfil e reputação | Perfil do usuário |
+| Comunidades e favoritos | Comunidades |
+| Endereço e segurança | Endereço salvo |
 
 Cada aluno entrega a tela visual, estado local, validação, loading, estado vazio, tratamento de erro e serviço frontend correspondente.
 
@@ -522,12 +522,12 @@ Cada aluno entrega a tela visual, estado local, validação, loading, estado vaz
 
 | Conjunto | Tela da Sprint 2 |
 |---|---|
-| Conjunto 1 | Gerenciar itens |
-| Conjunto 2 | Detalhes do item |
-| Conjunto 3 | Chat de negociação |
-| Conjunto 4 | Reputação |
-| Conjunto 5 | Favoritos |
-| Conjunto 6 | Segurança e termos |
+| Publicação e gestão | Gerenciar itens |
+| Descoberta e detalhes | Detalhes do item |
+| Solicitação e chat | Chat de negociação |
+| Perfil e reputação | Reputação |
+| Comunidades e favoritos | Favoritos |
+| Endereço e segurança | Segurança e termos |
 
 A segunda tela deve continuar independente e reaproveitar somente componentes compartilhados ou contratos definidos para o conjunto.
 

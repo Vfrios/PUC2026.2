@@ -92,7 +92,7 @@ Usar contexto Spring e banco isolado para verificar:
 
 ### Camada de contrato HTTP
 
-Validar método, rota, status e payload para cada endpoint descrito em `03-ARQUITETURA.md`:
+Validar método, rota, status e payload para cada endpoint descrito em `03-ARQUITETURA-IMPLEMENTADA.md`:
 
 - `201 Created` para cadastro e publicação bem-sucedidos.
 - `401 Unauthorized` para ausência ou invalidade de JWT.
