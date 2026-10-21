@@ -11,6 +11,10 @@ import tempfile
 # =========================
 # Configurações
 # =========================
+
+
+
+
 PASTA_CODIGO_DEFAULT = Path("./")
 EXTENSOES_PERMITIDAS = {".js",".css",".py",".ts",".rs",".md",".jsx",".java"}
 SKIP_DIRS = {"node_modules", "dist", "build", "__pycache__", ".git", ".next", ".vercel", ".cache"}
