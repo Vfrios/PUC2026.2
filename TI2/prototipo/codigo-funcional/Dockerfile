@@ -8,6 +8,8 @@ COPY reviva-frontend/ ./
 ENV VITE_API_URL=""
 RUN npm run build
 
+
+
 # --- Stage 2: build do backend (Java/Maven), com o front já embutido ---
 FROM maven:3.9-eclipse-temurin-21 AS backend-build
 WORKDIR /app
