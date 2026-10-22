@@ -9,3 +9,4 @@ public record EnderecoResponse(
         Double latitude,
         Double longitude
 ) {}
+

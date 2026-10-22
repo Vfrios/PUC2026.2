@@ -14,8 +14,8 @@ A tarefa consiste em **copiar os arquivos e blocos de funções já existentes d
 
 ## Brayan
 
-1. `reviva-api/src/main/api/conjuntos/Brayan-descoberta-detalhes/busca-descoberta/EnderecoResponse.java`
-2. `reviva-api/src/main/api/conjuntos/Brayan-descoberta-detalhes/busca-descoberta/GeoService.java`
+1. `reviva-api/src/main/api/conjuntos/Brayan-descoberta-detalhes/busca-descoberta/EnderecoResponse.java` gg
+2. `reviva-api/src/main/api/conjuntos/Brayan-descoberta-detalhes/busca-descoberta/GeoService.java`gg
 3. `reviva-api/src/main/api/conjuntos/Brayan-descoberta-detalhes/busca-descoberta/GeoController.java`
 4. `reviva-frontend/src/api.js` — `listarItens({ categoria, tipo, termo, cidade, uf, disponiveis } = {})`
 5. `reviva-frontend/src/api.js` — `itemPorId(id)`
@@ -33,26 +33,26 @@ A tarefa consiste em **copiar os arquivos e blocos de funções já existentes d
 4. `reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/solicitacao/SolicitacaoResponse.java`
 5. `reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/solicitacao/SolicitacaoService.java`
 6. `reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/solicitacao/SolicitacaoController.java`
-7. `reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/chat-negociacao/Mensagem.java`
-8. `reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/chat-negociacao/MensagemRepository.java`
-9. `reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/chat-negociacao/MensagemRequest.java`
+7. `reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/chat-negociacao/Mensagem.java` gg
+8. `reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/chat-negociacao/MensagemRepository.java` 
+9. `reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/chat-negociacao/MensagemRequest.java` 
 10. `reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/chat-negociacao/MensagemResponse.java`
-11. `reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/chat-negociacao/MensagemController.java`
+11. `reviva-api/src/main/api/conjuntos/Vitor-solicitacao-chat/chat-negociacao/MensagemController.java` gg
 12. `reviva-frontend/src/api.js` — `solicitar(itemId, mensagem)`, `solicitacoesRecebidas()`, `solicitacoesEnviadas()`, `conversas()`, `solicitacaoPorId(id)`, `listarMensagens(solicitacaoId)`, `enviarMensagem(solicitacaoId, texto)` e `marcarMensagensLidas(solicitacaoId)`
-13. `reviva-frontend/src/shared/shared.jsx` — `function fmtDateTime(iso)`
-14. `reviva-frontend/src/shared/shared.jsx` — `const ETAPA_LABEL`
-15. `reviva-frontend/src/shared/shared.jsx` — `function Avatar({ label, size = 40, tone })`
-16. `reviva-frontend/src/shared/shared.jsx` — `function onlyDigits(v)`
+13. `reviva-frontend/src/shared/shared.jsx` — `function fmtDateTime(iso)`gg
+14. `reviva-frontend/src/shared/shared.jsx` — `const ETAPA_LABEL`gg
+15. `reviva-frontend/src/shared/shared.jsx` — `function Avatar({ label, size = 40, tone })`gg
+16. `reviva-frontend/src/shared/shared.jsx` — `function onlyDigits(v)`gg
 17. `reviva-frontend/src/shared/shared.jsx` — `function formatCpf(v)` e `function formatCnpj(v)`
-18. `reviva-frontend/src/shared/shared.jsx` — `function formatDocumento(v)`
-19. `reviva-frontend/src/shared/shared.jsx` — `function formatCep(v)`
-20. `reviva-frontend/src/shared/shared.jsx` — `function formatCelular(v)`
-21. `reviva-frontend/src/shared/shared.jsx` — `function cpfValido(valor)`, incluindo a função interna `const calc = (base) => { ... }`
-22. `reviva-frontend/src/shared/shared.jsx` — `function cnpjValido(valor)`, incluindo a função interna `const calc = (pesos) => { ... }`
-23. `reviva-frontend/src/shared/shared.jsx` — `function documentoValido(valor)`
+18. `reviva-frontend/src/shared/shared.jsx` — `function formatDocumento(v)`gg
+19. `reviva-frontend/src/shared/shared.jsx` — `function formatCep(v)`gg
+20. `reviva-frontend/src/shared/shared.jsx` — `function formatCelular(v)`gg
+21. `reviva-frontend/src/shared/shared.jsx` — `function cpfValido(valor)`, incluindo a função interna `const calc = (base) => { ... }`gg
+22. `reviva-frontend/src/shared/shared.jsx` — `function cnpjValido(valor)`, incluindo a função interna `const calc = (pesos) => { ... }`gg
+23. `reviva-frontend/src/shared/shared.jsx` — `function documentoValido(valor)` gg
 24. `reviva-frontend/src/conjuntos/Vitor-solicitacao-chat/solicitacao.jsx`
 25. `reviva-frontend/src/conjuntos/Vitor-solicitacao-chat/tradeScreens.jsx`
-26. `reviva-frontend/src/App.jsx`
+26. `reviva-frontend/src/App.jsx` gg
 
 ## Thiago
 
@@ -99,11 +99,11 @@ A tarefa consiste em **copiar os arquivos e blocos de funções já existentes d
 
 ## Michael
 
-1. `reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/endereco-salvo/Endereco.java`
-2. `reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/endereco-salvo/EnderecoRepository.java`
+1. `reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/endereco-salvo/Endereco.java` ok 
+2. `reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/endereco-salvo/EnderecoRepository.java` gg
 3. `reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/endereco-salvo/EnderecoRequest.java`
 4. `reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/endereco-salvo/EnderecoService.java`
-5. `reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/endereco-salvo/EnderecoController.java`
+5. `reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/endereco-salvo/EnderecoController.java` gg 
 6. `reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/seguranca-termos/Notificacao.java`
 7. `reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/seguranca-termos/NotificacaoRepository.java`
 8. `reviva-api/src/main/api/conjuntos/Tang-endereco-seguranca/seguranca-termos/NotificacaoResponse.java`
@@ -120,7 +120,9 @@ A tarefa consiste em **copiar os arquivos e blocos de funções já existentes d
 19. `reviva-frontend/src/conjuntos/Tang-endereco-seguranca/enderecos.jsx`
 20. `reviva-frontend/src/conjuntos/Tang-endereco-seguranca/seguranca.jsx`
 
+
 ## Gustavo
+
 
 1. `reviva-api/src/main/api/conjuntos/Gustavo-publicacao-gestao/comum/Item.java`
 2. `reviva-api/src/main/api/conjuntos/Gustavo-publicacao-gestao/comum/ItemRepository.java`
