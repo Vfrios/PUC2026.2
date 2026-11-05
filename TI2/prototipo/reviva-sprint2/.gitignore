@@ -1,0 +1,9 @@
+target/
+node_modules/
+dist/
+atlas-credentials.env
+.env
+minhas_extensoes.txt
+falta.txt
+.vscode/
+.idea/

@@ -1,0 +1,182 @@
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { api, getToken, setToken, ApiError } from "../../api.js";
+import { ListaItens } from "./itensDetalhes.jsx";
+import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, Archive, RotateCcw, X } from "lucide-react";
+import { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, NOTIF_ICONS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCep, cpfValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactoResumo, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox } from "../../shared/shared.jsx";
+
+function usePullRefresh(reload, notify) {
+  const [pull, setPull] = useState(0);
+  const start = useRef(0);
+  return { pull, onTouchStart: e => { if (e.currentTarget.parentElement?.parentElement?.scrollTop === 0) start.current = e.touches[0].clientY; }, onTouchMove: e => { if (start.current) setPull(Math.min(64, Math.max(0, e.touches[0].clientY - start.current))); }, onTouchEnd: () => { if (pull > 48) { reload(); notify("Atualizando conteúdo..."); } start.current = 0; setPull(0); } };
+}
+function HomeDoador({ go, usuario, compact, notify, notifNaoLidas = 0 }) {
+  const { loading, data: recebidas, reload } = useApiData(() => api.solicitacoesRecebidas(), [usuario?.id]);
+  const pullProps = usePullRefresh(reload, notify);
+  const destaque = (recebidas || [])[0];
+
+  return (
+    <Screen>
+      <div {...pullProps} style={{ position: "relative" }}>
+      {pullProps.pull > 0 && <div style={{ height: pullProps.pull, textAlign: "center", fontSize: 11, color: INK_SOFT, paddingTop: 8 }}>Solte para atualizar</div>}
+      <div style={{ padding: "4px 20px 6px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <div style={{ fontSize: 12.5, color: INK_SOFT }}>Olá,</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 21, fontWeight: 600, color: INK }}>{usuario?.nome?.split(" ")[0] || "Você"} 👋</div>
+        </div>
+        <button onClick={() => go("notificacoes")} style={{ ...iconBtn, position: "relative" }} aria-label="Notificações">
+          <Bell size={18} color={INK} />
+          {notifNaoLidas > 0 && (
+            <span style={{ position: "absolute", top: -3, right: -3, minWidth: 15, height: 15, borderRadius: 8, background: "#D44D3B", color: "#fff", fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
+              {notifNaoLidas}
+            </span>
+          )}
+        </button>
+      </div>
+      <div style={{ padding: "0 20px" }}>
+        <SectionTitle>Atalhos</SectionTitle>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {[
+            { label: "Cadastrar item", Icon: Plus, key: "cadastroItem" },
+            { label: "Gerenciar itens", Icon: Gift, key: "gerenciarItens" },
+            { label: "Mensagens", Icon: MessageCircle, key: "inbox" },
+            { label: "Comunidades", Icon: Users, key: "comunidades" },
+            { label: "Configurações", Icon: Settings, key: "perfil" },
+          ].map(a => (
+            <div key={a.key} onClick={() => go(a.key)} style={{ background: "#fff", border: "1px solid #EDEBE1", borderRadius: 16, padding: 14, display: "flex", flexDirection: "column", gap: 8, cursor: "pointer" }}>
+              <a.Icon size={19} color="var(--role-primary)" />
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: INK }}>{a.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding: "0 20px" }}>
+        <SectionTitle right={<span onClick={() => go("gerenciarItens")} style={linkText}>ver tudo</span>}>Solicitações recentes</SectionTitle>
+        {loading ? <Loading label="Buscando solicitações..." /> : destaque ? (
+          <div onClick={() => go("gerenciarItens")} style={{ background: "#fff", border: "1px solid #EDEBE1", borderRadius: 16, padding: 12, display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}>
+            <Avatar label={destaque.receptor?.nome} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 13.5, color: INK }}>{destaque.receptor?.nome} enviou uma mensagem sobre "{destaque.item?.titulo}"</div>
+              <div style={{ fontSize: 11.5, color: INK_SOFT }}>Abrir conversa · {timeAgo(destaque.criadaEm)}</div>
+            </div>
+            <ChevronRight size={16} color={INK_SOFT} />
+          </div>
+        ) : (
+          <EmptyState Icon={Gift} text="Nenhuma solicitação pendente ainda. Publique um item para começar a receber pedidos." />
+        )}
+      </div>
+      </div>
+    </Screen>
+  );
+}
+
+function HomeReceptor({ go, favorites, toggleFav, usuario, compact, notify, notifNaoLidas = 0 }) {
+  const { loading, error, data: itens, reload } = useApiData(() => api.listarItens(), []);
+  const [quickItem, setQuickItem] = useState(null);
+  const pullProps = usePullRefresh(reload, notify);
+  const quickTimer = useRef(null);
+
+  useEffect(() => {
+    const intervalo = setInterval(() => reload({ silent: true }), 15000);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  return (
+    <Screen>
+      <div {...pullProps} style={{ position: "relative" }}>
+      {pullProps.pull > 0 && <div style={{ height: pullProps.pull, textAlign: "center", fontSize: 11, color: INK_SOFT, paddingTop: 8 }}>Solte para atualizar</div>}
+      <div style={{ padding: "4px 20px 6px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <div style={{ fontSize: 12.5, color: INK_SOFT }}>Perto de você</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 21, fontWeight: 600, color: INK }}>Encontre um item 🔎</div>
+        </div>
+        <button onClick={() => go("notificacoes")} style={{ ...iconBtn, position: "relative" }} aria-label="Notificações">
+          <Bell size={18} color={INK} />
+          {notifNaoLidas > 0 && (
+            <span style={{ position: "absolute", top: -3, right: -3, minWidth: 15, height: 15, borderRadius: 8, background: "#D44D3B", color: "#fff", fontSize: 9, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
+              {notifNaoLidas}
+            </span>
+          )}
+        </button>
+      </div>
+      <div style={{ padding: "12px 20px 0" }} onClick={() => go("busca")}>
+        <div style={{ background: "#fff", border: "1.5px solid #EDEBE1", borderRadius: 16, padding: "12px 14px", display: "flex", gap: 10, alignItems: "center", color: INK_SOFT }}>
+          <Search size={17} /> Buscar roupas, livros, móveis...
+        </div>
+      </div>
+      <div style={{ padding: "0 20px" }}>
+        <SectionTitle>Categorias</SectionTitle>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+          {Object.entries(CATS).map(([k, v]) => (
+            <div key={k} onClick={() => go("listaItens", { categoria: k })} style={{ minWidth: 68, textAlign: "center", cursor: "pointer" }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: "var(--role-soft)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
+                <v.Icon size={21} color="var(--role-primary-dark)" />
+              </div>
+              <div style={{ fontSize: 10.5, marginTop: 5, color: INK, fontWeight: 600 }}>{v.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding: "0 20px" }}>
+        <SectionTitle right={<span style={linkText} onClick={() => go("listaItens")}>ver tudo</span>}>Publicados recentemente</SectionTitle>
+        {loading && <Loading label="Buscando itens..." />}
+        {error && <ErrorBox message={error} onRetry={reload} />}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+          {(itens || []).slice(0, 4).map(it => (
+            <div key={it.id} onContextMenu={e => { e.preventDefault(); setQuickItem(it); }} onTouchStart={() => { quickTimer.current = setTimeout(() => setQuickItem(it), 550); }} onTouchEnd={() => clearTimeout(quickTimer.current)}><ItemCard item={it} usuario={usuario} favorite={!!favorites[it.id]} onFav={toggleFav} onClick={() => go("detalhesItem", { itemId: it.id })} /></div>
+          ))}
+          {!loading && !error && (itens || []).length === 0 && <EmptyState Icon={Search} text="Nenhum item publicado ainda." />}
+        </div>
+      </div>
+      {quickItem && <div onClick={() => setQuickItem(null)} style={{ position: "absolute", inset: 0, zIndex: 35, background: "rgba(22,40,31,.3)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}><div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, padding: 18, width: "100%" }}><SectionTitle>Visualização rápida</SectionTitle><div style={{ fontWeight: 700, color: INK }}>{quickItem.titulo}</div><div style={{ fontSize: 12, color: INK_SOFT, marginTop: 5 }}>{quickItem.descricao || "Sem descrição"}</div><Button full style={{ marginTop: 14 }} onClick={() => go("detalhesItem", { itemId: quickItem.id })}>Ver item</Button></div></div>}
+      </div>
+    </Screen>
+  );
+}
+
+/* ---- BUSCA ---- */
+function Busca({ go, favorites, toggleFav, usuario }) {
+  const [q, setQ] = useState("");
+  const [categoria, setCategoria] = useState(null);
+  const [resultado, setResultado] = useState({});
+  const [versaoLista, setVersaoLista] = useState(0);
+
+  const buscar = (termoParam = q, categoriaParam = categoria) =>
+    setResultado({
+      termo: termoParam?.trim() || undefined,
+      categoria: categoriaParam || undefined,
+    });
+
+  const escolherCategoria = (k) => {
+    const nova = categoria === k ? null : k;
+    setCategoria(nova);
+    buscar(q, nova);
+  };
+
+  const limparTudo = () => {
+    setQ(""); setCategoria(null);
+    setResultado({});
+    setVersaoLista(v => v + 1);
+  };
+
+  return (
+    <div>
+      <TopBar title="Buscar" onBack={() => go(-1)} />
+      <div style={{ padding: "0 20px" }}>
+        <div style={{ ...fieldBox }}>
+          <Search size={16} color={INK_SOFT} />
+          <input value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && buscar()} placeholder="O que você está procurando?" style={fieldInput} autoFocus />
+          {q && <button type="button" onClick={() => setQ("")} aria-label="Limpar busca" title="Limpar busca" style={{ border: "none", background: "none", padding: 0, color: INK_SOFT, cursor: "pointer", display: "flex" }}><X size={16} /></button>}
+        </div>
+
+        <SectionTitle>Categoria</SectionTitle>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+          {Object.entries(CATS).map(([k, v]) => <Chip key={k} active={categoria === k} onClick={() => escolherCategoria(k)}>{v.label}</Chip>)}
+        </div>
+        <div style={{ marginTop: 16 }}><Button full onClick={() => buscar()}>Buscar</Button></div>
+      </div>
+      <ListaItens key={versaoLista} go={go} favorites={favorites} toggleFav={toggleFav} usuario={usuario} params={resultado} embedded onLimparFiltros={limparTudo} />
+    </div>
+  );
+}
+
+export { HomeDoador, HomeReceptor, Busca };
