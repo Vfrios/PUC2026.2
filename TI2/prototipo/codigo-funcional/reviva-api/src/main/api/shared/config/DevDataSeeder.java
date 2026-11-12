@@ -13,11 +13,17 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+import com.mongodb.DBRef;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Popula o banco MongoDB com dados de demonstração ao subir a aplicação em modo
@@ -38,6 +44,7 @@ public class DevDataSeeder implements CommandLineRunner {
     private final ComunidadeRepository comunidadeRepository;
     private final ComunidadePostRepository postRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MongoTemplate mongoTemplate;
 
     @Override
     public void run(String... args) {
@@ -244,31 +251,58 @@ public class DevDataSeeder implements CommandLineRunner {
 
     /** Bancos criados antes dos filtros de comunidade não têm categoria/cidade: preenche com padrões. */
     private void completarComunidadesAntigas() {
-        Usuario responsavel = usuarioRepository.findAll().stream().findFirst().orElse(null);
-        for (Comunidade c : comunidadeRepository.findAll()) {
-            boolean alterada = false;
-            if (c.getCategoria() == null) {
-                c.setCategoria("ONG Reviver".equals(c.getNome()) ? "ROUPAS" : "GERAL");
-                alterada = true;
+        // Só precisamos do _id; a projeção evita desserializar campos legados do usuário.
+        Document usuarioBruto = mongoTemplate.getCollection("usuarios")
+                .find().projection(new Document("_id", 1)).first();
+        String responsavelId = idComoString(usuarioBruto != null ? usuarioBruto.get("_id") : null);
+        for (Document comunidade : mongoTemplate.getCollection("comunidades").find()) {
+            Document campos = new Document();
+            if (comunidade.get("categoria") == null) {
+                campos.put("categoria", "ONG Reviver".equals(comunidade.getString("nome")) ? "ROUPAS" : "GERAL");
             }
-            if (c.getCidade() == null) {
-                c.setCidade("Belo Horizonte");
-                alterada = true;
+            if (comunidade.get("cidade") == null) campos.put("cidade", "Belo Horizonte");
+            if (comunidade.get("uf") == null) campos.put("uf", "MG");
+            if (comunidade.get("criadorId") == null && responsavelId != null) {
+                campos.put("criadorId", responsavelId);
             }
-            if (c.getUf() == null) {
-                c.setUf("MG");
-                alterada = true;
+
+            Set<String> membrosIds = new LinkedHashSet<>();
+            coletarIds(comunidade.get("membrosIds"), membrosIds);
+            coletarIds(comunidade.get("membros"), membrosIds);
+            if (membrosIds.isEmpty() && responsavelId != null) membrosIds.add(responsavelId);
+            campos.put("membrosIds", membrosIds);
+
+            Document atualizacao = new Document("$set", campos);
+            if (comunidade.containsKey("membros")) {
+                // O formato DBRef antigo é consolidado em membrosIds e então descartado.
+                atualizacao.put("$unset", new Document("membros", ""));
             }
-            if (c.getCriadorId() == null && responsavel != null) {
-                c.setCriadorId(responsavel.getId());
-                alterada = true;
-            }
-            if ((c.getMembrosIds() == null || c.getMembrosIds().isEmpty()) && responsavel != null) {
-                c.normalizarMembros();
-                if (c.getMembrosIds().isEmpty()) c.getMembrosIds().add(responsavel.getId());
-                alterada = true;
-            }
-            if (alterada) comunidadeRepository.save(c);
+            mongoTemplate.getCollection("comunidades")
+                    .updateOne(new Document("_id", comunidade.get("_id")), atualizacao);
         }
+
+        // Posts antigos podem referenciar a comunidade como ObjectId; o repositório atual usa String.
+        for (Document post : mongoTemplate.getCollection("comunidade_posts")
+                .find(new Document("comunidadeId", new Document("$type", "objectId")))) {
+            mongoTemplate.getCollection("comunidade_posts").updateOne(
+                    new Document("_id", post.get("_id")),
+                    new Document("$set", new Document("comunidadeId", idComoString(post.get("comunidadeId")))));
+        }
+    }
+
+    private static void coletarIds(Object valor, Set<String> destino) {
+        if (!(valor instanceof Iterable<?> valores)) return;
+        for (Object item : valores) {
+            Object id = item;
+            if (item instanceof DBRef ref) id = ref.getId();
+            else if (item instanceof Document doc) id = doc.getOrDefault("$id", doc.get("_id"));
+            String convertido = idComoString(id);
+            if (convertido != null) destino.add(convertido);
+        }
+    }
+
+    private static String idComoString(Object id) {
+        if (id instanceof ObjectId objectId) return objectId.toHexString();
+        return id != null ? id.toString() : null;
     }
 }

@@ -1,6 +1,8 @@
 package com.reviva.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
@@ -15,6 +17,9 @@ import lombok.ToString;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Locale;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Usuário da plataforma. Um mesmo usuário pode alternar entre os perfis
@@ -113,5 +118,26 @@ public class Usuario {
         return preferencias;
     }
 
-    public enum SeloTier { BRONZE, PRATA, OURO, ESMERALDA }
+    public enum SeloTier {
+        BRONZE, PRATA, OURO, ESMERALDA;
+
+        private static final Logger LOG = LoggerFactory.getLogger(SeloTier.class);
+
+        /** DIAMANTE e outros valores antigos não fazem parte da régua atual; o nível seguro é BRONZE. */
+        @JsonCreator
+        public static SeloTier fromValue(String valor) {
+            if (valor == null || valor.isBlank()) return BRONZE;
+            try {
+                return valueOf(valor.trim().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                LOG.warn("SeloTier desconhecido no banco/JSON: '{}'. Usando BRONZE.", valor);
+                return BRONZE;
+            }
+        }
+
+        @JsonValue
+        public String toValue() {
+            return name();
+        }
+    }
 }
