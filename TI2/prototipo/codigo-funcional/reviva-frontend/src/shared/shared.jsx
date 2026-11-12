@@ -1,0 +1,760 @@
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { api, getToken, setToken, ApiError, wsUrl } from "../api.js";
+import { Client as StompClient } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+import { Home, Plus, Search, MapPin, User, Bell, Heart, MessageCircle, Star, QrCode, Users, Settings, ChevronLeft, Camera, Send, Award, Leaf, AlertTriangle, ChevronRight, Recycle, Gift, Share2, Flag, Shirt, BookOpen, Sofa, Baby, Zap, UtensilsCrossed, Calendar, Clock, LogIn, Mail, Lock, Sparkles, ShieldCheck, ArrowLeftRight, ImagePlus, LogOut, Loader2, UserPlus, Trash2, Pencil, CheckCircle2, Archive, RotateCcw, X } from "lucide-react";
+
+/* ============================================================
+   REVIVA — Plataforma de Doação e Troca de Objetos
+   Frontend (React) conectado de verdade ao backend Java/Spring Boot.
+   ============================================================ */
+
+/* ---------------- Design tokens ---------------- */
+const ROLE_COLORS = {
+  doador:   { primary: "#1F6E43", primaryDark: "#123F27", soft: "#E4EFE7", ring: "#1F6E43" },
+  receptor: { primary: "#E0673F", primaryDark: "#9C4327", soft: "#FBE8E0", ring: "#E0673F" },
+};
+const GOLD = "#F2A93C";
+const INK = "#16281F";
+const INK_SOFT = "#516357";
+
+/* ---------------- Mapeamentos com o backend ----------------
+   As chaves batem com os enums Java (Item.Categoria, EstadoConservacao,
+   TipoPublicacao, Usuario.SeloTier) para não precisar traduzir nada. */
+
+const CATS = {
+  ROUPAS:      { label: "Roupas",      Icon: Shirt },
+  LIVROS:      { label: "Livros",      Icon: BookOpen },
+  MOVEIS:      { label: "Móveis",      Icon: Sofa },
+  INFANTIL:    { label: "Infantil",    Icon: Baby },
+  ELETRONICOS: { label: "Eletrônicos", Icon: Zap },
+  COZINHA:     { label: "Cozinha",     Icon: UtensilsCrossed },
+  OUTROS:      { label: "Outros",      Icon: Gift },
+};
+
+const ESTADOS = [
+  { value: "NOVO", label: "Novo" },
+  { value: "SEMINOVO", label: "Seminovo" },
+  { value: "USADO", label: "Usado" },
+];
+
+// Estimativa automática de kg de resíduo evitado por categoria (o protótipo
+// original não tinha um jeito do usuário medir isso na hora de cadastrar).
+const CO2_ESTIMADO = {
+  ROUPAS: 2.5, LIVROS: 1.5, MOVEIS: 10, INFANTIL: 5,
+  ELETRONICOS: 4, COZINHA: 3, OUTROS: 2,
+};
+
+// Mesmos limiares usados no backend (AgendamentoService) para o selo.
+// min = pontos necessários para alcançar o selo (ver PontuacaoService no backend:
+// +15 pts por doação concluída, +5 pts por recebimento confirmado, +1 a +10 pts
+// por avaliação recebida conforme a nota).
+const BADGES = [
+  { tier: "BRONZE",    label: "Bronze",    min: 0,   color: "#B08968" },
+  { tier: "PRATA",     label: "Prata",     min: 50,  color: "#9CA3AF" },
+  { tier: "OURO",      label: "Ouro",      min: 150, color: "#F2A93C" },
+  { tier: "ESMERALDA", label: "Esmeralda", min: 350, color: "#1F6E43" },
+];
+
+const MOTIVOS_DENUNCIA = [
+  { value: "ITEM_DIVERGENTE", label: "Item não corresponde ao anunciado" },
+  { value: "COMPORTAMENTO_INADEQUADO", label: "Comportamento inadequado" },
+  { value: "NAO_COMPARECIMENTO", label: "Não compareceu à retirada" },
+  { value: "SUSPEITA_GOLPE", label: "Suspeita de golpe" },
+  { value: "OUTRO", label: "Outro" },
+];
+
+const NOTIF_ICONS = {
+  CHAT: MessageCircle, MATCH: Sparkles, WISHLIST: Heart,
+  LEMBRETE: Clock, AVALIACAO: Star, MODERACAO: Flag, COMUNIDADE: Users,
+};
+
+// Feed de comunidade e desafio do mês: o backend ainda não tem um modelo de
+// "post" nem de "desafio" — fica como conteúdo ilustrativo (ver README).
+const COMMUNITY_POSTS = [
+  { id: 1, user: "ONG Reviver", text: "Mutirão de doação de agasalhos neste sábado no Parque Municipal ❄️🧥", likes: 58 },
+  { id: 2, user: "Marina S.",   text: "Consegui doar 12 peças esse mês! Comunidade incrível 💚", likes: 34 },
+  { id: 3, user: "Comunidade BH Solidária", text: "Ranking do mês: quem mais reaproveitou objetos na sua região", likes: 91 },
+];
+
+function capitalize(s) {
+  if (!s) return "";
+  return s.charAt(0) + s.slice(1).toLowerCase();
+}
+function timeAgo(iso) {
+  if (!iso) return "";
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} h`;
+  const d = Math.floor(h / 24);
+  return `${d} d`;
+}
+function fmtDateTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR") + " às " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+function badgeIndex(tier) {
+  const i = BADGES.findIndex(b => b.tier === tier);
+  return i < 0 ? 0 : i;
+}
+
+function onlyDigits(v) {
+  return (v || "").replace(/\D/g, "");
+}
+
+function distanciaKm(origem, destino) {
+  if (origem?.latitude == null || origem?.longitude == null || destino?.latitude == null || destino?.longitude == null) return null;
+  const rad = Math.PI / 180;
+  const dLat = (destino.latitude - origem.latitude) * rad;
+  const dLon = (destino.longitude - origem.longitude) * rad;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(origem.latitude * rad) * Math.cos(destino.latitude * rad) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatCpf(v) {
+  const d = onlyDigits(v).slice(0, 11);
+  if (d.length > 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+  if (d.length > 6) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  if (d.length > 3) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  return d;
+}
+
+function formatCnpj(v) {
+  const d = onlyDigits(v).slice(0, 14);
+  if (d.length > 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+  if (d.length > 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  if (d.length > 5) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length > 2) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  return d;
+}
+
+function formatDocumento(v) {
+  const d = onlyDigits(v);
+  if (d.length <= 11) return formatCpf(d);
+  return formatCnpj(d);
+}
+
+function formatCep(v) {
+  const d = onlyDigits(v).slice(0, 8);
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+}
+
+function formatCelular(v) {
+  const d = onlyDigits(v).slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return `(${d.slice(0,2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0,2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0,2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+function cpfValido(valor) {
+  const cpf = onlyDigits(valor);
+  if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+  const calc = (base) => {
+    let soma = 0;
+    for (let i = 0; i < base; i++) soma += Number(cpf[i]) * (base + 1 - i);
+    const d = 11 - (soma % 11);
+    return d >= 10 ? 0 : d;
+  };
+  return calc(9) === Number(cpf[9]) && calc(10) === Number(cpf[10]);
+}
+
+function cnpjValido(valor) {
+  const cnpj = onlyDigits(valor);
+  if (cnpj.length !== 14 || /^(\d)\1+$/.test(cnpj)) return false;
+
+  const calc = (pesos) => {
+    let soma = 0;
+    for (let i = 0; i < pesos.length; i++) soma += Number(cnpj[i]) * pesos[i];
+    const resto = soma % 11;
+    const digito = resto < 2 ? 0 : 11 - resto;
+    return digito;
+  };
+
+  const digito1 = calc([5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  if (digito1 !== Number(cnpj[12])) return false;
+  const digito2 = calc([6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  return digito2 === Number(cnpj[13]);
+}
+
+function documentoValido(valor) {
+  const d = onlyDigits(valor);
+  if (d.length === 11) return cpfValido(d);
+  if (d.length === 14) return cnpjValido(d);
+  return false;
+}
+
+/**
+ * Redimensiona e comprime uma imagem no navegador antes de enviar pro backend.
+ * O Item guarda fotos como texto (data URL em fotosUrls, ver model/Item.java),
+ * então comprimir aqui evita payloads gigantes indo pro banco.
+ */
+function comprimirImagem(file, maxDim = 900, qualidade = 0.72) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Não foi possível ler a imagem."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Arquivo de imagem inválido."));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const escala = maxDim / Math.max(width, height);
+          width = Math.round(width * escala);
+          height = Math.round(height * escala);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", qualidade));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------------- Hook genérico de fetch ---------------- */
+function useApiData(fetcher, deps, { skip = false } = {}) {
+  const [state, setState] = useState({ loading: !skip, error: null, errorStatus: null, data: null });
+  const reloadRef = useRef(0);
+  const reload = ({ silent = false } = {}) => {
+    reloadRef.current += 1;
+    setState(s => ({ ...s, loading: silent ? false : true, error: null, errorStatus: null }));
+  };
+
+  useEffect(() => {
+    if (skip) { setState({ loading: false, error: null, errorStatus: null, data: null }); return; }
+    let alive = true;
+    setState(s => ({ ...s, loading: !s.data ? true : s.loading, error: null, errorStatus: null }));
+    fetcher()
+      .then(data => { if (alive) setState({ loading: false, error: null, errorStatus: null, data }); })
+      .catch(err => { if (alive) setState({ loading: false, error: err.message || "Erro ao carregar", errorStatus: err.status ?? null, data: null }); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...deps, skip, reloadRef.current]);
+
+  useEffect(() => {
+    if (skip) return undefined;
+    const atualizarAoVoltar = () => {
+      if (document.visibilityState === "visible") reload({ silent: true });
+    };
+    window.addEventListener("focus", atualizarAoVoltar);
+    document.addEventListener("visibilitychange", atualizarAoVoltar);
+    return () => {
+      window.removeEventListener("focus", atualizarAoVoltar);
+      document.removeEventListener("visibilitychange", atualizarAoVoltar);
+    };
+  }, [skip]);
+
+  return { ...state, reload };
+}
+
+/* ---------------- Small UI atoms ---------------- */
+
+function Button({ children, onClick, variant = "primary", full, style, small, icon: Icon, disabled, loading, type = "button" }) {
+  const base = {
+    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+    fontFamily: "var(--font-ui)", fontWeight: 600, fontSize: small ? 13 : 15,
+    padding: small ? "8px 14px" : "13px 18px", borderRadius: 14, border: "none",
+    cursor: disabled || loading ? "default" : "pointer", width: full ? "100%" : "auto",
+    transition: "transform .15s ease, opacity .15s ease", letterSpacing: 0.1,
+    opacity: disabled ? 0.55 : 1,
+  };
+  const variants = {
+    primary:   { background: "var(--role-primary)", color: "#fff" },
+    ghost:     { background: "transparent", color: "var(--role-primary)", border: "1.5px solid var(--role-primary)" },
+    soft:      { background: "var(--role-soft)", color: "var(--role-primary-dark)" },
+    dark:      { background: INK, color: "#fff" },
+    gold:      { background: GOLD, color: "#3A2705" },
+    danger:    { background: "#FBE8E0", color: "#9C4327" },
+  };
+  return (
+    <button
+      type={type}
+      onClick={disabled || loading ? undefined : onClick}
+      disabled={disabled || loading}
+      onMouseDown={(e) => { if (!disabled && !loading) e.currentTarget.style.transform = "scale(.97)"; }}
+      onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+      style={{ ...base, ...variants[variant], ...style }}
+    >
+      {loading ? <Loader2 size={small ? 14 : 16} style={{ animation: "spin .8s linear infinite" }} /> : (Icon && <Icon size={small ? 14 : 16} strokeWidth={2.3} />)}
+      {children}
+    </button>
+  );
+}
+
+function Chip({ children, active, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      padding: "7px 13px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap",
+      border: active ? "1.5px solid var(--role-primary)" : "1.5px solid #E1E4DE",
+      background: active ? "var(--role-soft)" : "#fff",
+      color: active ? "var(--role-primary-dark)" : INK_SOFT, cursor: "pointer",
+      fontFamily: "var(--font-ui)",
+    }}>{children}</button>
+  );
+}
+
+function Avatar({ label, size = 40, tone }) {
+  const initials = (label || "?").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%", background: tone || "var(--role-soft)",
+      color: tone ? "#fff" : "var(--role-primary-dark)", display: "flex", alignItems: "center",
+      justifyContent: "center", fontWeight: 700, fontSize: size * 0.38, fontFamily: "var(--font-ui)",
+      flexShrink: 0,
+    }}>{initials}</div>
+  );
+}
+
+function Stars({ value = 0, size = 13 }) {
+  return (
+    <span style={{ display: "inline-flex", gap: 1, alignItems: "center" }}>
+      {[1,2,3,4,5].map(i => (
+        <Star key={i} size={size} fill={i <= Math.round(value) ? GOLD : "none"} color={i <= Math.round(value) ? GOLD : "#D6D6D0"} />
+      ))}
+    </span>
+  );
+}
+
+function SectionTitle({ children, right }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "18px 0 10px" }}>
+      <h3 style={{ fontFamily: "var(--font-display)", fontSize: 17, margin: 0, color: INK, fontWeight: 600 }}>{children}</h3>
+      {right}
+    </div>
+  );
+}
+
+function ImpactRing({ pct = 0, size = 84, label, value, tone = "ink" }) {
+  const r = (size - 10) / 2;
+  const c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(1, pct));
+  const valueColor = tone === "light" ? "#fff" : INK;
+  const labelColor = tone === "light" ? "rgba(255,255,255,.8)" : INK_SOFT;
+  const track = tone === "light" ? "rgba(255,255,255,.28)" : "#EAE7DC";
+  const stroke = tone === "light" ? "#F6D48A" : GOLD;
+  const valueSize = Math.max(16, size * 0.26);
+  const labelSize = Math.max(10, size * 0.12);
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }} aria-hidden>
+        <circle cx={size / 2} cy={size / 2} r={r} stroke={track} strokeWidth={7} fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={r} stroke={stroke} strokeWidth={7} fill="none"
+          strokeDasharray={c} strokeDashoffset={c * (1 - clamped)} strokeLinecap="round" />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 8, textAlign: "center" }}>
+        <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: valueSize, color: valueColor, lineHeight: 1.05 }}>{value}</div>
+        {label && <div style={{ fontSize: labelSize, color: labelColor, fontWeight: 600, lineHeight: 1.15, marginTop: 2 }}>{label}</div>}
+      </div>
+    </div>
+  );
+}
+
+/** Card da home: impacto com personalidade, sem poluir — ODS 12. */
+function ImpactoResumo({ usuario, onOpen }) {
+  const kg = Number(usuario?.kgResiduoEvitado || 0);
+  const itens = Number(usuario?.itensDoados || 0);
+  const metaKg = 100;
+  const pct = Math.min(1, kg / metaKg);
+  const kgLabel = Number.isInteger(kg) ? String(kg) : kg.toFixed(1).replace(".", ",");
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label="Abrir painel de impacto"
+      style={{
+        width: "100%", textAlign: "left", cursor: "pointer", border: "none",
+        borderRadius: 22, padding: "16px 18px 14px", overflow: "hidden", fontFamily: "var(--font-ui)",
+        background: "linear-gradient(145deg, #1F6E43 0%, #164F31 55%, #123F27 100%)",
+        color: "#fff", position: "relative",
+      }}
+    >
+      <div style={{
+        position: "absolute", right: -18, top: -22, width: 100, height: 100, borderRadius: "50%",
+        background: "rgba(255,255,255,.06)", pointerEvents: "none",
+      }} />
+
+      <div style={{
+        display: "inline-flex", alignItems: "center", gap: 6, fontSize: 10.5, fontWeight: 700,
+        letterSpacing: "0.05em", textTransform: "uppercase", color: "rgba(255,255,255,.9)",
+        background: "rgba(255,255,255,.12)", borderRadius: 999, padding: "5px 10px",
+      }}>
+        <Recycle size={13} strokeWidth={2.4} /> ODS 12
+      </div>
+
+      <div style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 600, marginTop: 11, lineHeight: 1.25 }}>
+        Seu impacto até agora
+      </div>
+      <div style={{ fontSize: 12, color: "rgba(255,255,255,.7)", marginTop: 3 }}>
+        Material reaproveitado em vez de descartado.
+      </div>
+
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 20, marginTop: 14 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+            <span style={{ fontFamily: "var(--font-display)", fontSize: 34, fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em" }}>{kgLabel}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#F6D48A" }}>kg</span>
+          </div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,.7)", marginTop: 4, fontWeight: 600 }}>reutilizados</div>
+        </div>
+        <div style={{ width: 1, height: 40, background: "rgba(255,255,255,.18)", marginBottom: 2 }} />
+        <div style={{ minWidth: 70 }}>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 34, fontWeight: 700, lineHeight: 1 }}>{itens}</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,.7)", marginTop: 4, fontWeight: 600 }}>{itens === 1 ? "item doado" : "itens doados"}</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12, height: 4, borderRadius: 999, background: "rgba(255,255,255,.14)", overflow: "hidden" }}>
+        <div style={{ width: `${Math.max(pct * 100, kg > 0 ? 4 : 0)}%`, height: "100%", borderRadius: 999, background: "#F2A93C" }} />
+      </div>
+
+      <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 12.5, fontWeight: 700 }}>Ver painel completo</span>
+        <ChevronRight size={15} color="rgba(255,255,255,.85)" />
+      </div>
+    </button>
+  );
+}
+
+function ItemCard({ item, onClick, favorite, onFav, usuario, onlineIds = new Set() }) {
+  const cat = CATS[item.categoria] || CATS.OUTROS;
+  const Icon = cat.Icon;
+  const foto = item.fotosUrls?.[0];
+  const distancia = distanciaKm(usuario, item);
+  const anuncianteOnline = item.doador?.id ? onlineIds.has(item.doador.id) : false;
+  const localizacao = [item.bairro, item.cidade].filter(Boolean).join(" · ");
+  return (
+    <div onClick={onClick} style={{
+      background: "#fff", borderRadius: 18, padding: 12, display: "flex", gap: 12, cursor: "pointer",
+      border: "1px solid #EDEBE1", position: "relative",
+    }}>
+      <div style={{
+        width: 64, height: 64, borderRadius: 14, background: "var(--role-soft)", flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+      }}>
+        {foto ? <img src={foto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <Icon size={26} color="var(--role-primary-dark)" strokeWidth={1.8} />}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: INK, fontFamily: "var(--font-ui)" }}>{item.titulo}</div>
+          {onFav && (
+            <Heart size={17} onClick={(e) => { e.stopPropagation(); onFav(item); }}
+              style={{ animation: favorite ? "favorite-pulse .45s ease" : "none" }}
+              fill={favorite ? "#E0673F" : "none"} color={favorite ? "#E0673F" : "#C7C9C1"} />
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: INK_SOFT, margin: "3px 0 4px" }}>
+          <span>{item.doador?.nome || "Anunciante"}</span>
+          {item.doador && <><Stars value={item.doador.reputacaoScore} size={11} /><span>{(item.doador.reputacaoScore || 0).toFixed(1)}</span></>}
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{
+            fontSize: 10.5, fontWeight: 700, padding: "3px 8px", borderRadius: 999,
+            background: item.tipoPublicacao === "DOAR" ? "var(--role-soft)" : "#FBE8E0",
+            color: item.tipoPublicacao === "DOAR" ? "var(--role-primary-dark)" : "#9C4327",
+          }}>{item.tipoPublicacao === "DOAR" ? "DOAÇÃO" : "TROCA"}</span>
+          {statusDoItem(item) !== "ATIVO" && <StatusBadge item={item} label={statusDoItem(item) === "EM_NEGOCIACAO" ? "Reservado" : undefined} />}
+          {localizacao && <span style={{ fontSize: 11, color: INK_SOFT }}><MapPin size={11} style={{ verticalAlign: "-2px" }} /> {localizacao}</span>}
+          {distancia != null && <span style={{ fontSize: 11, color: INK_SOFT }}>{distancia < 1 ? "menos de 1 km" : `${Math.round(distancia)} km`}</span>}
+          <span style={{ fontSize: 11, color: anuncianteOnline ? "#2D8A57" : INK_SOFT, display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: anuncianteOnline ? "#2D8A57" : "#A7ADA3" }} /> {anuncianteOnline ? "online" : "offline"}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Toast({ text, show }) {
+  return (
+    <div style={{
+      position: "absolute", left: 16, right: 16, bottom: 88, background: INK, color: "#fff",
+      padding: "12px 16px", borderRadius: 14, fontSize: 13.5, fontWeight: 600, textAlign: "center",
+      zIndex: 60, boxShadow: "0 10px 24px rgba(0,0,0,.25)",
+      transform: show ? "translateY(0)" : "translateY(30px)", opacity: show ? 1 : 0,
+      transition: "all .3s cubic-bezier(.2,.9,.3,1)", pointerEvents: "none", fontFamily: "var(--font-ui)",
+    }}>{text}</div>
+  );
+}
+
+function Loading({ label = "Carregando..." }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "50px 20px", gap: 10, color: INK_SOFT }}>
+      <Loader2 size={24} style={{ animation: "spin .8s linear infinite" }} />
+      <div style={{ fontSize: 12.5 }}>{label}</div>
+    </div>
+  );
+}
+
+function ErrorBox({ message, onRetry }) {
+  return (
+    <div style={{ margin: "10px 20px", background: "#FBE8E0", border: "1px solid #F0C6B4", borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+        <AlertTriangle size={16} color="#9C4327" style={{ flexShrink: 0, marginTop: 1 }} />
+        <div style={{ fontSize: 12.5, color: "#9C4327", lineHeight: 1.4 }}>{message}</div>
+      </div>
+      {onRetry && <Button small variant="ghost" onClick={onRetry} style={{ borderColor: "#9C4327", color: "#9C4327" }}>Tentar de novo</Button>}
+    </div>
+  );
+}
+
+/* ---------------- Chrome: status bar / top bar / bottom nav ---------------- */
+
+function StatusBar() {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "14px 22px 4px", fontSize: 12.5, fontWeight: 700, color: INK }}>
+      <span>9:41</span>
+      <span style={{ display: "flex", gap: 5, alignItems: "center" }}>
+        <span>••••</span><span>Wi-Fi</span><span>72%</span>
+      </span>
+    </div>
+  );
+}
+
+function TopBar({ title, onBack, right, compact = false }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", padding: compact ? "2px 14px 6px" : "6px 14px 12px", gap: 8, transition: "padding .2s" }}>
+      {onBack ? (
+        <button onClick={onBack} style={{ background: "#F1EFE6", border: "none", borderRadius: 12, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <ChevronLeft size={18} color={INK} />
+        </button>
+      ) : <div style={{ width: 34 }} />}
+      <div style={{ flex: 1, textAlign: "center", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: compact ? 15 : 16.5, color: INK, transition: "font-size .2s" }}>{title}</div>
+      <div style={{ minWidth: 34, display: "flex", justifyContent: "flex-end" }}>{right}</div>
+    </div>
+  );
+}
+
+// Perfil unificado (estilo OLX): o mesmo usuário doa e recebe com a mesma conta,
+// então existe UM único menu com os destinos das duas pontas — não há mais
+// troca de "role" para decidir quais abas aparecem.
+const TABS_UNIFICADAS = [
+  { key: "homeDoador", label: "Início", Icon: Home },
+  { key: "busca", label: "Buscar", Icon: Search },
+  { key: "cadastroItem", label: "Doar", Icon: Plus },
+  { key: "gerenciarItens", label: "Minhas trocas", Icon: Gift },
+  { key: "perfil", label: "Perfil", Icon: User },
+];
+
+function BottomNav({ active, go }) {
+  const tabs = TABS_UNIFICADAS;
+  return (
+    <div style={{
+      display: "flex", borderTop: "1px solid #EDEBE1", background: "#fff", padding: "8px 6px 14px",
+      flexShrink: 0, paddingBottom: "max(14px, env(safe-area-inset-bottom))",
+    }}>
+      {tabs.map(t => {
+        const isActive = active === t.key;
+        return (
+          <button key={t.key} onClick={() => go(t.key)} style={{
+            flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex",
+            flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 0",
+            color: isActive ? "var(--role-primary)" : "#A7ADA3",
+          }}>
+            <t.Icon size={20} strokeWidth={isActive ? 2.4 : 1.9} />
+            <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 500, fontFamily: "var(--font-ui)" }}>{t.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Screen({ children }) {
+  return <div style={{ paddingBottom: 22, display: "flex", flexDirection: "column", gap: 4 }}>{children}</div>;
+}
+const iconBtn = { width: 36, height: 36, borderRadius: 12, background: "#F1EFE6", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative" };
+const linkText = { fontSize: 12, fontWeight: 700, color: "var(--role-primary)", cursor: "pointer" };
+const fieldLabel = { fontSize: 11.5, fontWeight: 700, color: INK_SOFT, marginBottom: 6, marginTop: 12, fontFamily: "var(--font-ui)", display: "block" };
+const fieldBox = { display: "flex", alignItems: "center", gap: 8, border: "1.5px solid #E9E7DC", borderRadius: 12, padding: "11px 13px" };
+const fieldInput = { border: "none", outline: "none", fontSize: 14, width: "100%", fontFamily: "var(--font-ui)", background: "transparent" };
+
+function EmptyState({ Icon, text }) {
+  return (
+    <div style={{ textAlign: "center", padding: "30px 10px", color: INK_SOFT }}>
+      <Icon size={30} style={{ marginBottom: 10, opacity: .5 }} />
+      <div style={{ fontSize: 13, maxWidth: 220, margin: "0 auto" }}>{text}</div>
+    </div>
+  );
+}
+function StatBox({ value, label, Icon }) {
+  return (
+    <div style={{ background: "#fff", border: "1px solid #EDEBE1", borderRadius: 16, padding: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+      <Icon size={18} color="var(--role-primary)" />
+      <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 700, color: INK }}>{value}</div>
+      <div style={{ fontSize: 11.5, color: INK_SOFT }}>{label}</div>
+    </div>
+  );
+}
+
+/* ---------------- Status e etapas compartilhados entre conjuntos ---------------- */
+
+const STATUS_ITEM = {
+  ATIVO:         { label: "Disponível",    bg: "var(--role-soft)", color: "var(--role-primary-dark)" },
+  EM_NEGOCIACAO: { label: "Em negociação", bg: "#FDEFD9",          color: "#9C6B14" },
+  DOADO:         { label: "Doado",         bg: "#EDEBE1",          color: INK_SOFT },
+  REMOVIDO:      { label: "Removido",      bg: "#F1EFE6",          color: INK_SOFT },
+  EXPIRADO:      { label: "Expirado",      bg: "#FBE8E0",          color: "#9C4327" },
+};
+
+function statusDoItem(item) {
+  if (!item) return "ATIVO";
+  if (item.status !== "DOADO" && item.status !== "REMOVIDO" && item.expirado) return "EXPIRADO";
+  return item.status || "ATIVO";
+}
+
+function StatusBadge({ item, status, label }) {
+  const s = STATUS_ITEM[status || statusDoItem(item)] || STATUS_ITEM.ATIVO;
+  return (
+    <span style={{ fontSize: 10.5, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: s.bg, color: s.color, whiteSpace: "nowrap" }}>
+      {label || s.label}
+    </span>
+  );
+}
+
+const MODOS_ENTREGA = {
+  RETIRADA: { label: "Retirada no local", curto: "Retirada" },
+  COMBINAR: { label: "A combinar no chat", curto: "A combinar" },
+};
+
+const ETAPAS_SOLICITACAO = [
+  { key: "ENVIADA",   label: "Enviada" },
+  { key: "ACEITA",    label: "Aceita" },
+  { key: "AGENDADA",  label: "Agendada" },
+  { key: "CONCLUIDA", label: "Concluída" },
+];
+
+const ETAPA_LABEL = {
+  ENVIADA: "Aguardando resposta", ACEITA: "Em conversa", AGENDADA: "Retirada agendada",
+  CONCLUIDA: "Concluída", RECUSADA: "Recusada", CANCELADA: "Cancelada",
+};
+
+function EtapasSolicitacao({ etapa }) {
+  const encerrada = etapa === "RECUSADA" || etapa === "CANCELADA";
+  const idx = ETAPAS_SOLICITACAO.findIndex(e => e.key === etapa);
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        {ETAPAS_SOLICITACAO.map((e, i) => {
+          const feito = !encerrada && i <= idx;
+          return (
+            <React.Fragment key={e.key}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 54 }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                  background: feito ? "var(--role-primary)" : "#EDEBE1", color: feito ? "#fff" : INK_SOFT, fontSize: 11, fontWeight: 700,
+                }}>{feito ? <CheckCircle2 size={13} /> : i + 1}</div>
+                <span style={{ fontSize: 10, fontWeight: feito ? 700 : 500, color: feito ? INK : INK_SOFT }}>{e.label}</span>
+              </div>
+              {i < ETAPAS_SOLICITACAO.length - 1 && <div style={{ flex: 1, height: 2, marginBottom: 16, background: !encerrada && i < idx ? "var(--role-primary)" : "#EDEBE1" }} />}
+            </React.Fragment>
+          );
+        })}
+      </div>
+      {encerrada && (
+        <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: "#9C4327", textAlign: "center" }}>
+          {etapa === "RECUSADA" ? "O anunciante recusou esta solicitação." : "Esta solicitação foi cancelada."}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Compartilha via menu nativo do aparelho; sem suporte, copia o link. */
+async function compartilhar({ titulo, texto, url }, notify) {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: titulo, text: texto, url });
+      return;
+    } catch (e) {
+      if (e?.name === "AbortError") return;
+    }
+  }
+  const conteudo = url || texto || "";
+  try {
+    await navigator.clipboard.writeText(conteudo);
+  } catch {
+    const area = document.createElement("textarea");
+    area.value = conteudo;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    document.execCommand("copy");
+    area.remove();
+  }
+  notify?.("Link copiado.");
+}
+
+function linkDoItem(itemId) {
+  return `${window.location.origin}${window.location.pathname}?item=${encodeURIComponent(itemId)}`;
+}
+
+function FieldError({ children }) {
+  if (!children) return null;
+  return <div style={{ fontSize: 11.5, color: "#9C4327", marginTop: 4 }}>{children}</div>;
+}
+
+function Checkbox({ checked, onChange, label }) {
+  return (
+    <button type="button" onClick={(e) => { e.stopPropagation(); onChange(!checked); }} aria-label={label} aria-pressed={checked} style={{
+      width: 22, height: 22, borderRadius: 7, flexShrink: 0, cursor: "pointer", padding: 0,
+      border: checked ? "none" : "1.5px solid #C7C9C1", background: checked ? "var(--role-primary)" : "#fff",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>{checked && <CheckCircle2 size={14} color="#fff" />}</button>
+  );
+}
+
+function FotoPerfil({ usuario, size = 40 }) {
+  if (usuario?.fotoUrl) {
+    return <img src={usuario.fotoUrl} alt={`Foto de ${usuario.nome || "usuário"}`} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />;
+  }
+  return <Avatar label={usuario?.nome} size={size} tone="var(--role-primary)" />;
+}
+
+function Toggle({ checked, onChange, label, disabled }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={() => onChange(!checked)} style={{
+      width: 42, height: 24, borderRadius: 999, border: "none", padding: 2, flexShrink: 0,
+      background: checked ? "var(--role-primary)" : "#D6D6D0", cursor: disabled ? "not-allowed" : "pointer",
+      opacity: disabled ? 0.5 : 1, display: "flex", justifyContent: checked ? "flex-end" : "flex-start", transition: "background .2s",
+    }}>
+      <span style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)" }} />
+    </button>
+  );
+}
+
+function linkDoPerfil(usuarioId) {
+  return `${window.location.origin}${window.location.pathname}?perfil=${encodeURIComponent(usuarioId)}`;
+}
+
+export { FotoPerfil, Toggle, linkDoPerfil };
+function ActionSheet({ open, title, actions = [], onClose }) {
+  if (!open) return null;
+  return (
+    <div onClick={e => { e.stopPropagation(); onClose(); }} style={{ position: "absolute", inset: 0, zIndex: 70, display: "flex", alignItems: "flex-end", background: "rgba(13, 25, 18, .42)" }}>
+      <div role="dialog" aria-modal="true" aria-label={title} onClick={e => e.stopPropagation()} style={{ width: "100%", background: "#FBFAF4", borderRadius: "20px 20px 0 0", padding: "12px 18px max(18px, env(safe-area-inset-bottom))", boxShadow: "0 -12px 32px rgba(22,40,31,.18)" }}>
+        <div style={{ width: 34, height: 4, borderRadius: 4, background: "#C7C9C1", margin: "0 auto 14px" }} />
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 600, color: INK, marginBottom: 8 }}>{title}</div>
+        {actions.map(({ label, Icon, danger, detail, onClick }) => (
+          <button key={label} type="button" onClick={e => { e.stopPropagation(); onClose(); onClick?.(); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, textAlign: "left", border: 0, borderTop: "1px solid #EDEBE1", background: "transparent", padding: "13px 2px", color: danger ? "#9C4327" : INK, cursor: "pointer", fontFamily: "var(--font-ui)" }}>
+            {Icon && <Icon size={18} color={danger ? "#9C4327" : "var(--role-primary)"} />}
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{label}{detail && <span style={{ display: "block", marginTop: 2, color: INK_SOFT, fontSize: 11, fontWeight: 400 }}>{detail}</span>}</span>
+            <ChevronRight size={15} color={INK_SOFT} />
+          </button>
+        ))}
+        <button type="button" onClick={e => { e.stopPropagation(); onClose(); }} style={{ width: "100%", marginTop: 10, padding: "12px", border: 0, borderRadius: 12, background: "#EDEBE1", color: INK, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-ui)" }}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
+export { ActionSheet };
+
+export { ROLE_COLORS, GOLD, INK, INK_SOFT, CATS, ESTADOS, CO2_ESTIMADO, BADGES, MOTIVOS_DENUNCIA, NOTIF_ICONS, COMMUNITY_POSTS, capitalize, timeAgo, fmtDateTime, badgeIndex, onlyDigits, distanciaKm, formatCpf, formatCnpj, formatDocumento, formatCep, formatCelular, cpfValido, cnpjValido, documentoValido, comprimirImagem, useApiData, Button, Chip, Avatar, Stars, SectionTitle, ImpactRing, ImpactoResumo, ItemCard, Toast, Loading, ErrorBox, StatusBar, TopBar, BottomNav, Screen, iconBtn, linkText, fieldLabel, fieldBox, fieldInput, EmptyState, StatBox, STATUS_ITEM, statusDoItem, StatusBadge, MODOS_ENTREGA, ETAPAS_SOLICITACAO, ETAPA_LABEL, EtapasSolicitacao, compartilhar, linkDoItem, FieldError, Checkbox };
