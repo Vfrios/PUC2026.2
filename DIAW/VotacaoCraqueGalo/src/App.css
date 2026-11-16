@@ -1,0 +1,367 @@
+/* ---------- Páginas ---------- */
+.pagina {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem clamp(1rem, 4vw, 2rem) 1rem;
+}
+
+.titulo-pagina {
+  font-size: clamp(2.2rem, 6vw, 3.4rem);
+  color: var(--ouro);
+}
+
+.subtitulo {
+  margin: 0.8rem 0 1.6rem;
+}
+
+.secao {
+  margin-top: 2.5rem;
+}
+
+.secao h2 {
+  color: var(--ouro);
+  font-size: 2rem;
+}
+
+/* ---------- Grades ---------- */
+.grade-indicados {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.2rem;
+  padding: 0.6rem 0.4rem 0.8rem;
+}
+
+.grade-elenco {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .grade-indicados {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .grade-indicados {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Card do jogador ---------- */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--grafite);
+  border: 3px solid var(--grafite-claro);
+  border-radius: 10px;
+  transition: transform 0.2s ease, outline-color 0.2s ease;
+}
+
+.card-foto {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  object-position: 50% 0;
+  background: #efefef;
+}
+
+.card-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.8rem;
+  text-align: center;
+}
+
+.card-nome {
+  font-size: 1.3rem;
+}
+
+.card-numero {
+  color: var(--ouro);
+}
+
+.card-posicao {
+  margin: 0;
+  color: var(--cinza);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.card-indicado {
+  border-color: var(--ouro);
+}
+
+.card-suspenso {
+  border-color: var(--amarelo);
+}
+
+.card-elenco {
+  filter: grayscale(1);
+}
+
+.card-selecionado {
+  outline: 5px solid var(--gramado);
+  outline-offset: 4px;
+  transform: translateY(-8px);
+}
+
+.card-botao {
+  margin-top: 0.5rem;
+  padding: 0.7rem;
+  background: var(--preto);
+  color: var(--branco);
+  border: 2px solid var(--branco);
+  border-radius: 8px;
+  font: 800 1rem var(--fonte-texto);
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.card-botao:hover {
+  filter: brightness(1.2);
+}
+
+.card-botao-ativo {
+  background: var(--gramado);
+  border-color: var(--gramado);
+  box-shadow: 0 4px 0 #1f6e2f;
+}
+
+/* ---------- Selos ---------- */
+.selo {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font: 800 0.75rem var(--fonte-titulo);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--preto);
+}
+
+.selo-indicado {
+  background: var(--ouro);
+}
+
+.selo-suspenso {
+  background: var(--amarelo);
+}
+
+/* ---------- Barra de confirmação ---------- */
+.confirmacao {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding: 1rem 1.4rem;
+  background: var(--preto);
+  border: 2px solid var(--ouro);
+  border-radius: 10px;
+}
+
+.confirmacao p {
+  margin: 0;
+}
+
+.confirmacao strong {
+  color: var(--ouro);
+}
+
+.botao:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- Histórico ---------- */
+.historico {
+  margin-top: 1.5rem;
+  padding: 1.2rem 1.4rem;
+  background: var(--gramado);
+  border-radius: 8px;
+}
+
+.historico h2 {
+  font-size: 1.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.historico ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.3rem 1rem;
+  margin: 0 0 0.8rem;
+  padding-left: 1.2rem;
+}
+
+.historico a {
+  font-weight: 800;
+}
+
+/* ---------- Resultado ---------- */
+.total-votos {
+  margin: 1rem 0 2rem;
+  font-size: 1.1rem;
+}
+
+.total-votos strong {
+  color: var(--ouro);
+  font: 800 2.2rem var(--fonte-titulo);
+}
+
+.disputa {
+  margin: 0 0 1.2rem;
+  padding: 0.9rem 1.2rem;
+  background: var(--grafite);
+  border-left: 5px solid var(--ouro);
+  font-weight: 700;
+}
+
+.sem-votos {
+  padding: 2rem 1rem;
+  text-align: center;
+  background: var(--grafite);
+  border: 2px dashed var(--grafite-claro);
+  border-radius: 10px;
+}
+
+.placar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.placar-item {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1rem 1.2rem;
+  background: var(--grafite);
+  border: 3px solid var(--grafite-claro);
+  border-radius: 10px;
+}
+
+.placar-craque {
+  border-color: var(--ouro);
+}
+
+.placar-vice {
+  border-color: var(--prata);
+}
+
+.placar-posicao {
+  min-width: 2.2rem;
+  font: 800 1.8rem var(--fonte-titulo);
+}
+
+.placar-foto {
+  width: 84px;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  object-position: 50% 0;
+  background: #efefef;
+  border-radius: 4px;
+}
+
+.placar-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.placar-nome {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.placar-nome h2 {
+  font-size: 1.6rem;
+}
+
+.selo-resultado {
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font: 800 0.8rem var(--fonte-texto);
+  color: var(--preto);
+}
+
+.selo-craque {
+  background: var(--ouro);
+}
+
+.selo-vice {
+  background: var(--prata);
+}
+
+.barra {
+  height: 22px;
+  margin: 0.7rem 0;
+  overflow: hidden;
+  background: var(--grafite-claro);
+  border-radius: 999px;
+}
+
+.barra-preenchida {
+  height: 100%;
+  background: var(--cinza);
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.placar-craque .barra-preenchida {
+  background: var(--ouro);
+}
+
+.placar-vice .barra-preenchida {
+  background: var(--prata);
+}
+
+.placar-numeros {
+  margin: 0;
+  font-weight: 700;
+}
+
+.acoes-resultado {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.8rem;
+}
+
+.botao-claro {
+  background: var(--branco);
+  color: var(--preto);
+  box-shadow: 0 4px 0 #9a9a9a;
+}
+
+.botao-contorno {
+  background: transparent;
+  color: var(--branco);
+  box-shadow: inset 0 0 0 2px var(--branco);
+}
+
+@media (max-width: 520px) {
+  .placar-item {
+    gap: 0.7rem;
+    padding: 0.8rem;
+  }
+
+  .placar-foto {
+    width: 60px;
+  }
+}

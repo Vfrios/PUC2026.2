@@ -1,0 +1,4 @@
+Para rodar:
+  npm install
+  npm run dev
+Abra http://localhost:5173/
